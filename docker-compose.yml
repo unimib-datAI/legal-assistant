@@ -2,15 +2,15 @@ version: '3.8'
 services:
   neo4j:
     image: neo4j:latest
-    container_name: local-neo4j
+    container_name: neo4j-legal-assistant
     ports:
       - "7474:7474"  # HTTP
       - "7687:7687"  # Bolt
     volumes:
-      - ./data:/data
-      - ./logs:/logs
-      - ./config:/config
-      - ./plugins:/plugins
+      - ./neo4j/data:/data
+      - ./neo4j/logs:/logs
+      - ./neo4j/config:/config
+      - ./neo4j/plugins:/plugins
     environment:
-      - NEO4J_AUTH=neo4j/your_password
+      - NEO4J_AUTH=neo4j/admin123
     restart: always
