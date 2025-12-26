@@ -71,4 +71,4 @@ respondent: String
 ## Document Parsing and Data Retrieval
 All the data used to fill the KG is retrieved from EUR-Lex documents. In particular, specific acts are parsed from the English HTML format into a specific structured data object. Furthermore, the document information section is parsed to match the associated case law. 
 
-PS: The parser ignores ongoing case law; we only consider completed case law. (XXX interprets YYY).
+PS: The parser ignores ongoing case law; we only consider completed case law. (XXX interprets YYY). 
