@@ -67,7 +67,7 @@ class EURLexHTMLParser:
                 citations.append({
                     'from_article_id': source_article_id,
                     'to_article_id': f"{self.celex}art_{cited_article_num}",
-                    'citation_type': 'REFERENCES',
+                    'citation_type': 'CITES',
                     'paragraph_id': f"{self.celex}_{paragraph['id']}"
                 })
 

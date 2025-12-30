@@ -12,5 +12,5 @@ services:
       - ./neo4j/config:/config
       - ./neo4j/plugins:/plugins
     environment:
-      - NEO4J_AUTH=neo4j/admin123
+      - NEO4J_AUTH=neo4j/your_password
     restart: always
