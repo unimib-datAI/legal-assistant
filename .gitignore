@@ -2,3 +2,4 @@ csv_output/
 neo4j/
 venv/
 __pycache__/
+.env
