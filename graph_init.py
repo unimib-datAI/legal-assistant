@@ -1,16 +1,9 @@
-from service.graph import Neo4jGraph
-from service.graph_loader import GraphLoader
-from dotenv import load_dotenv
+from service.graph.graph import Neo4jGraph
+from service.graph.graph_loader import GraphLoader
+import config
 import os
 
-load_dotenv()
-
-# Initialize Neo4j connection
-uri = os.getenv("NEO4J_URI")
-username = os.getenv("NEO4J_USERNAME")
-password = os.getenv("NEO4J_PASSWORD")
-
-graph = Neo4jGraph(uri, username, password)
+graph = Neo4jGraph(config.NEO4J_URI, config.NEO4J_USERNAME, config.NEO4J_PASSWORD)
 
 # Verify connection
 graph.verify_connection()
@@ -65,4 +58,4 @@ loader.load_all_documents(documents_config)
 
 # Close connection when done
 graph.close()
-print("✓ All documents loaded successfully!")
+print("All documents loaded successfully!")

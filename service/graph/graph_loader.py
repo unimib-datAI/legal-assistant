@@ -1,7 +1,10 @@
 
 import re
-from service.eurlex_exporter import EURLexHTMLParser
+from service.scraper.eurlex_exporter import EURLexHTMLParser
 from service.graph import Neo4jGraph
+import logging as log
+
+log.basicConfig(level=log.INFO, format='%(asctime)s | %(levelname)s | %(message)s')
 
 
 class GraphLoader:
@@ -38,7 +41,7 @@ class GraphLoader:
         self._load_citations(data['citations'])
         self._load_case_law(data['act'], data['case_law'])
 
-        print(f"✓ Loaded document {config['celex']} into graph")
+        log.info(f"Loaded document {config['celex']} into graph")
 
     def load_all_documents(self, documents_config):
         """
@@ -51,7 +54,7 @@ class GraphLoader:
             try:
                 self.load_document(config)
             except Exception as e:
-                print(f"✗ Error loading {config['celex']}: {str(e)}")
+                log.error(f"Error loading {config['celex']}: {str(e)}")
 
     def _load_act(self, act):
         """Create Act node."""

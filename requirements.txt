@@ -8,4 +8,7 @@ soupsieve==2.8.1
 typing_extensions==4.15.0
 urllib3==2.6.2
 neo4j
-dotenv
+python-dotenv
+langchain
+langchain-neo4j
+langchain_openai

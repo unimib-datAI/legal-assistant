@@ -1,7 +1,7 @@
 import re
 
 from bs4 import BeautifulSoup
-from service.metadata_parser import MetadataParser
+from service.scraper.metadata_parser import MetadataParser
 
 
 class EURLexHTMLParser:
