@@ -138,7 +138,7 @@ class GraphLoader:
                 node_properties={
                     'id': article_id,
                     'title': article['title'],
-                    'full_text': article['full_text']
+                    'text': article['full_text']
                 }
             )
 
@@ -207,7 +207,7 @@ class GraphLoader:
                 node_properties={
                     'id': recital_id,
                     'number': recital['number'],
-                    'full_text': recital['text']
+                    'text': recital['text']
                 }
             )
 

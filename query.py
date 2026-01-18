@@ -15,6 +15,16 @@ class NodeQueries:
     SET n = $node_properties
     RETURN n.id as node_id
     """
+    GET_NODE_WITHOUT_EMBEDDING = """
+    MATCH (n:{node_name})
+    WHERE n.textEmbeddingOpenAI IS NULL
+    return n.id as node_id, n.text as text
+    """
+    PUT_EMBEDDING = """
+    MATCH (n:{node_name})
+    WHERE n.id = $node_id
+    CALL db.create.setNodeVectorProperty(n, "textEmbeddingOpenAI", $vector)
+    """
 
 class RelationQueries:
     """Queries for relation operations"""
@@ -25,4 +35,16 @@ class RelationQueries:
     CREATE (ln)-[:{relationship}]->(rn)
     RETURN ln.id as left_id, rn.id as right_id
 
+    """
+    
+class GeneralQueries:
+    """General purpose queries"""
+    
+    CREATE_VECTOR_INDEX = """
+    CREATE VECTOR INDEX {index_name} IF NOT EXISTS
+    FOR (n:{node_name}) ON (n.textEmbeddingOpenAI)
+    OPTIONS {{ indexConfig: {{
+        `vector.dimensions`: 1536,
+        `vector.similarity_function`: 'COSINE'
+        }}}}
     """

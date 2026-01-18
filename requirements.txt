@@ -10,5 +10,8 @@ urllib3==2.6.2
 neo4j
 python-dotenv
 langchain
+langchain-community
 langchain-neo4j
 langchain_openai
+langchain-core
+openai

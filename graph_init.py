@@ -8,7 +8,7 @@ graph = Neo4jGraph(config.NEO4J_URI, config.NEO4J_USERNAME, config.NEO4J_PASSWOR
 # Verify connection
 graph.verify_connection()
 
-#graph.clear_database()
+graph.clear_database()
 
 # Initialize the loader
 loader = GraphLoader(graph)
