@@ -15,3 +15,5 @@ langchain-neo4j
 langchain_openai
 langchain-core
 openai
+sentence-transformers
+nltk

@@ -25,7 +25,12 @@ class NodeQueries:
     WHERE n.id = $node_id
     CALL db.create.setNodeVectorProperty(n, "textEmbeddingOpenAI", $vector)
     """
-
+    
+    GET_ALL_PARAGRAPHS = """
+    MATCH (act:Act)-[:CONTAINS*]->(art:Article)-[:CONTAINS]->(p:Paragraph)
+    RETURN p.text AS paragraph_text
+    ORDER BY art.id, p.id
+    """
 class RelationQueries:
     """Queries for relation operations"""
 
