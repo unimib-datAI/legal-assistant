@@ -30,6 +30,7 @@ class ASKETopicExtractor:
 
             for record in result:
                 paragraphs.append({
+                    "paragraph_id": record["paragraph_id"],
                     "text": record["paragraph_text"]
                 })
 
@@ -37,12 +38,13 @@ class ASKETopicExtractor:
         return paragraphs
 
     def tokenize_paragraphs(self, paragraphs):
-        """Tokenize paragraphs into sentences"""
+        """Tokenize paragraphs into sentences, preserving paragraph_id"""
 
         tokenized_paragraphs = []
         for para in paragraphs:
             sentences = sent_tokenize(para["text"])
             tokenized_paragraphs.append({
+                "paragraph_id": para["paragraph_id"],
                 "text": sentences
             })
 
@@ -50,11 +52,11 @@ class ASKETopicExtractor:
         return tokenized_paragraphs
 
     def lemmatize_paragraphs(self, paragraphs):
-        """Lemmatize paragraphs using WordNetLemmatizer
+        """Lemmatize paragraphs using WordNetLemmatizer, preserving paragraph_id
 
         Accepts either:
-        - Raw paragraphs: {"id": ..., "text": "string"}
-        - Tokenized paragraphs: {"id": ..., "text": ["sentence1", "sentence2", ...]}
+        - Raw paragraphs: {"paragraph_id": ..., "text": "string"}
+        - Tokenized paragraphs: {"paragraph_id": ..., "text": ["sentence1", "sentence2", ...]}
         """
 
         lemmatizer = WordNetLemmatizer()
@@ -70,18 +72,46 @@ class ASKETopicExtractor:
                 lemmatized_words = [lemmatizer.lemmatize(word.lower()) for word in words]
                 lemmatized_sentences.append(" ".join(lemmatized_words))
             lemmatized_paragraphs.append({
+                "paragraph_id": para["paragraph_id"],
                 "text": lemmatized_sentences
             })
 
         print(f"Lemmatized {len(lemmatized_paragraphs)} paragraphs")
         return lemmatized_paragraphs
 
+    def create_chunks_with_paragraph_ids(self, lemmatized_paragraphs, skip_first=True):
+        """Create chunks from lemmatized paragraphs, preserving paragraph_id reference.
+
+        Args:
+            lemmatized_paragraphs: List of dicts with 'paragraph_id' and 'text' (list of sentences)
+            skip_first: If True, skip the first sentence (often just a number/label)
+
+        Returns:
+            List of dicts with 'paragraph_id', 'chunk_index', and 'text'
+        """
+        chunks = []
+        for para in lemmatized_paragraphs:
+            paragraph_id = para["paragraph_id"]
+            sentences = para["text"]
+
+            # Skip first sentence if requested (often just paragraph number)
+            start_idx = 1 if skip_first and len(sentences) > 1 else 0
+
+            for chunk_idx, sentence in enumerate(sentences[start_idx:]):
+                chunks.append({
+                    "paragraph_id": paragraph_id,
+                    "chunk_index": chunk_idx,
+                    "text": sentence
+                })
+
+        print(f"Created {len(chunks)} chunks from {len(lemmatized_paragraphs)} paragraphs")
+        return chunks
 
     def run_aske_cycle(self, chunks, seeds, n_generations=5, alpha=0.4, beta=0.3, gamma=5):
         """Run the full ASKE extraction cycle for N generations.
 
         Args:
-            chunks: List of document chunk texts
+            chunks: List of chunk texts (strings) OR list of dicts with 'paragraph_id' and 'text'
             seeds: Initial seed concepts (list of strings or dicts)
             n_generations: Number of ASKE generations to run
             alpha: Classification similarity threshold
@@ -89,16 +119,24 @@ class ASKETopicExtractor:
             gamma: Max new terms per concept per generation
 
         Returns:
-            Final concepts after N generations
+            Tuple of (final concepts, classifications with paragraph_id if available)
         """
         concept_service = ConceptService(self.embedding_model)
         # Initialize concepts from seeds
         print("Initializing concepts from seeds...")
         concepts = self.init_concepts_from_seeds(seeds)
 
+        # Handle both simple string chunks and structured chunks with paragraph_id
+        if chunks and isinstance(chunks[0], dict):
+            chunk_texts = [c["text"] for c in chunks]
+            chunk_metadata = chunks  # Keep full metadata
+        else:
+            chunk_texts = chunks
+            chunk_metadata = None
+
         # Embed chunks once
-        print(f"Embedding {len(chunks)} chunks...")
-        chunk_embeddings = self.embedding_model.encode(chunks, show_progress_bar=False)
+        print(f"Embedding {len(chunk_texts)} chunks...")
+        chunk_embeddings = self.embedding_model.encode(chunk_texts, show_progress_bar=False)
 
         # Run ASKE generations
         for gen in range(n_generations):
@@ -116,16 +154,16 @@ class ASKETopicExtractor:
 
             # Phase 1: Document chunk classification
             print("\n[Phase 1] Document chunk classification...")
-            classifications = self.chunk_classification(chunks, chunk_embeddings, active_concepts, alpha)
+            classifications = self.chunk_classification(chunk_texts, chunk_embeddings, active_concepts, alpha, chunk_metadata)
             total_classified = sum(1 for c in classifications if c["concepts"])
-            print(f"  Classified {total_classified}/{len(chunks)} chunks")
+            print(f"  Classified {total_classified}/{len(chunk_texts)} chunks")
 
             # Deactivate unused concepts before terminology enrichment phase
             concepts = concept_service.deactivate_unused_concepts(concepts, classifications)
 
             # Phase 2: Terminology enrichment
             print("\n[Phase 2] Terminology enrichment...")
-            concepts = concept_service.terminology_enrichment(concepts, classifications, chunk_embeddings, chunks, beta=beta, gamma=gamma)
+            concepts = concept_service.terminology_enrichment(concepts, classifications, chunk_embeddings, chunk_texts, beta=beta, gamma=gamma)
 
             # Phase 3: Concept derivation (every generation or as configured)
             print("\n[Phase 3] Concept derivation...")
@@ -162,7 +200,7 @@ class ASKETopicExtractor:
 
         return concepts
 
-    def chunk_classification(self, chunks, chunk_embeddings, active_concepts, alpha):
+    def chunk_classification(self, chunks, chunk_embeddings, active_concepts, alpha, chunk_metadata=None):
         """Classify individual chunks based on similarity to concept embeddings.
 
         Args:
@@ -170,6 +208,7 @@ class ASKETopicExtractor:
             chunk_embeddings: List of chunk embeddings
             active_concepts: List of concept dictionaries with 'label' and 'embedding'
             alpha: Minimum cosine similarity score to associate a concept (default 0.4)
+            chunk_metadata: Optional list of dicts with 'paragraph_id' for each chunk
         """
         classifications = []
         concept_embeddings = np.array([concept["embedding"] for concept in active_concepts])
@@ -188,10 +227,17 @@ class ASKETopicExtractor:
                 threshold=alpha
             )
 
-            classifications.append({
+            classification = {
                 "text": chunks[i],
                 "concepts": matched_concepts
-            })
+            }
+
+            # Include paragraph_id if metadata is available
+            if chunk_metadata is not None:
+                classification["paragraph_id"] = chunk_metadata[i]["paragraph_id"]
+                classification["chunk_index"] = chunk_metadata[i].get("chunk_index", i)
+
+            classifications.append(classification)
         return classifications
 
 
@@ -237,5 +283,104 @@ class ASKETopicExtractor:
                 seen_labels.add(label)
 
         return deduplicated
+
+    def aggregate_topics_by_paragraph(self, classifications, top_n=3, strategy="max"):
+        """Aggregate concepts from all chunks of each paragraph and select top N topics.
+
+        When a paragraph is split into multiple chunks, each chunk may have different
+        concepts assigned. This method aggregates them using the specified strategy.
+
+        Args:
+            classifications: List of classification dicts with 'paragraph_id' and 'concepts'
+            top_n: Number of top topics to select per paragraph (default: 3)
+            strategy: Aggregation strategy - one of:
+                - "max": Take the maximum score for each concept across chunks (default)
+                - "avg": Average the scores for each concept
+                - "sum": Sum the scores (rewards concepts appearing in multiple chunks)
+                - "frequency": Count occurrences, break ties with max score
+
+        Returns:
+            Dict mapping paragraph_id to list of top N topics with scores
+            Example: {"para_1": [{"topic": "privacy", "score": 0.85}, ...]}
+        """
+        from collections import defaultdict
+
+        # Group classifications by paragraph_id
+        paragraph_concepts = defaultdict(list)
+
+        for classification in classifications:
+            paragraph_id = classification.get("paragraph_id")
+            if paragraph_id is None:
+                continue
+
+            for concept in classification.get("concepts", []):
+                paragraph_concepts[paragraph_id].append({
+                    "topic": concept["seed"],
+                    "score": concept["score"]
+                })
+
+        # Aggregate concepts for each paragraph
+        paragraph_topics = {}
+
+        for paragraph_id, concepts_list in paragraph_concepts.items():
+            if not concepts_list:
+                paragraph_topics[paragraph_id] = []
+                continue
+
+            # Group by topic
+            topic_scores = defaultdict(list)
+            for c in concepts_list:
+                topic_scores[c["topic"]].append(c["score"])
+
+            # Apply aggregation strategy
+            aggregated = []
+            for topic, scores in topic_scores.items():
+                if strategy == "max":
+                    final_score = max(scores)
+                elif strategy == "avg":
+                    final_score = sum(scores) / len(scores)
+                elif strategy == "sum":
+                    final_score = sum(scores)
+                elif strategy == "frequency":
+                    # Primary: count, Secondary: max score
+                    final_score = len(scores) + max(scores) / 10  # Frequency weighted
+                else:
+                    raise ValueError(f"Unknown aggregation strategy: {strategy}")
+
+                aggregated.append({
+                    "topic": topic,
+                    "score": final_score,
+                    "chunk_count": len(scores)  # How many chunks had this concept
+                })
+
+            # Sort by score and take top N
+            aggregated.sort(key=lambda x: x["score"], reverse=True)
+            paragraph_topics[paragraph_id] = aggregated[:top_n]
+
+        print(f"Aggregated topics for {len(paragraph_topics)} paragraphs using '{strategy}' strategy")
+        return paragraph_topics
+
+    def update_paragraph_topics(self, paragraph_topics):
+        """Update Paragraph nodes in Neo4j with their aggregated topics.
+
+        Args:
+            paragraph_topics: Dict mapping paragraph_id to list of topic dicts
+
+        Returns:
+            Number of paragraphs updated
+        """
+        updated_count = 0
+
+        with self.graph.driver.session() as session:
+            for paragraph_id, topics in paragraph_topics.items():
+                # Extract just the topic labels for the field
+                topic_labels = [t["topic"] for t in topics]
+
+                query = NodeQueries.UPDATE_PARAGRAPH_TOPICS
+                session.run(query, paragraph_id=paragraph_id, topics=topic_labels)
+                updated_count += 1
+
+        print(f"Updated {updated_count} paragraphs with topics")
+        return updated_count
 
 

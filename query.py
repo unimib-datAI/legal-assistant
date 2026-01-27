@@ -28,9 +28,36 @@ class NodeQueries:
     
     GET_ALL_PARAGRAPHS = """
     MATCH (act:Act)-[:CONTAINS*]->(art:Article)-[:CONTAINS]->(p:Paragraph)
-    RETURN p.text AS paragraph_text
+    RETURN p.id as paragraph_id, p.text AS paragraph_text
     ORDER BY art.id, p.id
     """
+
+    UPDATE_PARAGRAPH_TOPICS = """
+    MATCH (p:Paragraph)
+    WHERE p.id = $paragraph_id
+    SET p.topics = $topics
+    RETURN p.id as paragraph_id
+    """
+
+    GET_ALL_UNIQUE_TOPICS = """
+    MATCH (n)
+    WHERE n.topics IS NOT NULL
+    UNWIND n.topics AS topic
+    RETURN DISTINCT topic
+    """
+
+    GET_ALL_PARAGRAPHS_BY_TOPIC = """
+    MATCH (p:Paragraph)
+    WHERE p.topics IS NOT NULL
+      AND ANY(topic IN p.topics WHERE topic IN $topics)
+    MATCH (p)<-[:CONTAINS]-(a:Article)
+    RETURN p.id AS id,
+           p.text AS text,
+           p.topics AS topics,
+           a.text AS article_title
+    LIMIT $limit
+        """
+    
 class RelationQueries:
     """Queries for relation operations"""
 
