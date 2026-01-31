@@ -40,10 +40,18 @@ class NodeQueries:
     """
 
     GET_ALL_UNIQUE_TOPICS = """
-    MATCH (n)
-    WHERE n.topics IS NOT NULL
-    UNWIND n.topics AS topic
-    RETURN DISTINCT topic
+    CALL() {
+      MATCH (n)
+      WHERE n.topics IS NOT NULL
+      UNWIND n.topics AS topic
+      RETURN DISTINCT topic
+      UNION
+      MATCH ()-[r]-()
+      WHERE r.topics IS NOT NULL
+      UNWIND r.topics AS topic
+      RETURN DISTINCT topic
+    }
+    RETURN collect(topic) AS topics
     """
 
     GET_ALL_PARAGRAPHS_BY_TOPIC = """
