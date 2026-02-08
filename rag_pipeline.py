@@ -4,13 +4,13 @@ from langchain_core.prompts import PromptTemplate
 from langchain_neo4j import Neo4jGraph
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 
-from service.rag.graphRAG import GraphEnrichedRetriever
-from service.rag.prompt import ANSWER_SYNTHESIS_PROMPT
+from service.rag.RAG import GraphEnrichedRetriever
+from service.rag.prompt import ANSWER_SYNTHESIS_PROMPT, ANSWER_SYNTHESIS_PROMPT_v2
 import config
 
 
 QA_PROMPT = PromptTemplate(
-    template=ANSWER_SYNTHESIS_PROMPT,
+    template=ANSWER_SYNTHESIS_PROMPT_v2,
     input_variables=["context", "question"]
 )
 
@@ -68,7 +68,7 @@ expert_response = [
 ]
 
 # Output file
-output_file = "../../results/rag_results.txt"
+output_file = "E:\\Projects\\legal-assistant\\results\\rag_results_01-02_10paragraphs_first10reranked.txt"
 
 # Run all queries and store the result
 for i, query in enumerate(queries, 1):

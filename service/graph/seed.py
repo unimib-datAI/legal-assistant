@@ -176,37 +176,137 @@ SEEDS_AI_DATA_FOCUSED = [
     "critical infrastructure"
 ]
 
-ENHANCED_SEEDS = [
-    # === Keep all current specific seeds (35) ===
+SEEDS_AI_DATA_FOCUSED_v2 = [
+    # === CORE AI/DATA CONCEPTS ===
     "artificial intelligence",
     "machine learning",
+    "algorithmic decision-making",
+    "automated decision-making",
+    "AI system",
+    "high-risk AI system",
+
+    # === DATA GOVERNANCE ===
     "data protection",
-    # ... all current seeds
+    "personal data",
+    "data processing",
+    "data subject",
+    "data controller",
+    "data processor",
+    "data governance",
+    "data sharing",
+    "data intermediary",
+    "data altruism",
 
-    # === Add 8-10 TARGETED generic seeds ===
-    # To address underdeveloped concepts
+    # === RIGHTS & OBLIGATIONS ===
+    "rights and freedoms",
+    "fundamental rights",
+    "privacy rights",
+    "right to explanation",
+    "transparency obligation",
+    "accountability",
 
-    # For "data processing" (1 term)
-    "processing",  # Generic but relevant
+    # === TECHNICAL/OPERATIONAL ===
+    "technical documentation",
+    "conformity assessment",
+    "risk management",
+    "human oversight",
+    "accuracy requirement",
+    "cybersecurity",
+    "data quality",
 
-    # For "AI system" (1 term)
-    "system",  # Will capture AI + management + technical systems
+    # === REGULATORY ===
+    "supervisory authority",
+    "enforcement",
+    "compliance",
+    "sanctions",
+    "certification",
 
-    # For "automated decision-making" (1 term)
-    "decision",  # Will capture decision types
+    # === SPECIFIC CONTEXTS ===
+    "biometric identification",
+    "emotion recognition",
+    "critical infrastructure",
 
-    # For "data controller" (1 term)
-    "controller",  # Will capture controller types
+    # === AI ACT - SPECIFICI ===
+    "general purpose AI",
+    "GPAI",
+    "foundation model",
+    "systemic risk",
+    "prohibited AI practice",
+    "remote biometric identification",
+    "AI literacy",
+    "post-market monitoring",
+    "deployer",
+    "provider",
+    "CE marking",
+    "harmonised standard",
+    "notified body",
+    "AI regulatory sandbox",
+    "real-world testing",
 
-    # For missing concepts
-    "consent",  # Critical GDPR concept
-    "profiling",  # Already in [objectivity] but deserves own seed
+    # === DATA ACT - SPECIFICI ===
+    "IoT device",
+    "connected product",
+    "data holder",
+    "data recipient",
+    "switching cost",
+    "interoperability",
+    "smart contract",
+    "essential requirement",
+    "unfair contractual term",
+    "trade secret protection",
 
-    # To enrich existing
-    "algorithm",  # Complement to "algorithmic decision-making"
-    "assessment",  # Impact assessment, conformity assessment
+    # === DATA GOVERNANCE ACT - SPECIFICI ===
+    "data altruism organization",
+    "data cooperative",
+    "data intermediation service",
+    "consent management",
+    "public sector body",
+    "re-use of data",
+    "single information point",
+    "competent authority",
 
-    # Legal process terms
-    "obligation",  # Legal obligations
-    "right",  # Data subject rights (already derived, reinforce)
+    # === GDPR - INTEGRATIVI ===
+    "consent",
+    "legitimate interest",
+    "data minimization",
+    "purpose limitation",
+    "storage limitation",
+    "data portability",
+    "right to erasure",
+    "right to be forgotten",
+    "data breach",
+    "data protection impact assessment",
+    "DPIA",
+    "data protection officer",
+    "DPO",
+    "profiling",
+    "special category data",
+    "sensitive data",
+    "cross-border processing",
+    "lead supervisory authority",
+    "one-stop-shop mechanism",
+
+    # === TRASVERSALI - CONCETTI CHIAVE ===
+    "lawfulness of processing",
+    "fairness principle",
+    "automated profiling",
+    "safeguard measure",
+    "redress mechanism",
+    "market surveillance",
+    "standardization",
+    "incident reporting",
+    "auditability",
+    "traceability",
+    "robustness",
+    "record keeping",
+    "vulnerability assessment",
+
+    # === SETTORI/CONTESTI APPLICATIVI ===
+    "healthcare application",
+    "financial service",
+    "employment context",
+    "education and training",
+    "law enforcement",
+    "migration and border control",
+    "administration of justice",
 ]

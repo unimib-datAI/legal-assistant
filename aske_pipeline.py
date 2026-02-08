@@ -2,7 +2,7 @@
 import config
 from service.graph.aske import ASKETopicExtractor
 from service.graph.graph import Neo4jGraph
-from service.graph.seed import SEEDS_AI_DATA_FOCUSED
+from service.graph.seed import SEEDS_AI_DATA_FOCUSED, SEEDS_AI_DATA_FOCUSED_v2
 
 graph = Neo4jGraph(config.NEO4J_URI, config.NEO4J_USERNAME, config.NEO4J_PASSWORD)
 
@@ -20,13 +20,13 @@ print(f"\nTotal chunks extracted: {len(chunks)}")
 print(f"Sample chunk: {chunks[0]['text'][:100]}...")
 
 # Run full ASKE cycle for N generations
-N_GENERATIONS = 15      # Number of ASKE generations
+N_GENERATIONS = 20      # Number of ASKE generations
 ALPHA = 0.3             # Classification threshold
-BETA = 0.3              # Terminology enrichment threshold
+BETA = 0.4              # Terminology enrichment threshold
 GAMMA = 10              # Max new terms per concept per generation
 
 # Select the seed set to use
-test_seeds = SEEDS_AI_DATA_FOCUSED
+test_seeds = SEEDS_AI_DATA_FOCUSED_v2
 
 print(f"\nStarting ASKE cycle with {len(test_seeds)} seed concepts...")
 print(f"Parameters: alpha={ALPHA}, beta={BETA}, gamma={GAMMA}, generations={N_GENERATIONS}")

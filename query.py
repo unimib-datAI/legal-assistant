@@ -62,7 +62,7 @@ class NodeQueries:
     RETURN p.id AS id,
            p.text AS text,
            p.topics AS topics,
-           a.text AS article_title
+           a.title AS article_title
     LIMIT $limit
         """
     

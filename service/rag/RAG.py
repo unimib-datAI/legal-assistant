@@ -76,12 +76,12 @@ class GraphEnrichedRetriever(BaseRetriever):
 
         results = self.graph.query(
             NodeQueries.GET_ALL_PARAGRAPHS_BY_TOPIC,
-            params={"topics": topics, "limit": self.k}
+            params={"topics": topics, "limit": self.k * 2}
         )
 
         return [
             Document(
-                page_content=f"\ntext: {r['text']}\nid: {r['id']}",
+                page_content=f"{r['text']}",
                 metadata={
                     "id": r["id"],
                     "topics": r["topics"],
@@ -100,7 +100,7 @@ class GraphEnrichedRetriever(BaseRetriever):
 
     def _get_relevant_documents(self, user_query: str, *, run_manager: CallbackManagerForRetrieverRun = None) -> List[Document]:
         seen_ids = set()
-        docs = []
+        relevant_docs = []
 
         # Filter the KG based on semantic topic matching
         if self.use_topic_filter:
@@ -112,20 +112,31 @@ class GraphEnrichedRetriever(BaseRetriever):
                     logging.info(f"  - {topic}: {score:.3f}")
 
                 topic_names = [t for t, _ in matched_topics]
-                for doc in self._get_paragraphs_by_topics(topic_names):
-                    paragraph_id = doc.metadata.get("id")
+                for curr_doc in self._get_paragraphs_by_topics(topic_names):
+                    paragraph_id = curr_doc.metadata.get("id")
                     if paragraph_id and paragraph_id not in seen_ids:
                         seen_ids.add(paragraph_id)
-                        docs.append(doc)
+                        relevant_docs.append(curr_doc)
 
         # Vector similarity search
-        for doc in self.vector_store.similarity_search(user_query, k=self.k):
-            paragraph_id = self._extract_paragraph_id(doc.page_content)
-            if paragraph_id and paragraph_id not in seen_ids:
-                doc.metadata["id"] = paragraph_id
-                doc.metadata["source"] = "vector_search"
+        for curr_doc in self.vector_store.similarity_search(user_query, k=self.k * 2):
+            paragraph_id = curr_doc.metadata.get("id")
+            if paragraph_id not in seen_ids:
+                curr_doc.metadata["id"] = paragraph_id
+                curr_doc.metadata["source"] = "vector_search"
                 seen_ids.add(paragraph_id)
-                docs.append(doc)
+                relevant_docs.append(curr_doc)
 
-        logging.info(f"[Retriever] Returning {len(docs)} documents")
-        return docs[:self.k * 2]
+        # Rerank relevant docs
+        logging.info(f"[Retriever] Reranking {len(relevant_docs)} documents")
+        query_embedding = self.embedding_model.encode(user_query, show_progress_bar=False)
+        doc_embeddings = self.embedding_model.encode(
+            [doc.page_content for doc in relevant_docs],
+            show_progress_bar=False
+        )
+        similarities = cosine_similarity([query_embedding], doc_embeddings)[0]
+
+        ranked_indices = np.argsort(similarities)[::-1] # Descending order
+        ranked_docs = [relevant_docs[i] for i in ranked_indices]
+
+        return ranked_docs[:self.k]
