@@ -2,12 +2,11 @@ from langchain_classic.chains.retrieval_qa.base import RetrievalQA
 from langchain_community.vectorstores import Neo4jVector
 from langchain_core.prompts import PromptTemplate
 from langchain_neo4j import Neo4jGraph
-from langchain_openai import OpenAIEmbeddings, ChatOpenAI
+from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 
-from service.rag.RAG import GraphEnrichedRetriever
-from service.rag.prompt import ANSWER_SYNTHESIS_PROMPT, ANSWER_SYNTHESIS_PROMPT_v2
 import config
-
+from service.rag.prompt import ANSWER_SYNTHESIS_PROMPT_v2
+from service.rag.rag_naive_with_topics import GraphEnrichedRetriever
 
 QA_PROMPT = PromptTemplate(
     template=ANSWER_SYNTHESIS_PROMPT_v2,
@@ -31,7 +30,7 @@ vector_store = Neo4jVector.from_existing_graph(
     index_name="Paragraph",
     node_label="Paragraph",
     text_node_properties=["text", "id"],
-    embedding_node_property="textEmbeddingOpenAI"
+    embedding_node_property="textEmbeddingKaLM"
 )
 
 retriever = GraphEnrichedRetriever(
@@ -68,7 +67,7 @@ expert_response = [
 ]
 
 # Output file
-output_file = "E:\\Projects\\legal-assistant\\results\\rag_results_01-02_10paragraphs_first10reranked.txt"
+output_file = "E:\\Projects\\legal-assistant\\results\\prova.txt"
 
 # Run all queries and store the result
 for i, query in enumerate(queries, 1):

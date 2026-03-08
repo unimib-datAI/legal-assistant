@@ -13,7 +13,10 @@ langchain
 langchain-community
 langchain-neo4j
 langchain_openai
+langchain-huggingface
 langchain-core
 openai
 sentence-transformers
 nltk
+ollama
+huggingface_hub[hf_xet]

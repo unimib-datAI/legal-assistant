@@ -7,14 +7,11 @@ from service.scraper.metadata_parser import MetadataParser
 class EURLexHTMLParser:
     """EURLex HTML parser to extract structured data from legal documents."""
 
-    def __init__(self, html_file_path, celex, author, publication_date, date_of_application, eurolex_url, document_info_url):
+    def __init__(self, html_file_path, celex, eurolex_url, document_info_url):
         with open(html_file_path, 'r', encoding='utf-8') as f:
             self.soup = BeautifulSoup(f.read(), 'html.parser')
 
         self.celex = celex
-        self.author = author
-        self.publication_date = publication_date
-        self.date_of_application = date_of_application
         self.eurolex_url = eurolex_url
         self.document_info_url = document_info_url
 
@@ -30,9 +27,6 @@ class EURLexHTMLParser:
             'act': {
                 'celex': self.celex,
                 'title': title,
-                'author': self.author,
-                'publication_date': self.publication_date,
-                'date_of_application': self.date_of_application,
                 'eurolex_url': self.eurolex_url
             },
             'chapters': chapters_data,

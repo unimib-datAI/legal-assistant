@@ -2,7 +2,7 @@ from neo4j import GraphDatabase
 from pathlib import Path
 import sys
 from tqdm import tqdm
-from openai import OpenAI
+from sentence_transformers import SentenceTransformer
 
 # Add root directory to path to import query module
 root_dir = Path(__file__).parent.parent.parent
@@ -52,37 +52,45 @@ class Neo4jGraph:
             session.run(query, left_id=left_id, right_id=right_id)
             log.info(f"Created {relationship} relationship between {left_node_name}(id={left_id}) and {right_node_name}(id={right_id})")
             
-    def create_vector_index(self, node_name, index_name):
+    def create_vector_index(self, node_name, index_name, dimensions: int):
         with self.driver.session() as session:
             query = GeneralQueries.CREATE_VECTOR_INDEX.format(
                 node_name=node_name,
                 index_name=index_name,
+                dimensions=dimensions,
             )
             session.run(query)
-            log.info(f"Created vector index {index_name} on {node_name} nodes")
-            
-    def embed_text_openai(self, OPENAI_API_KEY, OPENAI_ENDPOINT, node_name):
-        # Initialize OpenAI client
-        client = OpenAI(api_key=OPENAI_API_KEY, base_url=OPENAI_ENDPOINT.replace("/embeddings", "") if OPENAI_ENDPOINT else None)
+            log.info(f"Created vector index {index_name} on {node_name} nodes (dimensions={dimensions})")
 
+    def embed_text(self, model: SentenceTransformer, node_name: str, batch_size: int = 32) -> int:
+        """Generate embeddings for nodes missing them using a SentenceTransformer model.
+
+        Args:
+            model: A loaded SentenceTransformer model.
+            node_name: The Neo4j node label to embed (e.g. "Paragraph").
+            batch_size: Number of texts to encode at once.
+
+        Returns:
+            The embedding dimension produced by the model.
+        """
         with self.driver.session() as session:
             retrieve_query = NodeQueries.GET_NODE_WITHOUT_EMBEDDING.format(node_name=node_name)
             nodes = list(session.run(retrieve_query).data())
             log.info(f"Found {len(nodes)} {node_name} nodes without embeddings")
 
+            if not nodes:
+                # Return dimension from a dummy encode so callers can still create the index
+                return model.get_sentence_embedding_dimension()
+
             with tqdm(total=len(nodes), desc=f"Embedding {node_name} nodes") as pbar:
-                for record in nodes:
-                    node_id = record['node_id']
-                    text = record['text']
+                for i in range(0, len(nodes), batch_size):
+                    batch = nodes[i:i + batch_size]
+                    texts = [record['text'] for record in batch]
+                    embeddings = model.encode(texts, show_progress_bar=False)
 
-                    # Generate embedding using OpenAI API
-                    response = client.embeddings.create(
-                        input=text,
-                        model="text-embedding-ada-002"
-                    )
-                    vector = response.data[0].embedding
+                    for record, vector in zip(batch, embeddings):
+                        update_query = NodeQueries.PUT_EMBEDDING.format(node_name=node_name)
+                        session.run(update_query, node_id=record['node_id'], vector=vector.tolist())
+                        pbar.update(1)
 
-                    # Store embedding in Neo4j
-                    update_query = NodeQueries.PUT_EMBEDDING.format(node_name=node_name)
-                    session.run(update_query, node_id=node_id, vector=vector)
-                    pbar.update(1)
+        return model.get_sentence_embedding_dimension()

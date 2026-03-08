@@ -17,13 +17,13 @@ class NodeQueries:
     """
     GET_NODE_WITHOUT_EMBEDDING = """
     MATCH (n:{node_name})
-    WHERE n.textEmbeddingOpenAI IS NULL
+    WHERE n.textEmbeddingKaLM IS NULL
     return n.id as node_id, n.text as text
     """
     PUT_EMBEDDING = """
     MATCH (n:{node_name})
     WHERE n.id = $node_id
-    CALL db.create.setNodeVectorProperty(n, "textEmbeddingOpenAI", $vector)
+    CALL db.create.setNodeVectorProperty(n, "textEmbeddingKaLM", $vector)
     """
     
     GET_ALL_PARAGRAPHS = """
@@ -32,49 +32,43 @@ class NodeQueries:
     ORDER BY art.id, p.id
     """
 
-    UPDATE_PARAGRAPH_TOPICS = """
-    MATCH (p:Paragraph)
-    WHERE p.id = $paragraph_id
-    SET p.topics = $topics
-    RETURN p.id as paragraph_id
+    CREATE_TOPIC_NODE = """
+    MERGE (t:Topic {label: $topic_label})
+    RETURN t.label as topic_label
+    """
+
+    CREATE_PARAGRAPH_TOPIC_RELATIONSHIP = """
+    MATCH (p:Paragraph {id: $paragraph_id})
+    MATCH (t:Topic {label: $topic_label})
+    MERGE (p)-[:RELATED_TO]->(t)
+    RETURN p.id as paragraph_id, t.label as topic_label
     """
 
     GET_ALL_UNIQUE_TOPICS = """
-    CALL() {
-      MATCH (n)
-      WHERE n.topics IS NOT NULL
-      UNWIND n.topics AS topic
-      RETURN DISTINCT topic
-      UNION
-      MATCH ()-[r]-()
-      WHERE r.topics IS NOT NULL
-      UNWIND r.topics AS topic
-      RETURN DISTINCT topic
-    }
-    RETURN collect(topic) AS topics
+    MATCH (t:Topic)
+    RETURN collect(t.label) AS topics
     """
 
     GET_ALL_PARAGRAPHS_BY_TOPIC = """
-    MATCH (p:Paragraph)
-    WHERE p.topics IS NOT NULL
-      AND ANY(topic IN p.topics WHERE topic IN $topics)
+    MATCH (p:Paragraph)-[:RELATED_TO]->(t:Topic)
+    WHERE t.label IN $topics
     MATCH (p)<-[:CONTAINS]-(a:Article)
+    WITH p, a, collect(t.label) AS topics
     RETURN p.id AS id,
            p.text AS text,
-           p.topics AS topics,
+           topics,
            a.title AS article_title
     LIMIT $limit
-        """
+    """
     
 class RelationQueries:
     """Queries for relation operations"""
 
     CREATE_RELATIONSHIP = """
-    MATCH (ln:{left_node_name}), (rn:{right_node_name})
-    WHERE ln.id = $left_id AND rn.id = $right_id
+    MATCH (ln:{left_node_name} {{id: $left_id}})
+    MATCH (rn:{right_node_name} {{id: $right_id}})
     CREATE (ln)-[:{relationship}]->(rn)
     RETURN ln.id as left_id, rn.id as right_id
-
     """
     
 class GeneralQueries:
@@ -82,9 +76,9 @@ class GeneralQueries:
     
     CREATE_VECTOR_INDEX = """
     CREATE VECTOR INDEX {index_name} IF NOT EXISTS
-    FOR (n:{node_name}) ON (n.textEmbeddingOpenAI)
+    FOR (n:{node_name}) ON (n.textEmbeddingKaLM)
     OPTIONS {{ indexConfig: {{
-        `vector.dimensions`: 1536,
+        `vector.dimensions`: {dimensions},
         `vector.similarity_function`: 'COSINE'
         }}}}
     """

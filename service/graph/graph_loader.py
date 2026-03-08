@@ -25,9 +25,6 @@ class GraphLoader:
         parser = EURLexHTMLParser(
             html_file_path=config['html_file'],
             celex=config['celex'],
-            author=config['author'],
-            publication_date=config['publication_date'],
-            date_of_application=config['date_of_application'],
             eurolex_url=config['eurolex_url'],
             document_info_url=config['document_info_url']
         )
@@ -63,9 +60,6 @@ class GraphLoader:
             node_properties={
                 'id': act['celex'],
                 'title': act['title'],
-                'author': act['author'],
-                'publication_date': act['publication_date'],
-                'date_of_application': act['date_of_application'],
                 'eurolex_url': act['eurolex_url']
             }
         )
@@ -187,7 +181,7 @@ class GraphLoader:
                 right_id=paragraph_id,
                 relationship="CONTAINS"
             )
-            
+
             self.graph.create_relationship(
                 left_node_name="Article",
                 right_node_name="Paragraph",

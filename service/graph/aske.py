@@ -360,27 +360,46 @@ class ASKETopicExtractor:
         print(f"Aggregated topics for {len(paragraph_topics)} paragraphs using '{strategy}' strategy")
         return paragraph_topics
 
-    def update_paragraph_topics(self, paragraph_topics):
-        """Update Paragraph nodes in Neo4j with their aggregated topics.
+    def update_paragraph_topics(self, paragraph_topics: dict[str, list[dict]]) -> int:
+        """Create Topic nodes and RELATED_TO relationships from paragraphs.
+
+        For each paragraph, creates Topic nodes (if not existing) and links
+        them via (Paragraph)-[:RELATED_TO]->(Topic).
 
         Args:
             paragraph_topics: Dict mapping paragraph_id to list of topic dicts
+                e.g. {"para_1": [{"topic": "privacy", "score": 0.85}, ...]}
 
         Returns:
-            Number of paragraphs updated
+            Number of paragraphs linked to topics
         """
         updated_count = 0
+        created_topics: set[str] = set()
 
         with self.graph.driver.session() as session:
             for paragraph_id, topics in paragraph_topics.items():
-                # Extract just the topic labels for the field
-                topic_labels = [t["topic"] for t in topics]
+                for topic_dict in topics:
+                    topic_label = topic_dict["topic"]
 
-                query = NodeQueries.UPDATE_PARAGRAPH_TOPICS
-                session.run(query, paragraph_id=paragraph_id, topics=topic_labels)
+                    # Create Topic node once per unique label
+                    if topic_label not in created_topics:
+                        session.run(
+                            NodeQueries.CREATE_TOPIC_NODE,
+                            topic_label=topic_label,
+                        )
+                        created_topics.add(topic_label)
+
+                    # Create RELATED_TO relationship
+                    session.run(
+                        NodeQueries.CREATE_PARAGRAPH_TOPIC_RELATIONSHIP,
+                        paragraph_id=paragraph_id,
+                        topic_label=topic_label,
+                    )
+
                 updated_count += 1
 
-        print(f"Updated {updated_count} paragraphs with topics")
+        print(f"Created {len(created_topics)} Topic nodes")
+        print(f"Linked {updated_count} paragraphs to topics via RELATED_TO")
         return updated_count
 
 

@@ -3,6 +3,8 @@ import logging
 import numpy as np
 
 from typing import List, Any
+
+import torch
 from sklearn.metrics.pairwise import cosine_similarity
 from langchain_core.retrievers import BaseRetriever
 from langchain_core.callbacks import CallbackManagerForRetrieverRun
@@ -19,7 +21,7 @@ class GraphEnrichedRetriever(BaseRetriever):
     use_topic_filter: bool = True
     top_k_topic: int = 5
     topic_similarity_threshold: float = 0.35
-    embedding_model: Any = SentenceTransformer("all-MiniLM-L6-v2")
+    embedding_model: Any = SentenceTransformer("Qwen/Qwen3-Embedding-8B",model_kwargs={"dtype": torch.float16})
     graph_topic: dict = None
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
