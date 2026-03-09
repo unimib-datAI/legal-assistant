@@ -1,23 +1,27 @@
 import logging
 
-import requests
 from bs4 import BeautifulSoup
+
+from service.scraper.browser_fetcher import BrowserFetcher
 
 logger = logging.getLogger(__name__)
 
 
 class MetadataParser:
 
-    def parse_eurovoc_descriptors(self, document_info_url):
-        try:
-            doc_synthesis = requests.get(document_info_url).text
-            soup = BeautifulSoup(doc_synthesis, 'html.parser')
-            section = self.extract_div_by_specific_id(soup, "PPLinked_Contents")
-            return self.extract_relationship_between_documents_section(section)
+    def __init__(self, fetcher: BrowserFetcher | None = None):
+        self.fetcher = fetcher or BrowserFetcher()
 
-        except requests.RequestException as e:
-            logger.warning("Request error fetching %s: %s", document_info_url, e)
+    def parse_eurovoc_descriptors(self, document_info_url: str) -> list:
+        try:
+            html = self.fetcher.fetch(document_info_url)
+        except (TimeoutError, ValueError) as e:
+            logger.warning("Failed to fetch metadata from %s: %s", document_info_url, e)
             return []
+
+        soup = BeautifulSoup(html, "html.parser")
+        section = self.extract_div_by_specific_id(soup, "PPLinked_Contents")
+        return self.extract_relationship_between_documents_section(section)
 
     def extract_div_by_specific_id(self, soup, id_prefix, multiple=True):
         """ Extract div elements with specific id prefix. """
