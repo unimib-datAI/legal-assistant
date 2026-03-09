@@ -76,7 +76,7 @@ class GeneralQueries:
     
     CREATE_VECTOR_INDEX = """
     CREATE VECTOR INDEX {index_name} IF NOT EXISTS
-    FOR (n:{node_name}) ON (n.textEmbeddingKaLM)
+    FOR (n:{node_name}) ON (n.textEmbedding)
     OPTIONS {{ indexConfig: {{
         `vector.dimensions`: {dimensions},
         `vector.similarity_function`: 'COSINE'

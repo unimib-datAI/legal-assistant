@@ -1,23 +1,29 @@
+import logging
+import pathlib
 
 import config
-from service.graph.aske import ASKETopicExtractor
+from service.topic.aske import ASKETopicExtractor
 from service.graph.graph import Neo4jGraph
-from service.graph.seed import SEEDS_AI_DATA_FOCUSED, SEEDS_AI_DATA_FOCUSED_v2
+from service.graph.seed import SEEDS_AI_DATA_FOCUSED_v2
+from service.text.preprocessor import TextPreprocessor
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    datefmt="%H:%M:%S",
+)
+logger = logging.getLogger(__name__)
 
 graph = Neo4jGraph(config.NEO4J_URI, config.NEO4J_USERNAME, config.NEO4J_PASSWORD)
 
 ASKE = ASKETopicExtractor(graph)
+preprocessor = TextPreprocessor()
 
-# Extract and preprocess paragraphs
-paragraphs = ASKE.extract_paragraphs_from_KG()
-tokenized_paragraphs = ASKE.tokenize_paragraphs(paragraphs)
-lemmatized_paragraphs = ASKE.lemmatize_paragraphs(tokenized_paragraphs)
+# Extract paragraphs from the KG and preprocess into sentence-level chunks
+paragraphs = graph.get_paragraphs_from_kg()
+chunks = preprocessor.to_chunks(paragraphs, skip_first=True)
 
-# Create chunks with paragraph_id references (skipping first element which is the number)
-chunks = ASKE.create_chunks_with_paragraph_ids(lemmatized_paragraphs, skip_first=True)
-
-print(f"\nTotal chunks extracted: {len(chunks)}")
-print(f"Sample chunk: {chunks[0]['text'][:100]}...")
+logger.info("Total chunks extracted: %d", len(chunks))
 
 # Run full ASKE cycle for N generations
 N_GENERATIONS = 20      # Number of ASKE generations
@@ -25,11 +31,12 @@ ALPHA = 0.3             # Classification threshold
 BETA = 0.4              # Terminology enrichment threshold
 GAMMA = 10              # Max new terms per concept per generation
 
-# Select the seed set to use
 test_seeds = SEEDS_AI_DATA_FOCUSED_v2
 
-print(f"\nStarting ASKE cycle with {len(test_seeds)} seed concepts...")
-print(f"Parameters: alpha={ALPHA}, beta={BETA}, gamma={GAMMA}, generations={N_GENERATIONS}")
+logger.info(
+    "Starting ASKE cycle — seeds: %d, alpha=%.2f, beta=%.2f, gamma=%d, generations=%d",
+    len(test_seeds), ALPHA, BETA, GAMMA, N_GENERATIONS,
+)
 
 concepts, final_classifications = ASKE.run_aske_cycle(
     chunks=chunks,
@@ -37,61 +44,35 @@ concepts, final_classifications = ASKE.run_aske_cycle(
     n_generations=N_GENERATIONS,
     alpha=ALPHA,
     beta=BETA,
-    gamma=GAMMA
+    gamma=GAMMA,
 )
 
-# Print final results
-print("\n" + "="*60)
-print("FINAL RESULTS")
-print("="*60)
-
-# Active concepts
 active_concepts = [c for c in concepts if c.get("active", True)]
 inactive_concepts = [c for c in concepts if not c.get("active", True)]
 
-print(f"\nTotal concepts: {len(concepts)}")
-print(f"Active concepts: {len(active_concepts)}")
-print(f"Inactive (deactivated) concepts: {len(inactive_concepts)}")
-
-# Print active concepts with their terms
-print("\n--- Active Concepts ---")
-for concept in active_concepts[:20]:  # Show first 20
-    terms = concept.get("terms", [])
-    term_labels = [t["label"] if isinstance(t, dict) else t for t in terms]
-    derived = f" (derived from: {concept['derived_from']})" if concept.get("derived_from") else ""
-    print(f"\n  [{concept['label']}]{derived}")
-    print(f"    Generation: {concept.get('generation', 0)}")
-    print(f"    Terms ({len(term_labels)}): {', '.join(term_labels[:10])}{'...' if len(term_labels) > 10 else ''}")
-
-# Print deactivated concepts
-if inactive_concepts:
-    print("\n--- Deactivated Concepts ---")
-    for concept in inactive_concepts[:10]:
-        print(f"  - {concept['label']}")
-
-# Print sample classifications
-print("\n--- Sample Classifications ---")
-for i, result in enumerate(final_classifications[:5]):
-    if result["concepts"]:
-        print(f"\nChunk {i+1}: {result['text'][:80]}...")
-        print(f"  Paragraph ID: {result.get('paragraph_id', 'N/A')}")
-        print(f"  Matched concepts:")
-        for c in result["concepts"][:3]:
-            print(f"    - {c['seed']} (score: {c['score']:.3f})")
-
-# Aggregate topics by paragraph and update Neo4j
-print("\n" + "="*60)
-print("AGGREGATING TOPICS BY PARAGRAPH")
-print("="*60)
-
-# Aggregate using max score strategy, top 3 topics per paragraph
-paragraph_topics = ASKE.aggregate_topics_by_paragraph(
-    final_classifications,
-    top_n=3,
-    strategy="max"
+logger.info(
+    "ASKE complete — Total concepts: %d, Active: %d, Inactive: %d",
+    len(concepts), len(active_concepts), len(inactive_concepts),
 )
 
-# Update Neo4j with topics
-print("\n--- Updating Neo4j ---")
-updated_count = ASKE.update_paragraph_topics(paragraph_topics)
-print(f"Updated topics for {updated_count} paragraphs in Neo4j.")
+# Aggregate topics by paragraph and update Neo4j
+paragraph_topics = ASKE.aggregate_topics_by_paragraph(final_classifications, top_n=3)
+
+updated_count = graph.update_paragraph_topics(paragraph_topics)
+logger.info("Updated topics for %d paragraphs in Neo4j", updated_count)
+
+# --- Final report ---
+report_path = pathlib.Path("results/aske_report.txt")
+report_path.parent.mkdir(parents=True, exist_ok=True)
+
+with report_path.open("w", encoding="utf-8") as f:
+    f.write("ASKE Topic Report\n")
+    f.write("=" * 60 + "\n\n")
+
+    for concept in sorted(active_concepts, key=lambda c: c["label"]):
+        terms = concept.get("terms", [])
+        term_labels = sorted({t["label"] if isinstance(t, dict) else t for t in terms})
+        f.write(f"[{concept['label']}]\n")
+        f.write(f"  Terms: {', '.join(term_labels)}\n\n")
+
+logger.info("Report written to %s", report_path)

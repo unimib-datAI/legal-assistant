@@ -3,8 +3,6 @@ from bs4 import BeautifulSoup
 
 
 class MetadataParser:
-    def __init__(self):
-        pass
 
     def parse_eurovoc_descriptors(self, document_info_url):
         try:

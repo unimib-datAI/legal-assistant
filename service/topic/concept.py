@@ -1,4 +1,4 @@
-import nltk
+import logging
 import warnings
 from collections import defaultdict
 
@@ -10,22 +10,18 @@ from sklearn.cluster import AffinityPropagation
 from sklearn.exceptions import ConvergenceWarning
 from sklearn.metrics.pairwise import cosine_similarity
 
-nltk.download('punkt_tab')
-nltk.download('wordnet')
-nltk.download('omw-1.4')
+nltk.download('punkt_tab', quiet=True)
+nltk.download('wordnet', quiet=True)
+nltk.download('omw-1.4', quiet=True)
+
+logger = logging.getLogger(__name__)
+
 
 class ConceptService:
     def __init__(self, embedding_model):
         self.embedding_model = embedding_model
 
-    def terminology_enrichment(self,
-                               concepts,
-                               classifications,
-                               chunk_embeddings,
-                               chunks,
-                               beta=0.3,
-                               gamma=5,
-                               max_candidates=50):
+    def terminology_enrichment(self, concepts, classifications, chunk_embeddings, chunks, beta=0.3, gamma=5, max_candidates=50):
         """Extract new terms from classified chunks and enrich concept terminology.
 
         Args:
@@ -91,9 +87,6 @@ class ConceptService:
                 current_concept["terms"] = []
             current_concept["terms"].extend(new_terms)
 
-            if new_terms:
-                print(f"  Concept '{label_concept}': +{len(new_terms)} terms")
-
         return concepts
 
     def concept_derivation(self, concepts, min_terms_for_clustering=3):
@@ -124,7 +117,7 @@ class ConceptService:
 
         # Batch embed missing terms
         if terms_to_embed:
-            print(f"  Embedding {len(terms_to_embed)} terms...")
+            logger.debug("Embedding %d terms...", len(terms_to_embed))
             new_embeddings = self.embedding_model.encode(terms_to_embed, show_progress_bar=False)
             for i, (c_idx, t_idx, label) in enumerate(terms_to_embed_info):
                 concepts[c_idx]["terms"][t_idx] = {"label": label, "embedding": new_embeddings[i]}
@@ -173,7 +166,7 @@ class ConceptService:
                     new_concepts.append(concept)
                     continue
             except Exception as e:
-                print(f"  Clustering failed for '{concept['label']}': {e}")
+                logger.warning("Clustering failed for '%s': %s", concept['label'], e)
                 new_concepts.append(concept)
                 continue
 
@@ -218,7 +211,7 @@ class ConceptService:
 
                 new_concepts.append(new_concept)
 
-            print(f"  '{original_label}' -> {len(clusters)} concepts")
+            logger.debug("'%s' -> %d concepts", original_label, len(clusters))
 
         # Deduplication check
         deduplicated = self._deduplicate_concepts(new_concepts)
@@ -252,7 +245,7 @@ class ConceptService:
                 deactivated_count += 1
 
         if deactivated_count > 0:
-            print(f"  Deactivated {deactivated_count} concepts with no classified chunks")
+            logger.debug("Deactivated %d concepts with no classified chunks", deactivated_count)
 
         return concepts
 
@@ -347,7 +340,7 @@ class ConceptService:
 
             # Check for duplicate label
             if label in seen_labels:
-                print(f"  Discarding duplicate label '{label}'")
+                logger.debug("Discarding duplicate label '%s'", label)
                 continue
 
             term_labels = set(
@@ -360,7 +353,7 @@ class ConceptService:
             for seen_terms in seen_term_sets:
                 if term_labels and term_labels.issubset(seen_terms):
                     is_duplicate = True
-                    print(f"  Discarding subset concept '{label}'")
+                    logger.debug("Discarding subset concept '%s'", label)
                     break
 
             if not is_duplicate:

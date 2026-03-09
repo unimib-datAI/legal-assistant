@@ -1,12 +1,22 @@
+import logging
+
+import pathlib
 from langchain_classic.chains.retrieval_qa.base import RetrievalQA
 from langchain_community.vectorstores import Neo4jVector
 from langchain_core.prompts import PromptTemplate
 from langchain_neo4j import Neo4jGraph
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
-
-import config
 from service.rag.prompt import ANSWER_SYNTHESIS_PROMPT_v2
 from service.rag.rag_naive_with_topics import GraphEnrichedRetriever
+
+import config
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    datefmt="%H:%M:%S",
+)
+logger = logging.getLogger(__name__)
 
 QA_PROMPT = PromptTemplate(
     template=ANSWER_SYNTHESIS_PROMPT_v2,
@@ -30,7 +40,7 @@ vector_store = Neo4jVector.from_existing_graph(
     index_name="Paragraph",
     node_label="Paragraph",
     text_node_properties=["text", "id"],
-    embedding_node_property="textEmbeddingKaLM"
+    embedding_node_property="textEmbedding"
 )
 
 retriever = GraphEnrichedRetriever(
@@ -67,29 +77,23 @@ expert_response = [
 ]
 
 # Output file
-output_file = "E:\\Projects\\legal-assistant\\results\\prova.txt"
+output_file = pathlib.Path("results/prova.txt")
 
 # Run all queries and store the result
 for i, query in enumerate(queries, 1):
-    print(f"\n{'='*70}")
-    print(f"Query {i}/{len(queries)}: {query[:50]}...")
-    print("="*70)
+    logger.info("Query %d/%d", i, len(queries))
 
     result = qa_chain.invoke({"query": query})
 
-    print(f"\nResponse:\n{result['result'][:200]}...")
+    answer = result['result'].replace('\r\n', '\n').replace('\r', '\n').strip()
     sources = [doc.metadata.get('id') for doc in result['source_documents']]
-    print(f"\nSources: {sources}")
 
-    # Save results to file
     with open(output_file, "a", encoding="utf-8") as f:
         f.write("=" * 70 + "\n")
         f.write(f"Query {i}: {query}\n\n")
-        f.write(f"RAG Response:\n{result['result']}\n\n")
+        f.write(f"RAG Response:\n{answer}\n\n")
         f.write(f"Sources: {sources}\n")
         f.write(f"Expert response:\n{expert_response[i-1]}\n")
         f.write("=" * 70 + "\n\n")
 
-print(f"\n{'='*70}")
-print(f"All {len(queries)} queries completed!")
-print(f"Results saved to: {output_file}")
+logger.info("All %d queries completed. Results saved to: %s", len(queries), output_file)
