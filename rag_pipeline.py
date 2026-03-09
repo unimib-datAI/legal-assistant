@@ -1,15 +1,15 @@
 import logging
-
 import pathlib
+
 from langchain_classic.chains.retrieval_qa.base import RetrievalQA
 from langchain_community.vectorstores import Neo4jVector
 from langchain_core.prompts import PromptTemplate
 from langchain_neo4j import Neo4jGraph
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
-from service.rag.prompt import ANSWER_SYNTHESIS_PROMPT_v2
-from service.rag.rag_naive_with_topics import GraphEnrichedRetriever
 
 import config
+from service.rag.prompt import ANSWER_SYNTHESIS_PROMPT_v2
+from service.rag.rag_naive_with_topics import GraphEnrichedRetriever
 
 logging.basicConfig(
     level=logging.INFO,

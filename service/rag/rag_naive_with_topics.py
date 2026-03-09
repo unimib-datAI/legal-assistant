@@ -1,16 +1,19 @@
-import re
 import logging
-import numpy as np
-
+import re
 from typing import List, Any
 
-from sklearn.metrics.pairwise import cosine_similarity
-from langchain_core.retrievers import BaseRetriever
+import numpy as np
 from langchain_core.callbacks import CallbackManagerForRetrieverRun
 from langchain_core.documents import Document
+from langchain_core.retrievers import BaseRetriever
 from pydantic import ConfigDict
 from sentence_transformers import SentenceTransformer
+from sklearn.metrics.pairwise import cosine_similarity
+
 from service.graph.query import NodeQueries
+
+logger = logging.getLogger(__name__)
+
 
 class GraphEnrichedRetriever(BaseRetriever):
     """Retriever combining semantic topic filtering with vector similarity search."""
@@ -35,7 +38,6 @@ class GraphEnrichedRetriever(BaseRetriever):
         extracted_topics = result[0]["topics"]
 
         if not extracted_topics:
-            # return empty for consistency
             self.graph_topic = {"topics": [], "embeddings": np.array([])}
         else:
             embeddings = self.embedding_model.encode(extracted_topics, show_progress_bar=False)
@@ -57,17 +59,15 @@ class GraphEnrichedRetriever(BaseRetriever):
         extracted_topics = self.extract_unique_topics_and_related_embeddings()
 
         if not extracted_topics["topics"]:
-            logging.info(f"No topics found for user query: {user_query}")
+            logger.info("No topics found for user query: %s", user_query)
             return []
 
-        # Generate embedding for the user query to match against topic embeddings
         query_embedding = self.embedding_model.encode(user_query, show_progress_bar=False)
         similarities = cosine_similarity([query_embedding], extracted_topics["embeddings"])[0]
 
         matches = self._filter_and_rank_topics(extracted_topics["topics"], similarities)
         matches.sort(key=lambda match: match[1], reverse=True)
 
-        # Return top-k topics
         return matches[:self.top_k_topic]
 
     def _get_paragraphs_by_topics(self, topics: List[str]) -> List[Document]:
@@ -103,14 +103,12 @@ class GraphEnrichedRetriever(BaseRetriever):
         seen_ids = set()
         relevant_docs = []
 
-        # Filter the KG based on semantic topic matching
         if self.use_topic_filter:
             matched_topics = self._match_topics(user_query)
 
             if matched_topics:
-                logging.info("[Semantic Topic Filter] Matched topics:")
-                for topic, score in matched_topics:
-                    logging.info(f"  - {topic}: {score:.3f}")
+                logger.info("[Semantic Topic Filter] Matched topics: %s",
+                            ", ".join(f"{t}({s:.3f})" for t, s in matched_topics))
 
                 topic_names = [t for t, _ in matched_topics]
                 for curr_doc in self._get_paragraphs_by_topics(topic_names):
@@ -119,7 +117,6 @@ class GraphEnrichedRetriever(BaseRetriever):
                         seen_ids.add(paragraph_id)
                         relevant_docs.append(curr_doc)
 
-        # Vector similarity search
         for curr_doc in self.vector_store.similarity_search(user_query, k=self.k * 2):
             paragraph_id = curr_doc.metadata.get("id")
             if paragraph_id not in seen_ids:
@@ -128,8 +125,7 @@ class GraphEnrichedRetriever(BaseRetriever):
                 seen_ids.add(paragraph_id)
                 relevant_docs.append(curr_doc)
 
-        # Rerank relevant docs
-        logging.info(f"[Retriever] Reranking {len(relevant_docs)} documents")
+        logger.info("[Retriever] Reranking %d documents", len(relevant_docs))
         query_embedding = self.embedding_model.encode(user_query, show_progress_bar=False)
         doc_embeddings = self.embedding_model.encode(
             [doc.page_content for doc in relevant_docs],
@@ -137,7 +133,7 @@ class GraphEnrichedRetriever(BaseRetriever):
         )
         similarities = cosine_similarity([query_embedding], doc_embeddings)[0]
 
-        ranked_indices = np.argsort(similarities)[::-1] # Descending order
+        ranked_indices = np.argsort(similarities)[::-1]
         ranked_docs = [relevant_docs[i] for i in ranked_indices]
 
         return ranked_docs[:self.k]

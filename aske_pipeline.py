@@ -2,10 +2,10 @@ import logging
 import pathlib
 
 import config
-from service.topic.aske import ASKETopicExtractor
 from service.graph.graph import Neo4jGraph
 from service.graph.seed import SEEDS_AI_DATA_FOCUSED_v2
 from service.text.preprocessor import TextPreprocessor
+from service.topic.aske import ASKETopicExtractor
 
 logging.basicConfig(
     level=logging.INFO,

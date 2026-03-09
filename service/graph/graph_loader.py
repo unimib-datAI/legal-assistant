@@ -1,10 +1,10 @@
-
+import logging
 import re
+
 from service.scraper.eurlex_exporter import EURLexHTMLParser
 from service.graph import Neo4jGraph
-import logging as log
 
-log.basicConfig(level=log.INFO, format='%(asctime)s | %(levelname)s | %(message)s')
+logger = logging.getLogger(__name__)
 
 
 class GraphLoader:
@@ -21,7 +21,6 @@ class GraphLoader:
             config: Dict with keys: html_file, celex, author, publication_date,
                    date_of_application, eurolex_url, document_info_url
         """
-        # Extract data using the existing parser
         parser = EURLexHTMLParser(
             html_file_path=config['html_file'],
             celex=config['celex'],
@@ -31,14 +30,13 @@ class GraphLoader:
 
         data = parser.extract_data()
 
-        # Load into graph
         self._load_act(data['act'])
         self._load_chapters(data['act'], data['chapters'])
         self._load_recitals(data['act'], data['recitals'])
         self._load_citations(data['citations'])
         self._load_case_law(data['act'], data['case_law'])
 
-        log.info(f"Loaded document {config['celex']} into graph")
+        logger.info("Loaded document %s into graph", config['celex'])
 
     def load_all_documents(self, documents_config):
         """
@@ -51,7 +49,7 @@ class GraphLoader:
             try:
                 self.load_document(config)
             except Exception as e:
-                log.error(f"Error loading {config['celex']}: {str(e)}")
+                logger.error("Error loading %s: %s", config['celex'], e)
 
     def _load_act(self, act):
         """Create Act node."""
@@ -70,7 +68,6 @@ class GraphLoader:
             chapter_id = f"{act['celex']}{chapter['id']}"
             chapter_number = self._extract_number(chapter['id'], 'cpt_')
 
-            # Create Chapter node
             self.graph.create_graph_node(
                 node_name="Chapter",
                 node_properties={
@@ -80,7 +77,6 @@ class GraphLoader:
                 }
             )
 
-            # Create Act -> Chapter relationship
             self.graph.create_relationship(
                 left_node_name="Act",
                 right_node_name="Chapter",
@@ -89,10 +85,7 @@ class GraphLoader:
                 relationship="CONTAINS"
             )
 
-            # Load sections within chapter
             self._load_sections(act, chapter, chapter_id)
-
-            # Load articles directly in chapter (not in sections)
             self._load_articles(act, chapter, chapter_id, None)
 
     def _load_sections(self, act, chapter, chapter_id):
@@ -100,7 +93,6 @@ class GraphLoader:
         for section in chapter['sections']:
             section_id = f"{act['celex']}{section['id']}"
 
-            # Create Section node
             self.graph.create_graph_node(
                 node_name="Section",
                 node_properties={
@@ -109,7 +101,6 @@ class GraphLoader:
                 }
             )
 
-            # Create Chapter -> Section relationship
             self.graph.create_relationship(
                 left_node_name="Chapter",
                 right_node_name="Section",
@@ -118,7 +109,6 @@ class GraphLoader:
                 relationship="CONTAINS"
             )
 
-            # Load articles within section
             self._load_articles(act, section, chapter_id, section_id)
 
     def _load_articles(self, act, parent, chapter_id, section_id):
@@ -126,7 +116,6 @@ class GraphLoader:
         for article in parent['articles']:
             article_id = f"{act['celex']}{article['id']}"
 
-            # Create Article node
             self.graph.create_graph_node(
                 node_name="Article",
                 node_properties={
@@ -136,9 +125,7 @@ class GraphLoader:
                 }
             )
 
-            # Create parent -> Article relationship
             if section_id:
-                # Article is in a Section
                 self.graph.create_relationship(
                     left_node_name="Section",
                     right_node_name="Article",
@@ -147,7 +134,6 @@ class GraphLoader:
                     relationship="CONTAINS"
                 )
             else:
-                # Article is directly in a Chapter
                 self.graph.create_relationship(
                     left_node_name="Chapter",
                     right_node_name="Article",
@@ -156,7 +142,6 @@ class GraphLoader:
                     relationship="CONTAINS"
                 )
 
-            # Load paragraphs
             self._load_paragraphs(act, article, article_id)
 
     def _load_paragraphs(self, act, article, article_id):
@@ -164,7 +149,6 @@ class GraphLoader:
         for paragraph in article['paragraphs']:
             paragraph_id = f"{act['celex']}_{paragraph['id']}"
 
-            # Create Paragraph node
             self.graph.create_graph_node(
                 node_name="Paragraph",
                 node_properties={
@@ -173,7 +157,6 @@ class GraphLoader:
                 }
             )
 
-            # Create Article -> Paragraph relationship
             self.graph.create_relationship(
                 left_node_name="Article",
                 right_node_name="Paragraph",
@@ -195,7 +178,6 @@ class GraphLoader:
         for recital in recitals:
             recital_id = f"{act['celex']}{recital['id']}"
 
-            # Create Recital node
             self.graph.create_graph_node(
                 node_name="Recital",
                 node_properties={
@@ -205,7 +187,6 @@ class GraphLoader:
                 }
             )
 
-            # Create Act -> Recital relationship
             self.graph.create_relationship(
                 left_node_name="Act",
                 right_node_name="Recital",
@@ -226,28 +207,23 @@ class GraphLoader:
                     relationship=citation['citation_type']
                 )
             except Exception as e:
-                # Citation might reference non-existent article
-                print(f"  ⚠ Skipped citation {citation['from_article_id']} -> {citation['to_article_id']}: {e}")
+                logger.warning("Skipped citation %s -> %s: %s",
+                               citation['from_article_id'], citation['to_article_id'], e)
 
     def _load_case_law(self, act, case_law_list):
         """Create CaseLaw nodes and their interpretation relationships."""
         for case_law in case_law_list:
             case_law_id = case_law['case_law_identifier']
 
-            # Create CaseLaw node (if not already exists)
             try:
                 self.graph.create_graph_node(
                     node_name="CaseLaw",
-                    node_properties={
-                        'id': case_law_id
-                    }
+                    node_properties={'id': case_law_id}
                 )
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug("CaseLaw node '%s' already exists or could not be created: %s", case_law_id, e)
 
-            # Create interpretation relationships
             if case_law.get('paragraph'):
-                # Case law interprets a specific paragraph
                 paragraph_id = f"{act['celex']}_{case_law['paragraph']}"
                 self.graph.create_relationship(
                     left_node_name="CaseLaw",
@@ -257,7 +233,6 @@ class GraphLoader:
                     relationship="INTERPRETS"
                 )
             elif case_law.get('article'):
-                # Case law interprets an article
                 article_id = f"{act['celex']}{case_law['article']}"
                 self.graph.create_relationship(
                     left_node_name="CaseLaw",
@@ -267,7 +242,6 @@ class GraphLoader:
                     relationship="INTERPRETS"
                 )
             elif case_law.get('chapter'):
-                # Case law interprets a chapter
                 chapter_id = f"{act['celex']}{case_law['chapter']}"
                 self.graph.create_relationship(
                     left_node_name="CaseLaw",

@@ -1,5 +1,9 @@
+import logging
+
 import requests
 from bs4 import BeautifulSoup
+
+logger = logging.getLogger(__name__)
 
 
 class MetadataParser:
@@ -12,9 +16,8 @@ class MetadataParser:
             return self.extract_relationship_between_documents_section(section)
 
         except requests.RequestException as e:
-            print(f"Request error: {e}")
-        except Exception as e:
-            print(f"A generic error occurred: {e}")
+            logger.warning("Request error fetching %s: %s", document_info_url, e)
+            return []
 
     def extract_div_by_specific_id(self, soup, id_prefix, multiple=True):
         """ Extract div elements with specific id prefix. """
@@ -38,7 +41,6 @@ class MetadataParser:
                 if not dd_elem:
                     continue
 
-                # Process each list item
                 for li_item in dd_elem.find_all('li', class_='defaultUnderlined'):
                     content = self.extract_case_law_content(li_item)
                     if content:
@@ -56,21 +58,18 @@ class MetadataParser:
         full_text = li_item.get_text(strip=True)
 
         """
-        This filter is necessary to identify 'final judgment' case law, even though there may be case law with 
+        This filter is necessary to identify 'final judgment' case law, even though there may be case law with
         a preliminary ruling that is trying to get a response from the court.
         """
         if 'Interpreted by' not in full_text:
             return None
 
-        # Extract case CELEX from link
         link = li_item.find('a')
         if not link or not link.get('data-celex'):
             return None
 
-        # Extract article reference from the full text (Es: 'A02P1')
         article_reference = full_text.split('Interpreted by')[0].strip()
 
-        # Only return if article reference exists
         if not article_reference:
             return None
 
@@ -108,9 +107,7 @@ class MetadataParser:
                 article_num, paragraph_part = rest.split('P')
                 article_num = int(article_num)
 
-                # Extract only the numeric digits from the paragraph part
                 paragraph_digits = "".join(filter(str.isdigit, paragraph_part))
-                # Remap paragraph to the Eur-Lex format with leading zeros (Es: 001.011)
                 paragraph = f'{article_num:03d}.{int(paragraph_digits):03d}'
             else:
                 article_num = int(rest)
