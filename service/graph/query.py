@@ -17,13 +17,13 @@ class NodeQueries:
     """
     GET_NODE_WITHOUT_EMBEDDING = """
     MATCH (n:{node_name})
-    WHERE n.textEmbeddingKaLM IS NULL
+    WHERE n.textEmbedding IS NULL
     return n.id as node_id, n.text as text
     """
     PUT_EMBEDDING = """
     MATCH (n:{node_name})
     WHERE n.id = $node_id
-    CALL db.create.setNodeVectorProperty(n, "textEmbeddingKaLM", $vector)
+    CALL db.create.setNodeVectorProperty(n, "textEmbedding", $vector)
     """
     
     GET_ALL_PARAGRAPHS = """

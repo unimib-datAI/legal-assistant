@@ -17,6 +17,7 @@ langchain-huggingface
 langchain-core
 openai
 sentence-transformers
+FlagEmbedding
 nltk
 ollama
 huggingface_hub[hf_xet]

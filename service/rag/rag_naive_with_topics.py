@@ -111,21 +111,30 @@ class GraphEnrichedRetriever(BaseRetriever):
                             ", ".join(f"{t}({s:.3f})" for t, s in matched_topics))
 
                 topic_names = [t for t, _ in matched_topics]
+                topic_docs = []
                 for curr_doc in self._get_paragraphs_by_topics(topic_names):
                     paragraph_id = curr_doc.metadata.get("id")
                     if paragraph_id and paragraph_id not in seen_ids:
                         seen_ids.add(paragraph_id)
                         relevant_docs.append(curr_doc)
+                        topic_docs.append(paragraph_id)
+                logger.info("[Topic Filter] Retrieved %d paragraphs: %s", len(topic_docs), topic_docs)
 
+        vector_ids = []
         for curr_doc in self.vector_store.similarity_search(user_query, k=self.k * 2):
-            paragraph_id = curr_doc.metadata.get("id")
+            paragraph_id = curr_doc.metadata.get("id") or self._extract_paragraph_id(curr_doc.page_content)
             if paragraph_id not in seen_ids:
                 curr_doc.metadata["id"] = paragraph_id
                 curr_doc.metadata["source"] = "vector_search"
                 seen_ids.add(paragraph_id)
                 relevant_docs.append(curr_doc)
+                vector_ids.append(paragraph_id)
+        logger.info("[Vector Search] Retrieved %d paragraphs: %s", len(vector_ids), vector_ids)
 
-        logger.info("[Retriever] Reranking %d documents", len(relevant_docs))
+        logger.info("[Retriever] Reranking %d documents total", len(relevant_docs))
+        if not relevant_docs:
+            return []
+
         query_embedding = self.embedding_model.encode(user_query, show_progress_bar=False)
         doc_embeddings = self.embedding_model.encode(
             [doc.page_content for doc in relevant_docs],
@@ -134,6 +143,7 @@ class GraphEnrichedRetriever(BaseRetriever):
         similarities = cosine_similarity([query_embedding], doc_embeddings)[0]
 
         ranked_indices = np.argsort(similarities)[::-1]
-        ranked_docs = [relevant_docs[i] for i in ranked_indices]
+        ranked_docs = [relevant_docs[i] for i in ranked_indices][:self.k]
 
-        return ranked_docs[:self.k]
+        logger.info("[Retriever] Final top-%d: %s", self.k, [d.metadata.get("id") for d in ranked_docs])
+        return ranked_docs

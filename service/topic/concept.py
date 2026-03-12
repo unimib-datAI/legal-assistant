@@ -13,13 +13,40 @@ from sklearn.metrics.pairwise import cosine_similarity
 nltk.download('punkt_tab', quiet=True)
 nltk.download('wordnet', quiet=True)
 nltk.download('omw-1.4', quiet=True)
+nltk.download('averaged_perceptron_tagger_eng', quiet=True)
+
+# Legal/structural stopwords that should never become topic labels
+LEGAL_STOPWORDS = frozenset({
+    # structural words from legislation
+    "article", "paragraph", "section", "chapter", "regulation", "directive",
+    "pursuant", "thereof", "herein", "whereas", "shall", "referred",
+    "subparagraph", "annex", "recital", "provision", "point",
+    # generic verbs/adjectives that leak through as topics
+    "imposed", "processed", "implementing", "apply", "establish", "allow",
+    "designate", "provided", "used", "approved", "issued", "empowered",
+    "laid", "specified", "notified", "registered", "certain", "relevant",
+    "available", "sufficiently", "proper", "balanced", "capable", "effective",
+    # temporal/vague
+    "week", "month", "year", "period", "later", "delay", "urgent", "while",
+    "periodic", "receipt", "forum", "journal",
+    # too generic
+    "code", "activity", "document", "order", "rule", "level", "format",
+    "amount", "process", "subject", "right", "relation", "standard",
+    "regard", "purpose", "information", "country", "union", "market",
+    "cost", "price", "staff", "power",
+})
+
+# POS tags considered valid for topic terms (nouns and proper nouns)
+VALID_POS_TAGS = frozenset({"NN", "NNS", "NNP", "NNPS"})
 
 logger = logging.getLogger(__name__)
 
 
 class ConceptService:
-    def __init__(self, embedding_model):
+    def __init__(self, embedding_model, seed_embeddings: np.ndarray = None, seed_labels: list[str] = None):
         self.embedding_model = embedding_model
+        self.seed_embeddings = seed_embeddings
+        self.seed_labels = frozenset(l.lower() for l in seed_labels) if seed_labels else frozenset()
 
     def terminology_enrichment(self, concepts, classifications, chunk_embeddings, chunks, beta=0.3, gamma=5, max_candidates=50):
         """Extract new terms from classified chunks and enrich concept terminology.
@@ -213,10 +240,16 @@ class ConceptService:
 
             logger.debug("'%s' -> %d concepts", original_label, len(clusters))
 
-        # Deduplication check
-        deduplicated = self._deduplicate_concepts(new_concepts)
+        # Validate derived concepts against seed embeddings
+        validated = self._validate_against_seeds(new_concepts)
 
-        return deduplicated
+        # Deduplication check
+        deduplicated = self._deduplicate_concepts(validated)
+
+        # Merge near-duplicate concepts by embedding similarity
+        merged = self._merge_similar_concepts(deduplicated)
+
+        return merged
 
     def deactivate_unused_concepts(self, concepts, classifications):
         """Deactivate concepts that don't classify any document chunk.
@@ -252,13 +285,22 @@ class ConceptService:
     def _extract_candidate_terms(self, concept_chunks, current_concept, max_candidates=50):
         """
         Extract candidate terms from concept chunks based on term frequency.
+
+        Filters by POS tag (nouns only) and excludes legal/structural stopwords
+        to prevent noise terms like 'imposed', 'while', 'paragraph' from becoming topics.
         """
         term_counts = defaultdict(int)
         for chunk in concept_chunks:
-            words = word_tokenize(chunk)  # Tokenize chunk into words
-            for word in words:
-                if word.isalpha() and len(word) > 3:  # no number, just letter and increased min length
-                    term_counts[word.lower()] += 1  # Count term frequency
+            words = word_tokenize(chunk)
+            tagged = nltk.pos_tag(words)
+            for word, pos in tagged:
+                if (
+                    word.isalpha()
+                    and len(word) > 3
+                    and pos in VALID_POS_TAGS
+                    and word.lower() not in LEGAL_STOPWORDS
+                ):
+                    term_counts[word.lower()] += 1
 
         # Extract existing terms from the concept
         existing_terms = set()
@@ -325,6 +367,114 @@ class ConceptService:
                 })
 
         return enriched_terms
+
+    def _validate_against_seeds(self, concepts, min_seed_similarity: float = 0.4):
+        """Discard derived concepts that are noise.
+
+        Applies two filters to derived concepts (originals are always kept):
+        1. Seed similarity gate: must have cosine similarity >= min_seed_similarity
+           to at least one seed embedding.
+        2. Single-word gate: single-word derived labels are discarded unless they
+           exactly match a seed label. Single-word derivations like 'nature', 'fact',
+           'part' are almost always noise.
+
+        Args:
+            concepts: List of concept dicts
+            min_seed_similarity: Minimum cosine similarity to any seed to keep a derived concept
+
+        Returns:
+            Filtered list of concepts
+        """
+        if self.seed_embeddings is None or len(self.seed_embeddings) == 0:
+            return concepts
+
+        kept = []
+        discarded_count = 0
+
+        for concept in concepts:
+            is_original = concept.get("derived_from") is None and concept.get("generation", 0) == 0
+            if is_original:
+                kept.append(concept)
+                continue
+
+            label = concept["label"]
+
+            # Single-word derived concepts must be an exact seed match to survive
+            if " " not in label and label.lower() not in self.seed_labels:
+                discarded_count += 1
+                logger.debug("Discarding single-word derived concept '%s'", label)
+                continue
+
+            concept_emb = concept.get("embedding")
+            if concept_emb is None:
+                concept_emb = self.embedding_model.encode(label, show_progress_bar=False)
+
+            max_sim = float(cosine_similarity([concept_emb], self.seed_embeddings).max())
+
+            if max_sim >= min_seed_similarity:
+                kept.append(concept)
+            else:
+                discarded_count += 1
+                logger.debug("Discarding derived concept '%s' (max seed sim=%.3f)", label, max_sim)
+
+        if discarded_count > 0:
+            logger.info("Seed validation: discarded %d/%d derived concepts (threshold=%.2f)",
+                        discarded_count, len(concepts) - len(kept) + discarded_count, min_seed_similarity)
+
+        return kept
+
+    def _merge_similar_concepts(self, concepts, merge_threshold: float = 0.85):
+        """Merge near-duplicate concepts by embedding similarity.
+
+        When two concepts have cosine similarity >= merge_threshold, the one with
+        the shorter (less specific) label is absorbed into the longer one.
+        E.g. 'supervisory' is merged into 'supervisory authority'.
+
+        Args:
+            concepts: List of concept dicts
+            merge_threshold: Cosine similarity above which concepts are merged
+
+        Returns:
+            Deduplicated list of concepts
+        """
+        if len(concepts) <= 1:
+            return concepts
+
+        embeddings = []
+        for c in concepts:
+            emb = c.get("embedding")
+            if emb is None:
+                emb = self.embedding_model.encode(c["label"], show_progress_bar=False)
+                c["embedding"] = emb
+            embeddings.append(emb)
+
+        sim_matrix = cosine_similarity(np.array(embeddings))
+
+        absorbed = set()
+        for i in range(len(concepts)):
+            if i in absorbed:
+                continue
+            for j in range(i + 1, len(concepts)):
+                if j in absorbed:
+                    continue
+                if sim_matrix[i][j] >= merge_threshold:
+                    label_i = concepts[i]["label"]
+                    label_j = concepts[j]["label"]
+                    # Keep the more specific label (longer or multi-word)
+                    if len(label_i) >= len(label_j):
+                        absorbed.add(j)
+                        logger.debug("Merging '%s' into '%s' (sim=%.3f)", label_j, label_i, sim_matrix[i][j])
+                    else:
+                        absorbed.add(i)
+                        logger.debug("Merging '%s' into '%s' (sim=%.3f)", label_i, label_j, sim_matrix[i][j])
+                        break  # i is absorbed, stop checking its pairs
+
+        merged = [c for idx, c in enumerate(concepts) if idx not in absorbed]
+
+        if absorbed:
+            logger.info("Merged %d near-duplicate concepts (threshold=%.2f)", len(absorbed), merge_threshold)
+
+        return merged
 
     def _deduplicate_concepts(self, concepts):
         """Remove duplicate concepts by label and by term sets."""

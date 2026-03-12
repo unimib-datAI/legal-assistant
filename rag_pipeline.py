@@ -32,6 +32,7 @@ graph = Neo4jGraph(
 # 1. Vector search for semantic similarity
 vector_store = Neo4jVector.from_existing_graph(
     embedding=OpenAIEmbeddings(
+        model="text-embedding-3-small",
         api_key=config.OPENAI_API_KEY
     ),
     url=config.NEO4J_URI,
@@ -47,7 +48,7 @@ retriever = GraphEnrichedRetriever(
     vector_store=vector_store,
     graph=graph,
     k=5,
-    use_topic_filter=True  # Enable topic-based filtering
+    use_topic_filter=True
 )
 
 qa_chain = RetrievalQA.from_chain_type(

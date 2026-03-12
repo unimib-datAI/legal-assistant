@@ -1,9 +1,9 @@
 import logging
 import sys
 from pathlib import Path
+from typing import Callable
 
 from neo4j import GraphDatabase
-from sentence_transformers import SentenceTransformer
 from tqdm import tqdm
 
 # Add root directory to path to import query module
@@ -68,16 +68,23 @@ class Neo4jGraph:
             session.run(query)
             logger.info("Created vector index %s on %s nodes (dimensions=%d)", index_name, node_name, dimensions)
 
-    def generate_text_embeddings(self, model: SentenceTransformer, node_name: str, batch_size: int = 32) -> int:
-        """Generate embeddings for nodes missing them using a SentenceTransformer model.
+    def generate_text_embeddings(
+        self,
+        embed_fn: Callable[[list[str]], list[list[float]]],
+        embedding_dim: int,
+        node_name: str,
+        batch_size: int = 32,
+    ) -> int:
+        """Generate embeddings for nodes missing them using any embedding callable.
 
         Args:
-            model: A loaded SentenceTransformer model.
+            embed_fn: Callable that takes a list of strings and returns a list of float vectors.
+            embedding_dim: Dimensionality of the vectors produced by embed_fn.
             node_name: The Neo4j node label to embed (e.g. "Paragraph").
             batch_size: Number of texts to encode at once.
 
         Returns:
-            The embedding dimension produced by the model.
+            The embedding dimension.
         """
         with self.driver.session() as session:
             retrieve_query = NodeQueries.GET_NODE_WITHOUT_EMBEDDING.format(node_name=node_name)
@@ -85,20 +92,20 @@ class Neo4jGraph:
             logger.info("Found %d %s nodes without embeddings", len(nodes), node_name)
 
             if not nodes:
-                return model.get_sentence_embedding_dimension()
+                return embedding_dim
 
             with tqdm(total=len(nodes), desc=f"Embedding {node_name} nodes") as pbar:
                 for i in range(0, len(nodes), batch_size):
                     batch = nodes[i:i + batch_size]
                     texts = [record['text'] for record in batch]
-                    embeddings = model.encode(texts, show_progress_bar=False)
+                    embeddings = embed_fn(texts)
 
                     for record, vector in zip(batch, embeddings):
                         update_query = NodeQueries.PUT_EMBEDDING.format(node_name=node_name)
-                        session.run(update_query, node_id=record['node_id'], vector=vector.tolist())
+                        session.run(update_query, node_id=record['node_id'], vector=vector)
                         pbar.update(1)
 
-        return model.get_sentence_embedding_dimension()
+        return embedding_dim
 
     def get_paragraphs_from_kg(self):
         """Extract paragraphs from Knowledge Graph"""

@@ -1,8 +1,7 @@
 import logging
 
-from sentence_transformers import SentenceTransformer
-
 import config
+from langchain_openai import OpenAIEmbeddings
 from service.graph.graph import Neo4jGraph
 from service.graph.graph_loader import GraphLoader
 from service.scraper.eurlex_document_utils import EurlexDocumentUtils
@@ -35,8 +34,13 @@ documents_config = [eurlex_document_utils.build_document_config(celex) for celex
 # Load all documents into the graph
 loader.load_all_documents(documents_config)
 
-# Generate embeddings for Paragraph nodes
-dimensions = graph.generate_text_embeddings(SentenceTransformer("all-MiniLM-L6-v2"), "Paragraph")
+# Generate embeddings for Paragraph nodes using OpenAI text-embedding-3-small
+openai_embeddings = OpenAIEmbeddings(model="text-embedding-3-small", api_key=config.OPENAI_API_KEY)
+dimensions = graph.generate_text_embeddings(
+    embed_fn=openai_embeddings.embed_documents,
+    embedding_dim=1536,
+    node_name="Paragraph",
+)
 
 # Create vector index for similarity search
 graph.create_vector_index("Paragraph", "Paragraph", dimensions)

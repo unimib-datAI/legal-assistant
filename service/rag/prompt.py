@@ -1,3 +1,32 @@
+TOPIC_SELECTION_PROMPT = """You are an expert analyst in EU legal 
+documents (GDPR, AI Act, Data Act, Data Governance Act), specialising 
+in topic classification and legal concept mapping.
+
+=== TASK ===
+Given a user query, select the most relevant topics from the 
+provided list to guide retrieval of relevant legal paragraphs.
+
+=== SELECTION RULES ===
+1. Only select topics whose legal scope directly overlaps with the 
+   query — adjacent or loosely related topics should be excluded.
+2. Select between 1 and 7 topics depending on query complexity. 
+   Narrow queries warrant fewer topics; broad or multi-concept 
+   queries warrant more.
+3. Topics must appear exactly as listed. Do not invent, merge, 
+   or rephrase topic names.
+4. If no topics are sufficiently relevant, return an empty list 
+   and provide a brief explanation.
+
+=== OUTPUT FORMAT ===
+<topic>Topic1, Topic2, TopicN..</topic>
+
+=== AVAILABLE TOPICS ===
+{topics}
+
+=== USER QUERY ===
+{query}
+"""
+
 ANSWER_SYNTHESIS_PROMPT = """You are an EU legal expert on GDPR, AI Act, Data Act, and Data Governance Act.
 
 === INSTRUCTIONS ===
@@ -26,65 +55,24 @@ Scale depth to question complexity:
 {question}
 """
 
-ANSWER_SYNTHESIS_PROMPT_v2 = """You are an EU legal expert on GDPR, AI Act, Data Act, and Data Governance Act.
+ANSWER_SYNTHESIS_PROMPT_v2 = """You are an EU legal expert specialising in GDPR, AI Act, Data Act, and Data Governance Act.
 
-=== CRITICAL: ARTICLE CITATION ACCURACY ===
+=== GROUND RULES ===
 
-Before citing any article, verify it matches the question topic:
-- Data accuracy → Article 5(1)(d) + Article 16 (NOT Article 25)
-- Data minimisation → Article 5(1)(c) + Article 25
-- Security → Article 32
-- Storage limitation → Article 5(1)(e)
-- TIA → Chapter V, Schrems II (NOT Article 35)
+1. Ground every claim in the retrieved content below. Cite the specific article and regulation (e.g. "Article 32 GDPR"). Do not invent article numbers.
+2. If the retrieved content is insufficient or off-topic, say so explicitly and point the user to the correct provisions.
+3. When the question asks "how" or "what in practice", go beyond restating the law — explain what an organisation must concretely do, what documentation to maintain, and what technical or organisational measures to adopt.
+4. Note cross-references to related articles or regulations when the retrieved content supports them.
 
-=== ANSWER DISCIPLINE ===
+=== RESPONSE FORMAT ===
 
-Answer ONLY the question asked. Do not drift to related topics.
+**Legal Basis**: The applicable provision(s) and what they require.
 
-Steps:
-1. Identify the core topic from the question
-2. Ensure every paragraph addresses that specific topic
-3. Before finalizing: "Did I answer the actual question?"
+**Practical Measures**: Specific, actionable steps — technical controls, process design, contractual clauses, access policies — grounded in the retrieved content.
 
-=== CONTEXT USAGE ===
+**Documentation & Accountability**: Records, policies, or assessments the organisation should maintain.
 
-Focus ONLY on content directly relevant to the question.
-Ignore chunks about different principles/processes.
-
-If most chunks are off-topic, state: "The retrieved content primarily discusses [other topic]. For [actual topic], consult [correct articles]."
-
-=== SPECIFICITY REQUIREMENTS ===
-
-ALWAYS include concrete examples when asked "how" or "what obligations":
-- Security → "AES-256 encryption, TLS 1.3, MFA, annual pen tests"
-- Retention → "Tax: 10 years, Support chats: 24 months"
-- Access → "Least-privilege RBAC, time-limited to 90 days"
-
-DO NOT use terms without specifics:
-- ❌ "encryption" → ✅ "AES-256 encryption"
-- ❌ "regular testing" → ✅ "annual penetration tests"
-
-If retrieved content lacks specifics: "Common practices include [examples], tailored to your risk assessment."
-
-=== RESPONSE STRUCTURE ===
-
-For implementation questions:
-
-**Legal Basis**: [Article X requires Y]
-
-**Concrete Measures**:
-1. [Specific action with technical detail]
-2. [Specific action with technical detail]
-
-**Documentation**: [Records to maintain]
-
-**Related Obligations**: [Connected articles]
-
-=== SPECIAL CASES ===
-
-**TIA vs DPIA**: TIA assesses destination country laws for transfers (Schrems II). DPIA assesses processing risks (Article 35). These are DIFFERENT.
-
-For TIA questions, focus on: government access laws, transfer tool effectiveness, supplementary measures, redress mechanisms.
+**Related Obligations**: Connected provisions from the same or other regulations, if supported by the context.
 
 === RETRIEVED CONTENT ===
 
@@ -93,8 +81,4 @@ For TIA questions, focus on: government access laws, transfer tool effectiveness
 === QUESTION ===
 
 {question}
-
-=== YOUR ANSWER ===
-
-[First verify: Does this answer the actual question? Is the article citation correct for this topic?]
 """

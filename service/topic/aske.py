@@ -29,10 +29,12 @@ class ASKETopicExtractor:
         Returns:
             Tuple of (final concepts, classifications with paragraph_id if available)
         """
-        concept_service = ConceptService(self.embedding_model)
-
         logger.info("Initializing %d seed concepts", len(seeds))
         concepts = self.init_concepts_from_seeds(seeds)
+
+        seed_embeddings = np.array([c["embedding"] for c in concepts])
+        seed_labels = [c["label"] for c in concepts]
+        concept_service = ConceptService(self.embedding_model, seed_embeddings=seed_embeddings, seed_labels=seed_labels)
 
         # Handle both simple string chunks and structured chunks with paragraph_id
         if chunks and isinstance(chunks[0], dict):
