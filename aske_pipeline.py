@@ -1,9 +1,10 @@
+import json
 import logging
 import pathlib
 
 import config
 from service.graph.graph import Neo4jGraph
-from service.graph.seed import SEEDS_AI_DATA_FOCUSED_v2
+from service.graph.seed import SEEDS
 from service.text.preprocessor import TextPreprocessor
 from service.topic.aske import ASKETopicExtractor
 
@@ -27,11 +28,11 @@ logger.info("Total chunks extracted: %d", len(chunks))
 
 # Run full ASKE cycle for N generations
 N_GENERATIONS = 20      # Number of ASKE generations
-ALPHA = 0.45            # Classification threshold
+ALPHA = 0.4            # Classification threshold
 BETA = 0.4              # Terminology enrichment threshold
 GAMMA = 10              # Max new terms per concept per generation
 
-test_seeds = SEEDS_AI_DATA_FOCUSED_v2
+test_seeds = SEEDS
 
 logger.info(
     "Starting ASKE cycle — seeds: %d, alpha=%.2f, beta=%.2f, gamma=%d, generations=%d",
@@ -62,17 +63,17 @@ updated_count = graph.update_paragraph_topics(paragraph_topics)
 logger.info("Updated topics for %d paragraphs in Neo4j", updated_count)
 
 # --- Final report ---
-report_path = pathlib.Path("results/aske_report.txt")
+report_path = pathlib.Path("results/aske_result.json")
 report_path.parent.mkdir(parents=True, exist_ok=True)
 
-with report_path.open("w", encoding="utf-8") as f:
-    f.write("ASKE Topic Report\n")
-    f.write("=" * 60 + "\n\n")
+report = [
+    {
+        "label": concept["label"],
+        "terms": sorted({t["label"] if isinstance(t, dict) else t for t in concept.get("terms", [])}),
+    }
+    for concept in sorted(active_concepts, key=lambda c: c["label"])
+]
 
-    for concept in sorted(active_concepts, key=lambda c: c["label"]):
-        terms = concept.get("terms", [])
-        term_labels = sorted({t["label"] if isinstance(t, dict) else t for t in terms})
-        f.write(f"[{concept['label']}]\n")
-        f.write(f"  Terms: {', '.join(term_labels)}\n\n")
+report_path.write_text(json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8")
 
 logger.info("Report written to %s", report_path)

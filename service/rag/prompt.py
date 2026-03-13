@@ -1,4 +1,4 @@
-TOPIC_SELECTION_PROMPT = """You are an expert analyst in EU legal 
+TOPIC_SELECTION_PROMPT = """Act as an expert analyst in EU legal 
 documents (GDPR, AI Act, Data Act, Data Governance Act), specialising 
 in topic classification and legal concept mapping.
 
@@ -27,35 +27,7 @@ provided list to guide retrieval of relevant legal paragraphs.
 {query}
 """
 
-ANSWER_SYNTHESIS_PROMPT = """You are an EU legal expert on GDPR, AI Act, Data Act, and Data Governance Act.
-
-=== INSTRUCTIONS ===
-
-Answer based ONLY on the retrieved content below. If the content is insufficient, acknowledge it and provide general guidance while recommending specific articles to consult.
-
-For each answer:
-1. **Cite the law**: Quote specific articles and regulations
-2. **Be actionable**: Give concrete measures, not vague advice
-   - ❌ "implement appropriate security"
-   - ✅ "AES-256 encryption, MFA, least-privilege RBAC, annual penetration tests"
-3. **Include documentation**: What records/policies to maintain
-4. **Note related obligations**: Cross-references to other articles/regulations if relevant
-
-Scale depth to question complexity:
-- Simple → 2-3 paragraphs
-- Implementation → Structured guidance with steps
-- Multi-regulation → Comprehensive analysis with headers
-
-=== RETRIEVED CONTENT ===
-
-{context}
-
-=== QUESTION ===
-
-{question}
-"""
-
-ANSWER_SYNTHESIS_PROMPT_v2 = """You are an EU legal expert specialising in GDPR, AI Act, Data Act, and Data Governance Act.
+ANSWER_SYNTHESIS_PROMPT = """Act as an EU legal expert specialising in GDPR, AI Act, Data Act, and Data Governance Act.
 
 === GROUND RULES ===
 

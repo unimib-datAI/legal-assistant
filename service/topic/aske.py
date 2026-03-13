@@ -57,13 +57,10 @@ class ASKETopicExtractor:
 
             # Phase 1: Document chunk classification
             classifications = self.chunk_classification(chunk_texts, chunk_embeddings, active_concepts, alpha, chunk_metadata)
-
             # Deactivate unused concepts before terminology enrichment phase
             concepts = concept_service.deactivate_unused_concepts(concepts, classifications)
-
             # Phase 2: Terminology enrichment
             concepts = concept_service.terminology_enrichment(concepts, classifications, chunk_embeddings, chunk_texts, beta=beta, gamma=gamma)
-
             # Phase 3: Concept derivation
             concepts = concept_service.concept_derivation(concepts)
 
@@ -169,7 +166,7 @@ class ASKETopicExtractor:
 
         return deduplicated
 
-    def aggregate_topics_by_paragraph(self, classifications, top_n=3):
+    def _aggregate_topics_by_paragraph(self, classifications, top_n=3):
         """Aggregate concepts from all chunks of each paragraph and select top N topics.
 
         When a paragraph is split into multiple chunks, each chunk may have different

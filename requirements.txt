@@ -19,5 +19,6 @@ openai
 sentence-transformers
 FlagEmbedding
 nltk
+playwright
 ollama
 huggingface_hub[hf_xet]
