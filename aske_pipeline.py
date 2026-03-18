@@ -27,10 +27,10 @@ chunks = preprocessor.to_chunks(paragraphs, skip_first=True)
 logger.info("Total chunks extracted: %d", len(chunks))
 
 # Run full ASKE cycle for N generations
-N_GENERATIONS = 20      # Number of ASKE generations
-ALPHA = 0.4            # Classification threshold
-BETA = 0.4              # Terminology enrichment threshold
-GAMMA = 10              # Max new terms per concept per generation
+N_GENERATIONS = 15      # Number of ASKE generations
+ALPHA = 0.3            # Classification threshold
+BETA = 0.3              # Terminology enrichment threshold
+GAMMA = 7              # Max new terms per concept per generation
 
 test_seeds = SEEDS
 
@@ -63,7 +63,7 @@ updated_count = graph.update_paragraph_topics(paragraph_topics)
 logger.info("Updated topics for %d paragraphs in Neo4j", updated_count)
 
 # --- Final report ---
-report_path = pathlib.Path("results/aske_result.json")
+report_path = pathlib.Path("results/aske_result_1.json")
 report_path.parent.mkdir(parents=True, exist_ok=True)
 
 report = [

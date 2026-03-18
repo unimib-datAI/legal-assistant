@@ -9,35 +9,12 @@ from nltk.tokenize import word_tokenize
 from sklearn.cluster import AffinityPropagation
 from sklearn.exceptions import ConvergenceWarning
 from sklearn.metrics.pairwise import cosine_similarity
+from service.topic.filters import LEGAL_STOPWORDS, VALID_POS_TAGS
 
 nltk.download('punkt_tab', quiet=True)
 nltk.download('wordnet', quiet=True)
 nltk.download('omw-1.4', quiet=True)
 nltk.download('averaged_perceptron_tagger_eng', quiet=True)
-
-# Legal/structural stopwords that should never become topic labels
-LEGAL_STOPWORDS = frozenset({
-    # structural words from legislation
-    "article", "paragraph", "section", "chapter", "regulation", "directive",
-    "pursuant", "thereof", "herein", "whereas", "shall", "referred",
-    "subparagraph", "annex", "recital", "provision", "point",
-    # generic verbs/adjectives that leak through as topics
-    "imposed", "processed", "implementing", "apply", "establish", "allow",
-    "designate", "provided", "used", "approved", "issued", "empowered",
-    "laid", "specified", "notified", "registered", "certain", "relevant",
-    "available", "sufficiently", "proper", "balanced", "capable", "effective",
-    # temporal/vague
-    "week", "month", "year", "period", "later", "delay", "urgent", "while",
-    "periodic", "receipt", "forum", "journal",
-    # too generic
-    "code", "activity", "document", "order", "rule", "level", "format",
-    "amount", "process", "subject", "right", "relation", "standard",
-    "regard", "purpose", "information", "country", "union", "market",
-    "cost", "price", "staff", "power",
-})
-
-# POS tags considered valid for topic terms (nouns and proper nouns)
-VALID_POS_TAGS = frozenset({"NN", "NNS", "NNP", "NNPS"})
 
 logger = logging.getLogger(__name__)
 
@@ -46,9 +23,9 @@ class ConceptService:
     def __init__(self, embedding_model, seed_embeddings: np.ndarray = None, seed_labels: list[str] = None):
         self.embedding_model = embedding_model
         self.seed_embeddings = seed_embeddings
-        self.seed_labels = frozenset(l.lower() for l in seed_labels) if seed_labels else frozenset()
+        self.seed_labels = frozenset(label.lower() for label in seed_labels) if seed_labels else frozenset()
 
-    def terminology_enrichment(self, concepts, classifications, chunk_embeddings, chunks, beta=0.3, gamma=5, max_candidates=50):
+    def terminology_enrichment(self, concepts, classifications, chunk_embeddings, chunks, beta=0.3, gamma=5, max_candidates=200):
         """Extract new terms from classified chunks and enrich concept terminology.
 
         Args:
@@ -63,55 +40,40 @@ class ConceptService:
         Returns:
             Updated concepts with enriched terminology
         """
-        # Initialize a dictionary to map concept to every label found in classification "text" field
-        concept_chunk_indices = defaultdict(list)
-        for i, classification in enumerate(classifications):
-            for matched in classification["concepts"]:
-                concept_label = matched["seed"]
-                concept_chunk_indices[concept_label].append(i)
+        # Initialize a dictionary to map document chunk index to every concept label found in classification
+        concept_chunk_dict = self._index_chunks_by_concept(classifications)
 
-        # For each active concept, extract and evaluate new terms
         for current_concept in concepts:
-            # skip current inactive concept
             if not current_concept.get("active", True):
                 continue
 
             # Extract all chunks indexes classified under this concept. "concept1" -> [chunk_idx1, chunk_idx2, ...]
             label_concept = current_concept["label"]
-            chunk_indices = concept_chunk_indices.get(label_concept, [])
+            classified_chunks_indices = concept_chunk_dict.get(label_concept, [])
 
-            if not chunk_indices:
+            if not classified_chunks_indices:
                 continue
 
-            # Get chunks for this concept
-            concept_chunks = [chunks[i] for i in chunk_indices[:100]]  # to Limit chunks -> [:100]
-            # Extract candidate terms (limit to most frequent)
-            candidate_terms = self._extract_candidate_terms(concept_chunks, current_concept, max_candidates=max_candidates)
+            classified_chunks_by_current_concept = [chunks[i] for i in classified_chunks_indices[:100]]
+            candidate_terms = self._extract_candidate_terms(classified_chunks_by_current_concept, current_concept, max_candidates=max_candidates)
 
             if not candidate_terms:
                 continue
 
             # Get WordNet definitions (only first/most common sense for speed)
-            term_definitions = self._extract_wordnet_definitions(candidate_terms)
+            term_definitions = self._extract_wordnet_definitions(candidate_terms, current_concept["embedding"])
 
             if not term_definitions:
                 continue
 
-            # BATCH embed all definitions at once
-            all_definitions = [td["definition"] for td in term_definitions]
-            def_embeddings = self.embedding_model.encode(all_definitions, show_progress_bar=False)
+            def_embeddings = np.array([td["embedding"] for td in term_definitions])
 
             # Evaluate enriched terms
-            enriched_terms = self._evaluate_enriched_terms(
-                current_concept, chunk_indices, chunk_embeddings, term_definitions, def_embeddings, beta
-            )
+            enriched_terms = self._evaluate_enriched_terms(current_concept, classified_chunks_indices, chunk_embeddings, term_definitions, def_embeddings, beta)
             # Sort by score and apply learning rate gamma
             enriched_terms.sort(key=lambda x: x["score"], reverse=True)
             new_terms = enriched_terms[:gamma]
-
-            # Add new terms to concept
-            if "terms" not in current_concept:
-                current_concept["terms"] = []
+            # TODO: pop out terms score, is useless
             current_concept["terms"].extend(new_terms)
 
         return concepts
@@ -129,25 +91,6 @@ class ConceptService:
             Updated list of concepts with newly derived concepts
         """
         new_concepts = []
-
-        # Collect terms that need embedding
-        terms_to_embed = []
-        terms_to_embed_info = []  # (concept_idx, term_idx, term_label)
-
-        for c_idx, concept in enumerate(concepts):
-            if not concept.get("active", True):
-                continue
-            for t_idx, term in enumerate(concept.get("terms", [])):
-                if isinstance(term, str):
-                    terms_to_embed.append(term)
-                    terms_to_embed_info.append((c_idx, t_idx, term))
-
-        # Batch embed missing terms
-        if terms_to_embed:
-            logger.debug("Embedding %d terms...", len(terms_to_embed))
-            new_embeddings = self.embedding_model.encode(terms_to_embed, show_progress_bar=False)
-            for i, (c_idx, t_idx, label) in enumerate(terms_to_embed_info):
-                concepts[c_idx]["terms"][t_idx] = {"label": label, "embedding": new_embeddings[i]}
 
         for concept in concepts:
             if not concept.get("active", True):
@@ -175,25 +118,8 @@ class ConceptService:
 
             term_embeddings = np.array(term_embeddings)
 
-            # Apply Affinity Propagation clustering
-            try:
-                with warnings.catch_warnings():
-                    warnings.filterwarnings("ignore", category=ConvergenceWarning)
-                    clustering = AffinityPropagation(
-                        random_state=42,
-                        damping=0.9,  # Higher damping = more stable
-                        max_iter=300,
-                        convergence_iter=30
-                    )
-                    cluster_labels = clustering.fit_predict(term_embeddings)
-
-                # Check if clustering produced valid results
-                if len(set(cluster_labels)) <= 1 or -1 in cluster_labels:
-                    # Clustering failed or produced single cluster
-                    new_concepts.append(concept)
-                    continue
-            except Exception as e:
-                logger.warning("Clustering failed for '%s': %s", concept['label'], e)
+            cluster_labels = self._cluster_term_embeddings(concept["label"], term_embeddings)
+            if cluster_labels is None:
                 new_concepts.append(concept)
                 continue
 
@@ -211,34 +137,9 @@ class ConceptService:
                 new_concepts.append(concept)
                 continue
 
-            # Create concepts from clusters
-            original_label = concept["label"]
-
-            for cluster_id, cluster_terms in clusters.items():
-                cluster_embs = np.array([t["embedding"] for t in cluster_terms])
-                centroid = np.mean(cluster_embs, axis=0)
-
-                # Find term closest to centroid
-                distances = cosine_similarity([centroid], cluster_embs)[0]
-                closest_idx = np.argmax(distances)
-                new_label = cluster_terms[closest_idx]["label"]
-
-                # Check if this cluster conserves the original concept
-                is_conservation = new_label == original_label or original_label.lower() in [t["label"].lower() for t in
-                                                                                            cluster_terms]
-
-                new_concept = {
-                    "label": new_label if not is_conservation else original_label,
-                    "embedding": centroid,
-                    "terms": [t.get("term_data", {"label": t["label"]}) for t in cluster_terms],
-                    "active": True,
-                    "derived_from": None if is_conservation else original_label,
-                    "generation": concept.get("generation", 0) + (0 if is_conservation else 1)
-                }
-
-                new_concepts.append(new_concept)
-
-            logger.debug("'%s' -> %d concepts", original_label, len(clusters))
+            derived = self._concepts_from_clusters(concept, clusters)
+            new_concepts.extend(derived)
+            logger.debug("'%s' -> %d concepts", concept["label"], len(clusters))
 
         # Validate derived concepts against seed embeddings
         validated = self._validate_against_seeds(new_concepts)
@@ -250,6 +151,107 @@ class ConceptService:
         merged = self._merge_similar_concepts(deduplicated)
 
         return merged
+
+    @staticmethod
+    def _concepts_from_clusters(concept: dict, clusters: dict) -> list[dict]:
+        """Build new concept dicts from Affinity Propagation clusters.
+
+        For each cluster the centroid embedding is computed and the term
+        closest to it becomes the cluster label.  A cluster that still
+        contains the original concept label is treated as a conservation
+        (generation unchanged); all others are marked as derived.
+
+        Args:
+            concept: The parent concept being split.
+            clusters: Mapping of cluster_id -> list of term dicts with
+                      keys 'label', 'embedding', 'term_data'.
+
+        Returns:
+            List of new concept dicts derived from the clusters.
+        """
+        original_label = concept["label"]
+        new_concepts = []
+
+        for cluster_terms in clusters.values():
+            cluster_embs = np.array([t["embedding"] for t in cluster_terms])
+            centroid = np.mean(cluster_embs, axis=0)
+
+            distances = cosine_similarity([centroid], cluster_embs)[0]
+            new_label = cluster_terms[np.argmax(distances)]["label"]
+
+            is_conservation = (
+                new_label == original_label
+                or original_label.lower() in [t["label"].lower() for t in cluster_terms]
+            )
+
+            new_concepts.append({
+                "label": original_label if is_conservation else new_label,
+                "embedding": centroid,
+                "terms": [t.get("term_data", {"label": t["label"]}) for t in cluster_terms],
+                "active": True,
+                "derived_from": None if is_conservation else original_label,
+                "generation": concept.get("generation", 0) + (0 if is_conservation else 1),
+            })
+
+        return new_concepts
+
+    def _cluster_term_embeddings(
+        self,
+        concept_label: str,
+        term_embeddings: np.ndarray,
+        damping: float = 0.9,
+        max_iter: int = 300,
+        convergence_iter: int = 30,
+    ) -> np.ndarray | None:
+        """Run Affinity Propagation on a matrix of term embeddings.
+
+        Args:
+            concept_label: Used only for logging on failure.
+            term_embeddings: 2-D array of shape (n_terms, embedding_dim).
+            damping: AP damping factor — higher values improve stability (default 0.9).
+            max_iter: Maximum number of AP iterations (default 300).
+            convergence_iter: Iterations without change before declaring convergence (default 30).
+
+        Returns:
+            Integer cluster-label array of length n_terms, or None when clustering
+            is skipped (single cluster, algorithm failure, or invalid output).
+        """
+        try:
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", category=ConvergenceWarning)
+                cluster_labels = AffinityPropagation(
+                    random_state=42,
+                    damping=damping,
+                    max_iter=max_iter,
+                    convergence_iter=convergence_iter,
+                ).fit_predict(term_embeddings)
+        except Exception as e:
+            logger.warning("Clustering failed for '%s': %s", concept_label, e)
+            return None
+
+        if len(set(cluster_labels)) <= 1 or -1 in cluster_labels:
+            return None
+
+        return cluster_labels
+
+    @staticmethod
+    def _index_chunks_by_concept(classifications: list):
+        """
+        Returns a dictionary mapping each concept label to the list of chunk indices classified under it in order to
+        have a faster lookup.
+        Example:
+        {
+            storage limitation principle: [chunk_idx_1, ...],
+            redress and complaint mechanism: [chunk_idx_4, ...],
+        }
+
+        This is retrieved from the classifications list, where each chunk is classified into one or more concepts.
+        """
+        concept_index_dict = defaultdict(list)
+        for chunk_idx, classification in enumerate(classifications):
+            for matched in classification["concepts"]:
+                concept_index_dict[matched["seed"]].append(chunk_idx)
+        return concept_index_dict
 
     def deactivate_unused_concepts(self, concepts, classifications):
         """Deactivate concepts that don't classify any document chunk.
@@ -282,22 +284,25 @@ class ConceptService:
 
         return concepts
 
-    def _extract_candidate_terms(self, concept_chunks, current_concept, max_candidates=50):
+    def _extract_candidate_terms(self, chunks_classified_by_current_concept, current_concept, max_candidates=50):
         """
-        Extract candidate terms from concept chunks based on term frequency.
+        Extract candidate terms from chunks classified under the current concept.
+        1. tokenize words and extract their tags using nltk.pos_tag filtering VALID_POS_TAGS and excluding LEGAL_STOPWORDS
+        Example: [('imposed', 'VBN'), ('sanctions', 'NNS'), ('while', 'IN'), ('paragraph', 'NN')]
+        2.  Retrieve existing terms from the current concept and get candidate terms by counting frequency of valid
+        words that are not already terms in the concept.
 
-        Filters by POS tag (nouns only) and excludes legal/structural stopwords
-        to prevent noise terms like 'imposed', 'while', 'paragraph' from becoming topics.
+        VALID_POS_TAGS and LEGAL_STOPWORDS are defined to prevent noise and focus on meaningful terms.
         """
         term_counts = defaultdict(int)
-        for chunk in concept_chunks:
+        for chunk in chunks_classified_by_current_concept:
             words = word_tokenize(chunk)
-            tagged = nltk.pos_tag(words)
-            for word, pos in tagged:
+            tagged_words = nltk.pos_tag(words)
+            for word, pos_tag in tagged_words:
                 if (
                     word.isalpha()
                     and len(word) > 3
-                    and pos in VALID_POS_TAGS
+                    and pos_tag in VALID_POS_TAGS
                     and word.lower() not in LEGAL_STOPWORDS
                 ):
                     term_counts[word.lower()] += 1
@@ -305,8 +310,7 @@ class ConceptService:
         # Extract existing terms from the concept
         existing_terms = set()
         for term in current_concept.get("terms", []):
-            label = term["label"] if isinstance(term, dict) else term
-            existing_terms.add(label)
+            existing_terms.add(term["label"])
 
         # Filter out terms that already exist
         candidate_terms = []
@@ -320,19 +324,52 @@ class ConceptService:
 
         return candidate_terms
 
-    def _extract_wordnet_definitions(self, candidate_terms):
+    def _extract_wordnet_definitions(
+            self, candidate_terms: list[str], concept_emb: np.ndarray,
+            max_definitions: int = 3
+    ) -> list[dict]:
+        """Extract the most contextually relevant WordNet definition for each term.
+
+        For each candidate term, retrieves up to ``max_definitions`` synsets,
+        embeds all definitions in a single batch, and selects the one closest
+        to the concept embedding.
+
+        Args:
+            candidate_terms: Terms to look up in WordNet.
+            concept_emb: Embedding of the parent concept (used for ranking).
+            max_definitions: Maximum number of WordNet synsets to consider per
+                term.  Higher values improve recall at the cost of more
+                embeddings.  ``1`` reproduces the original "first-only"
+                behaviour.
         """
-        Extract WordNet definitions for candidate terms.
-        """
-        term_definitions = []
+        # Collect all definitions across all terms in one pass
+        all_definitions: list[str] = []
+        term_spans: list[tuple[str, int, int]] = []  # (term, start, end)
+
         for term in candidate_terms:
-            synsets = wordnet.synsets(term)
-            if synsets:
-                # Use only the first (most common) definition for speed
-                term_definitions.append({
-                    "label": term,
-                    "definition": synsets[0].definition()
-                })
+            synsets = wordnet.synsets(term)[:max_definitions]
+            if not synsets:
+                continue
+            start = len(all_definitions)
+            all_definitions.extend(s.definition() for s in synsets)
+            term_spans.append((term, start, len(all_definitions)))
+
+        if not all_definitions:
+            return []
+
+        # Single batch encode for all definitions
+        all_embeddings = self.embedding_model.encode(all_definitions, show_progress_bar=False)
+
+        # Pick the best definition per term
+        term_definitions = []
+        for term, start, end in term_spans:
+            similarities = cosine_similarity([concept_emb], all_embeddings[start:end])[0]
+            best_idx = start + int(np.argmax(similarities))
+            term_definitions.append({
+                "label": term,
+                "definition": all_definitions[best_idx],
+                "embedding": all_embeddings[best_idx],
+            })
         return term_definitions
 
     def _evaluate_enriched_terms(self, current_concept, chunk_indices, chunk_embeddings, term_definitions, def_embeddings, beta):
@@ -361,7 +398,6 @@ class ConceptService:
             if combined_score >= beta:
                 enriched_terms.append({
                     "label": term_def["label"],
-                    "definition": term_def["definition"],
                     "embedding": term_emb,
                     "score": combined_score
                 })
@@ -402,7 +438,7 @@ class ConceptService:
             # Single-word derived concepts must be an exact seed match to survive
             if " " not in label and label.lower() not in self.seed_labels:
                 discarded_count += 1
-                logger.debug("Discarding single-word derived concept '%s'", label)
+                logger.info("Discarding single-word derived concept '%s'", label)
                 continue
 
             concept_emb = concept.get("embedding")
@@ -423,7 +459,7 @@ class ConceptService:
 
         return kept
 
-    def _merge_similar_concepts(self, concepts, merge_threshold: float = 0.85):
+    def _merge_similar_concepts(self, concepts, merge_threshold: float = 0.90):
         """Merge near-duplicate concepts by embedding similarity.
 
         When two concepts have cosine similarity >= merge_threshold, the one with
