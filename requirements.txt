@@ -19,6 +19,7 @@ openai
 sentence-transformers
 FlagEmbedding
 nltk
+rank-bm25
 playwright
 ollama
 huggingface_hub[hf_xet]

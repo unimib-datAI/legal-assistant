@@ -6,8 +6,10 @@ import numpy as np
 from langchain_core.callbacks import CallbackManagerForRetrieverRun
 from langchain_core.documents import Document
 from langchain_core.retrievers import BaseRetriever
+from langchain_community.retrievers import BM25Retriever
 from pydantic import ConfigDict
 from sentence_transformers import SentenceTransformer
+from sentence_transformers.cross_encoder import CrossEncoder
 from sklearn.metrics.pairwise import cosine_similarity
 
 from service.graph.query import NodeQueries
@@ -24,6 +26,7 @@ class GraphEnrichedRetriever(BaseRetriever):
     top_k_topic: int = 5
     topic_similarity_threshold: float = 0.35
     embedding_model: Any = SentenceTransformer("all-MiniLM-L6-v2")
+    cross_encoder: Any = CrossEncoder('cross-encoder/ms-marco-MiniLM-L-6-v2')
     graph_topic: dict = None
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
@@ -70,28 +73,19 @@ class GraphEnrichedRetriever(BaseRetriever):
 
         return matches[:self.top_k_topic]
 
-    def _get_paragraphs_by_topics(self, topics: List[str]) -> List[Document]:
+    def _get_paragraphs_by_topics(self, user_query:str, topics: List[str]) -> List[Document]:
         """Retrieve paragraphs associated with the given topics."""
         if not topics:
             return []
 
         results = self.graph.query(
             NodeQueries.GET_ALL_PARAGRAPHS_BY_TOPIC,
-            params={"topics": topics, "limit": self.k * 2}
+            params={"topics": topics}
         )
+        extracted_paragraphs = self._get_document_from_query_result(results)
+        ranked_docs = self._rank_extracted_documents(user_query, extracted_paragraphs, 3)
 
-        return [
-            Document(
-                page_content=f"{r['text']}",
-                metadata={
-                    "id": r["id"],
-                    "topics": r["topics"],
-                    "article_title": r["article_title"],
-                    "source": "semantic_topic_filter"
-                }
-            )
-            for r in results
-        ]
+        return ranked_docs
 
     @staticmethod
     def _extract_paragraph_id(content: str) -> str:
@@ -112,7 +106,7 @@ class GraphEnrichedRetriever(BaseRetriever):
 
                 topic_names = [t for t, _ in matched_topics]
                 topic_docs = []
-                for curr_doc in self._get_paragraphs_by_topics(topic_names):
+                for curr_doc in self._get_paragraphs_by_topics(user_query, topic_names):
                     paragraph_id = curr_doc.metadata.get("id")
                     if paragraph_id and paragraph_id not in seen_ids:
                         seen_ids.add(paragraph_id)
@@ -135,15 +129,38 @@ class GraphEnrichedRetriever(BaseRetriever):
         if not relevant_docs:
             return []
 
-        query_embedding = self.embedding_model.encode(user_query, show_progress_bar=False)
-        doc_embeddings = self.embedding_model.encode(
-            [doc.page_content for doc in relevant_docs],
-            show_progress_bar=False
-        )
-        similarities = cosine_similarity([query_embedding], doc_embeddings)[0]
+        pairs = [[user_query, doc.page_content] for doc in relevant_docs]
+        scores = self.cross_encoder.predict(pairs)
 
-        ranked_indices = np.argsort(similarities)[::-1]
-        ranked_docs = [relevant_docs[i] for i in ranked_indices][:self.k]
+        ranked_indices = np.argsort(scores)[::-1]
+        ranked_docs = [relevant_docs[i] for i in ranked_indices][:self.k * 2]
 
         logger.info("[Retriever] Final top-%d: %s", self.k, [d.metadata.get("id") for d in ranked_docs])
         return ranked_docs
+
+
+    def _rank_extracted_documents(self, query: str, documents: List[Document], top_k: int) -> List[Document]:
+        """Rank extracted document candidates from the topic extraction from the user query using BM25 ranker."""
+        bm25_retriever = BM25Retriever.from_documents(documents)
+        bm25_retriever.k = top_k
+        results = bm25_retriever.invoke(query)
+        for r in results:
+            logger.info("[BM25 Ranker] ranked doc content: %s and metadata: %s", r.page_content, r.metadata)
+
+        return results
+
+    def _get_document_from_query_result(self, query_result):
+        return [
+            Document(
+                page_content=f"{r['text']}",
+                metadata={
+                    "id": r["id"],
+                    "topics": r["topics"],
+                    "article_title": r["article_title"],
+                    "source": "semantic_topic_filter"
+                }
+            )
+            for r in query_result
+        ]
+
+

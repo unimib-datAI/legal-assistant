@@ -58,7 +58,6 @@ class NodeQueries:
            p.text AS text,
            topics,
            a.title AS article_title
-    LIMIT $limit
     """
     
 class RelationQueries:
