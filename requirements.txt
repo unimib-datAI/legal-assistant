@@ -23,3 +23,5 @@ rank-bm25
 playwright
 ollama
 huggingface_hub[hf_xet]
+docling
+ragas

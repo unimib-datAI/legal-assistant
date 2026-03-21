@@ -59,7 +59,7 @@ qa_chain = RetrievalQA.from_chain_type(
     chain_type_kwargs={"prompt": QA_PROMPT}
 )
 
-questions_file = pathlib.Path("compliance_questions.json")
+questions_file = pathlib.Path("docs/golden_dataset.json")
 questions = json.loads(questions_file.read_text(encoding="utf-8"))
 
 output_file = pathlib.Path("results/rag_result.json")
@@ -68,6 +68,7 @@ output_file.parent.mkdir(parents=True, exist_ok=True)
 report: list[dict] = []
 
 for i, item in enumerate(questions, 1):
+    act = item["act"]
     query: str = item["query"]
     expert_response: str = item["expert_response"]
 
@@ -79,10 +80,11 @@ for i, item in enumerate(questions, 1):
     sources: list[str] = [doc.metadata.get("id") for doc in result["source_documents"]]
 
     report.append({
+        "act": act,
         "query": query,
         "rag_response": rag_response,
         "expert_response": expert_response,
-        "sources": sources,
+        "retrieved_context": sources,
     })
 
 output_file.write_text(json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8")

@@ -1,0 +1,325 @@
+[
+  {
+    "query": "How do you obtain valid consent under the GDPR?",
+    "rag_response": "**Legal Basis**: Article 7 GDPR\n\n**Practical Measures**: To obtain valid consent under the GDPR, the controller must ensure that the consent is freely given, specific, informed, and unambiguous. This means that the request for consent must be presented in a clear and easily accessible manner, using plain language. If the consent is given in the context of a written declaration concerning other matters, it must be clearly distinguishable from those other matters. The data subject must also be informed of their right to withdraw consent at any time, and the withdrawal process should be as easy as giving consent.\n\n**Documentation & Accountability**: The controller must be able to demonstrate that the data subject has consented to the processing of their personal data. This may involve maintaining records of when and how consent was obtained, as well as any information provided to the data subject regarding their rights and the processing activities.\n\n**Related Obligations**: Article 8 GDPR specifies additional requirements for obtaining consent from children, including verifying that consent is given or authorized by the holder of parental responsibility over the child. Additionally, Article 7(4) GDPR highlights the importance of ensuring that consent is freely given, especially in cases where the performance of a contract is conditional on consent to processing personal data.",
+    "expert_response": "Consent is one of six lawful bases under the GDPR and is subject to stringent requirements. To be valid, consent must be freely given, specific, informed and unambiguous, expressed through a clear affirmative action. In practice, this means presenting a concise, intelligible request separate from other terms that identifies the controller, purposes, categories of data, consequences, the right to withdraw at any time, and any automated decision-making. Pre-ticked boxes, silence or inactivity are not consent. Consent should not be bundled, neither by purpose nor by processing activity – choices should be granular, providing the data subject with the opportunity to opt into certain processing activities and opt out of others. Withdrawal of consent must be as easy as giving consent. Controllers must maintain records of consent (who, when, how, what text was shown, from which interface) to demonstrate accountability. Where children are concerned, age must be verified and parental authorisation should be implemented where required, using age-appropriate language. Unless processing is necessary for a service, making access to a service conditional on consent should be avoided. Consent should be re-sought if the purposes of the processing change materially or incompatible purposes are introduced. Where genuine choice does not exist, the controller should consider whether another legal basis is more appropriate (e.g., employment contexts or processing that is objectively necessary for contract performance).",
+    "sources": [
+      "32022R0868_021.003",
+      "32024R1689_061.001",
+      "32016R0679_007.003",
+      "32016R0679_007.004",
+      "32016R0679_007.002",
+      "32022R0868_025.003",
+      "32022R0868_021.006",
+      "32016R0679_008.002",
+      "32022R0868_025.001",
+      "32016R0679_007.001"
+    ]
+  },
+  {
+    "query": "What must a privacy notice include when data are collected directly from the individual?",
+    "rag_response": "**Legal Basis**: \n\nWhen personal data are collected directly from the individual, the privacy notice provided by the controller must include the following information:\n\n1. The identity and contact details of the controller and, where applicable, the controller's representative.\n2. The contact details of the data protection officer, where applicable.\n3. The purposes of the processing for which the personal data are intended as well as the legal basis for the processing.\n4. Where the processing is based on the legitimate interests pursued by the controller or by a third party, this must be specified.\n5. Information about the recipients or categories of recipients of the personal data, if any.\n6. If applicable, information about any intended transfers of personal data to a third country or international organisation, including details on safeguards in place.\n7. Any other information required under Article 13 and 14 of the GDPR.\n\n**Practical Measures**:\n\n- Ensure that the privacy notice is easily accessible, written in clear and plain language.\n- Provide the individual with a copy of the privacy notice at the time when their personal data is collected.\n- Include all the required information mentioned above in the privacy notice.\n- Regularly review and update the privacy notice to reflect any changes in data processing activities.\n\n**Documentation & Accountability**:\n\n- Maintain records of the privacy notices provided to individuals, including the content of the notices and when they were provided.\n- Keep a record of any changes made to the privacy notice and the reasons for those changes.\n\n**Related Obligations**:\n\n- Article 13 and 14 of the GDPR provide detailed requirements for informing data subjects about the processing of their personal data, including when data are collected directly from the individual.",
+    "expert_response": "Articles 12 and 13 require transparent, intelligible and easily accessible information using clear language, especially for children. When collecting data directly, the privacy notice must state: the controller’s identity and contact details; contact details of any DPO; purposes and legal bases (including legitimate interests where relied upon); categories of recipients; any intended international transfers and safeguards; retention periods or the criteria to determine them; data subject rights (access, rectification, erasure, restriction, portability, objection and withdrawal of consent, where relevant); the right to lodge a complaint with the supervisory authority; whether provision of data is statutory/contractual and consequences of not providing; and details of any automated decision-making, including profiling, plus meaningful information about the logic and consequences. Notices should be provided at the time of collection and layered if complex. Records of when and how notices were presented must be kept to demonstrate accountability, and wording must align with the records of processing activities, DPIAs, and contracts. Where multiple purposes for processing exist, each must be explained and linked to purpose-specific details and granular controls (e.g., marketing preferences).",
+    "sources": [
+      "32016R0679_025.002",
+      "32016R0679_013.001",
+      "32016R0679_005.001",
+      "32016R0679_006.004",
+      "32016R0679_015.001",
+      "32016R0679_014.001",
+      "32022R0868_020.002",
+      "32023R2854_003.003",
+      "32016R0679_013.002",
+      "32022R0868_021.001"
+    ]
+  },
+  {
+    "query": "What is a DPIA and when is it required under the EU GDPR?",
+    "rag_response": "**Legal Basis**: \n\nA Data Protection Impact Assessment (DPIA) is required under the EU GDPR in specific cases as outlined in Article 35 GDPR. \n\n**Practical Measures**: \n\nA DPIA is required in the case of:\n- A systematic and extensive evaluation of personal aspects relating to natural persons based on automated processing, including profiling, which leads to decisions with legal effects or significant impacts on individuals.\n- Processing on a large scale of special categories of data or data relating to criminal convictions and offences.\n- Systematic monitoring of a publicly accessible area on a large scale.\n\nOrganisations must conduct a DPIA to assess the risks to the rights and freedoms of data subjects, and to determine the necessary measures to address these risks. This includes describing the processing operations, assessing necessity and proportionality, identifying risks, and outlining measures to mitigate these risks.\n\n**Documentation & Accountability**: \n\nThe DPIA must contain a systematic description of processing operations, purposes, necessity and proportionality assessments, risk assessments, and measures to address risks. This documentation is essential for demonstrating compliance with the GDPR and protecting the rights of data subjects.\n\n**Related Obligations**: \n\nThe DPIA requirement is closely linked to the role of the Data Protection Officer (DPO) as outlined in Article 39 GDPR. The DPO plays a key role in informing and advising the controller or processor on their obligations under the GDPR, monitoring compliance, and cooperating with the supervisory authority. The DPIA is a tool to ensure that data processing activities are conducted in a compliant and privacy-preserving manner.",
+    "expert_response": "A DPIA is mandatory where processing is likely to result in a high risk to individuals’ rights and freedoms, particularly with new technologies. Typical triggers include systematic and extensive profiling with significant effects, large-scale processing of special-category or criminal-offence data, and systematic monitoring of publicly accessible areas. Many supervisory authorities publish lists of operations that always/never require a DPIA. A DPIA should be initiated in the early stages of any new project and, in any case, before the data processing concerned commences. The scope and purposes must be defined; data flows, actors and transfers must be mapped; necessity and proportionality must be assessed (is the purpose achievable with less data or less intrusive methods?); risks across confidentiality, integrity, availability and impacts, such as discrimination, exclusion or chilling effects, should be analysed; and mitigation measures should be designed (e.g. minimisation, access controls, encryption, transparency, human-in-the-loop, redress). The controller should document its reasoning, residual risks and final decision as to whether to proceed with the processing activity or not. If residual high risk remains after mitigation measures, the supervisory authority must be consulted before deployment (prior consultation). The DPIA is a living document and should be updated when there is a change in purposes, datasets, models or vendors. The outcomes of a DPIA should inform privacy notices, security measures, processor contracts and testing plans, and align with privacy-by-design/default obligations. For joint projects, the roles of the parties must be established (controller/processor, joint controllers), as well as which party is signing off the DPIA.",
+    "sources": [
+      "32024R1689_026.010",
+      "32023R2854_037.003",
+      "32024R1689_078.002",
+      "32024R1689_026.009",
+      "32023R2854_032.003",
+      "32016R0679_043.001",
+      "32024R1689_007.002",
+      "32016R0679_035.003",
+      "32016R0679_039.001",
+      "32016R0679_035.007"
+    ]
+  },
+  {
+    "query": "What does the data minimisation principle require in practice?",
+    "rag_response": "**Legal Basis**: Article 5(1)(c) GDPR states that personal data must be adequate, relevant, and limited to what is necessary in relation to the purposes for which they are processed.\n\n**Practical Measures**: In practice, the data minimisation principle requires organisations to only collect and process personal data that is necessary for the specific purposes for which it is being processed. This means organisations should carefully consider what data is truly needed and avoid collecting excessive or irrelevant information. They should also regularly review and update the data they hold to ensure it remains necessary for the intended purposes.\n\n**Documentation & Accountability**: Organisations should maintain records of the personal data they collect, the purposes for which it is processed, and the legal basis for processing. They should also document their data minimisation practices, including any assessments conducted to determine the necessity of the data collected.\n\n**Related Obligations**: The data minimisation principle is closely related to the principles of purpose limitation (Article 5(1)(b) GDPR) and storage limitation (Article 5(1)(e) GDPR), which also require organisations to limit the processing of personal data to specific purposes and retain it only for as long as necessary. Organizations should ensure that their data processing activities comply with all these principles to protect the rights and freedoms of data subjects.",
+    "expert_response": "Data minimisation obliges controllers to ensure personal data are adequate, relevant and limited to what is necessary in relation to the stated purposes. Practically, this means designing data collection forms and systems to avoid optional or extra information that is not purpose-critical; using coarse or derived attributes instead of raw data when sufficient; and setting retention windows aligned to genuine operational or legal needs. For analytics and AI, privacy-preserving features should be preferred, with the use of synthetic or aggregated data where possible, and sampling should be used to reduce granularity of personal data. Purpose tags and minimisation checks should be built into engineering workflows (schema reviews, pull-request checklists). The organisation should map where each attribute is used; if unused, the attribute should be removed. With respect to vendors, organisations should ensure that contracts prohibit unnecessary collection or repurposing of personal data, and require deletion of personal data on termination. Minimisation also applies to access—role-based and time-bound permissions—and to the sharing of personal data with recipients. The rationale for the collection and retention of each category of data should be documented in the organisation’s records of processing activities and DPIAs, and should be revisited periodically as requirements evolve. Minimisation is not merely about collecting less; it is about collecting the right data—no more, no less—supported by evidence of necessity.",
+    "sources": [
+      "32016R0679_089.001",
+      "32016R0679_025.001",
+      "32016R0679_005.001",
+      "32024R1689_010.002",
+      "32022R0868_014.004",
+      "32022R0868_021.002",
+      "32016R0679_011.001",
+      "32022R0868_031.004",
+      "32022R0868_021.001",
+      "32016R0679_034.004"
+    ]
+  },
+  {
+    "query": "What are the controller's obligations in order to maintain data accuracy?",
+    "rag_response": "**Legal Basis**: Article 5(1)(d) GDPR states that personal data shall be accurate and, where necessary, kept up to date.\n\n**Practical Measures**: The controller must implement appropriate technical and organisational measures to ensure data accuracy. This may include regular data validation processes, data quality checks, and mechanisms for data subjects to update their information.\n\n**Documentation & Accountability**: The controller should maintain records of processing activities, including details on how data accuracy is ensured. This should include descriptions of the measures taken to keep data accurate and up to date.\n\n**Related Obligations**: Article 5(2) GDPR requires controllers to take steps to ensure that inaccurate personal data are rectified or erased without delay. Additionally, Article 16 GDPR gives data subjects the right to rectification of inaccurate personal data.",
+    "expert_response": "Controllers must ensure personal data are accurate and, where necessary, kept up to date; every reasonable step must be taken to erase or rectify without delay data that are inaccurate for the purposes. Accuracy by design should be embedded: input validation; user selfservice to update details; periodic prompts to confirm core attributes; and reconciliation against authoritative sources where lawful. When accuracy is disputed, evidence should be assessed and, if appropriate, processing should be restricted while verification takes place. Factual inaccuracies should be distinguished from contested opinions; the latter may be rectified by adding context rather than overwriting. In data sharing, responsibility and feedback channels with recipients should be established to facilitate any necessary corrections of the personal data. For AI systems, provenance should be tracked and pipelines updated so training/feature stores can be corrected. Organisations should consider whether inaccuracies have produced downstream decisions that need reevaluation. Audit trails of rectification requests and actions taken should be maintained to demonstrate accountability. Accuracy interacts with fairness— the aim of the accuracy principle is to avoid negative impacts caused by stale or erroneous data.",
+    "sources": [
+      "32016R0679_025.002",
+      "32016R0679_012.002",
+      "32016R0679_030.001",
+      "32016R0679_038.001",
+      "32016R0679_038.003",
+      "32016R0679_035.002",
+      "32016R0679_005.002",
+      "32016R0679_015.003",
+      "32016R0679_082.004",
+      "32023R2854_011.004"
+    ]
+  },
+  {
+    "query": "How should the storage limitation principle and data retention schedules be applied?",
+    "rag_response": "**Legal Basis**: Article 5 GDPR outlines the principles for processing personal data, including the storage limitation principle.\n\n**Practical Measures**: Organizations should ensure that personal data is kept in a form that allows for identification of data subjects for no longer than necessary for the purposes for which the data is processed. This means implementing data retention schedules that specify how long different types of personal data will be kept based on the purposes for which they were collected. Once the retention period expires, the data should be securely erased or anonymized.\n\n**Documentation & Accountability**: Organizations should maintain records of their data retention schedules, detailing the categories of personal data being processed, the purposes for processing, and the corresponding retention periods. This documentation should be regularly reviewed and updated to ensure compliance with the storage limitation principle.\n\n**Related Obligations**: Article 89 GDPR provides additional safeguards for processing personal data for archiving purposes, ensuring that technical and organizational measures are in place to respect the principle of data minimization. Organizations should consider pseudonymization and other methods to fulfill archiving purposes while minimizing the risk of identifying data subjects.",
+    "expert_response": "Storage limitation requires keeping personal data in identifiable form no longer than is necessary for the purposes. Documented retention schedules must be implemented, linked to purpose, legal obligations and limitation periods. Data lifecycle tooling should be employed to enable automatic deletion, archiving, and irreversible anonymisation where ongoing analysis is required without identification. Business-critical retention (e.g., tax records) must be distinguished from convenience storage, as convenience alone rarely justifies extended retention. Privacy notices must specify retention periods clearly, preferably through defined ranges or rules (e.g., “invoices are retained for 10 years per tax law; support chats for 24 months”). In shared datasets and data lakes, per-attribute retention and masking should be applied rather than uniform rules across the board. For backups, restoration windows and deletion procedures upon restore must be defined. In AI and analytics contexts, rolling windows and retraining workflows should be designed respect retention, with documentation of how models handle deletion requests (e.g., retraining, machine unlearning). Deletion controls must be periodically tested and evidence retained. Where law requires longer retention or preservation (e.g., litigation holds), access and use must be restricted solely to that purpose.",
+    "sources": [
+      "32016R0679_047.002",
+      "32016R0679_005.001",
+      "32023R2854_003.003",
+      "32022R0868_021.004",
+      "32016R0679_025.002",
+      "32016R0679_089.001",
+      "32022R0868_005.002",
+      "32022R0868_005.003",
+      "32022R0868_009.001",
+      "32022R0868_005.004"
+    ]
+  },
+  {
+    "query": "What does security of processing require under Article 32 of the GDPR?",
+    "rag_response": "**Legal Basis**: Article 32 of the GDPR outlines the requirements for the security of processing.\n\n**Practical Measures**: \n1. Implement appropriate technical and organisational measures to ensure a level of security appropriate to the risk.\n2. Pseudonymisation and encryption of personal data.\n3. Ensure ongoing confidentiality, integrity, availability, and resilience of processing systems and services.\n4. Have a process for regularly testing, assessing, and evaluating the effectiveness of technical and organisational measures for ensuring the security of the processing.\n\n**Documentation & Accountability**: \nMaintain records of the technical and organisational measures implemented to ensure security of processing. Regularly review and update these measures as necessary.\n\n**Related Obligations**: \nArticle 24 requires the controller to implement appropriate technical and organisational measures to ensure compliance with the GDPR. Article 25 also emphasizes the need for data protection by design and by default, which includes implementing appropriate technical and organisational measures to ensure data protection principles are met.",
+    "expert_response": "Security must be appropriate to the risk, considering the state of the art, costs, nature, scope, context and purposes of processing, and risks to individuals. Measures may include pseudonymisation and encryption, maintenance of confidentiality, integrity, availability and resilience of systems, the ability to restore availability of and access to data in a timely manner, and processes for regularly testing, assessing and evaluating effectiveness. A risk assessment must be conducted in relation to processing operations and applicable threat model, with alignment to recognised security frameworks (e.g. ISO 27001, NIST) where beneficial. Least-privilege access, multi-factor authentication, network segmentation, secure software development, vulnerability management, logging and monitoring, and incident response plans must be implemented. Equivalent controls must be required of processors by contract (in terms of Article 28 of GDPR) and verified through audits. Data protection by design and default must complement security by minimising data, restricting access and masking by default. Security documentation and evidence (policies, penetration tests, disaster recovery tests) must be maintained. Security is not static – reviews must be documented following incidents, significant changes or emerging threats.",
+    "sources": [
+      "32016R0679_028.003",
+      "32016R0679_005.001",
+      "32016R0679_023.001",
+      "32016R0679_032.001",
+      "32016R0679_037.001",
+      "32023R2854_025.002",
+      "32016R0679_028.001",
+      "32016R0679_025.001",
+      "32016R0679_006.001",
+      "32016R0679_024.001"
+    ]
+  },
+  {
+    "query": "What is 'data protection by design and by default' and how is it applied?",
+    "rag_response": "**Legal Basis**: Article 25 GDPR\n\n**Practical Measures**: Data protection by design and by default requires organisations to integrate data protection measures into their processing activities from the outset. This means implementing technical and organisational measures that ensure data protection principles, such as data minimisation and privacy by design, are taken into account throughout the entire data processing lifecycle. For example, organisations should implement pseudonymisation techniques, encryption, and access controls to protect personal data. Additionally, default settings should be privacy-friendly, meaning that the highest level of data protection should be the default setting for any processing activities.\n\n**Documentation & Accountability**: Organisations should document the data protection measures they have implemented as part of their data protection by design and by default approach. This documentation should include details of the technical and organisational measures in place, as well as any assessments or reviews conducted to ensure compliance with data protection principles.\n\n**Related Obligations**: Article 32 GDPR requires organisations to implement appropriate technical and organisational measures to ensure the security of personal data. Data protection by design and by default complements this obligation by ensuring that data protection measures are integrated into the processing activities from the outset, rather than added as an afterthought.",
+    "expert_response": "Article 25 of the GDPR requires controllers to implement appropriate technical and organisational measures, such as pseudonymisation, designed to implement data protection principles effectively and integrate necessary safeguards into processing. ‘By default’, only personal data necessary for each specific purpose should be processed, taking into account the amount, extent of processing, retention and accessibility. Data protection by design and by default must be applied through privacy engineering patterns, including minimised data schemas, local processing where feasible, strong access control, encryption at rest and in transit, differential privacy for analytics, and privacy-aware user experiences (clear notices, granular controls). Privacy into the software development lifecycle through threat and privacy modelling, design reviews, test cases for rights (access, erasure), and change management. Data protection by design and by default outcomes must be linked to DPIAs, security standards and procurement processes. Default configurations must remain privacy-protective (opt-in rather than opt-out for non-essential processing, short retention, limited sharing). Data protection by design and by default should be measured through controls catalogues and supporting evidence such as design documentation and test reports).",
+    "sources": [
+      "32016R0679_025.002",
+      "32023R2854_011.001",
+      "32016R0679_047.002",
+      "32016R0679_039.002",
+      "32016R0679_035.003",
+      "32016R0679_025.001",
+      "32016R0679_038.001",
+      "32016R0679_037.001",
+      "32016R0679_005.001",
+      "32023R2854_004.008"
+    ]
+  },
+  {
+    "query": "What are records of processing activities and what should they contain?",
+    "rag_response": "**Legal Basis**: \n\nAccording to Article 30 of the GDPR, both controllers and processors are required to maintain records of processing activities. \n\n**Practical Measures**: \n\n1. For controllers, the record should include:\n   - Name and contact details of the controller, joint controller, representative, and data protection officer.\n   - Purposes of the processing.\n   - Description of categories of data subjects and personal data.\n   - Categories of recipients to whom data have been or will be disclosed.\n   - Details of transfers of personal data to third countries or international organisations.\n   - Envisaged time limits for erasure of data.\n   - General description of technical and organisational security measures.\n\n2. For processors, the record should include:\n   - Name and contact details of the processor, controller(s) on behalf of which processing is carried out, and data protection officer.\n   - Categories of processing carried out on behalf of each controller.\n   - Details of transfers of personal data to third countries or international organisations.\n   - General description of technical and organisational security measures.\n\n**Documentation & Accountability**: \n\nControllers and processors must maintain these records as part of their accountability obligations under the GDPR. The records should be made available to the supervisory authority upon request.\n\n**Related Obligations**: \n\nArticle 6 of the GDPR outlines the lawful bases for processing personal data, which must be considered when documenting processing activities. Additionally, Article 32 requires the implementation of appropriate technical and organisational security measures, which should be reflected in the records of processing activities.",
+    "expert_response": "Under Article 30, controllers and processors must maintain written records of processing. For controllers, records should include: controller details and any joint controllers; DPO contact; purposes; categories of data subjects and personal data; categories of recipients; international transfers and safeguards; envisaged time limits for erasure; and a general description of security measures. Processors’ records include controller categories; processing categories; international transfers; and security measures. Records of processing activities should reference systems and assets, link to DPIAs, TIAs and contracts, and be kept up to date with change control. The records must be used as a central hub for audits, DSAR searches and incident response. Even where exemptions for small organisations apply, many operations (e.g., non-occasional or special-category processing) still require records. Since regulators commonly ask for records of processing activities in investigations, accuracy and completeness are critical. The fields in such records should be aligned with the data catalogue to avoid divergence, updates should be automated where feasible.",
+    "sources": [
+      "32016R0679_030.001",
+      "32016R0679_030.002",
+      "32024R1689_010.005",
+      "32022R0868_020.001",
+      "32016R0679_005.001",
+      "32016R0679_028.003",
+      "32016R0679_089.001",
+      "32016R0679_006.001",
+      "32016R0679_049.006",
+      "32016R0679_030.004"
+    ]
+  },
+  {
+    "query": "When are parties joint controllers and what must their arrangement cover?",
+    "rag_response": "**Legal Basis**: Article 26 of the GDPR states that where two or more controllers jointly determine the purposes and means of processing, they shall be joint controllers. They must determine their respective responsibilities for compliance with the obligations under the Regulation in a transparent manner.\n\n**Practical Measures**: In practice, when parties are joint controllers, they must establish an arrangement that outlines their respective roles and responsibilities regarding data subjects' rights, information provision, and compliance with the GDPR. This arrangement should designate a contact point for data subjects and ensure transparency in their relationship.\n\n**Documentation & Accountability**: Each joint controller must maintain a record of processing activities under their responsibility, including the arrangement with the other joint controllers. This record should contain information on the purposes of processing, categories of data subjects and personal data, recipients of data, data transfers, time limits for data erasure, and security measures.\n\n**Related Obligations**: Article 26(3) of the GDPR specifies that regardless of the arrangement, data subjects have the right to exercise their rights against each of the joint controllers. This reinforces the accountability of each controller towards data subjects.",
+    "expert_response": "Parties are joint controllers when they jointly determine purposes and means of processing. This may arise where decisions are made together or are inextricably linked such that purposes and means are effectively determined jointly. Joint controllers must transparently determine their respective responsibilities, in particular regarding data subject rights and transparency obligations, by means of an arrangement under Article 26. The essence of the arrangement must be made available to data subjects. Regardless of internal allocation, data subjects may exercise their rights against any of the controllers. In practice, the decision chain must be mapped to verify controller roles, labelling by convenience must be avoided, and responsibilities for notices, rights requests, security, breaches, and regulator engagement must be documented. Liability, indemnities and insurance must be aligned accordingly, and processors must be informed of their instructing controller. The arrangement must be updated whenever purposes or means of processing evolve.",
+    "sources": [
+      "32016R0679_026.001",
+      "32016R0679_026.002",
+      "32016R0679_062.002",
+      "32016R0679_026.003",
+      "32016R0679_030.001",
+      "32016R0679_005.002",
+      "32016R0679_027.001",
+      "32016R0679_040.002",
+      "32016R0679_082.004",
+      "32016R0679_047.003"
+    ]
+  },
+  {
+    "query": "What are the mandatory processor obligations and what should a data processing agreement (DPA) include?",
+    "rag_response": "**Legal Basis**: \n\nAccording to Article 28(3) of the GDPR, a processor must adhere to a contract or other legal act under Union or Member State law that sets out specific obligations. These obligations include processing data only on documented instructions from the controller, implementing appropriate technical and organisational measures, assisting the controller in responding to data subject rights, ensuring compliance with data protection obligations, and providing necessary information for audits.\n\n**Practical Measures**:\n\n1. Process personal data only based on documented instructions from the controller.\n2. Implement appropriate technical and organisational measures as required by Article 32 GDPR to ensure data security.\n3. Assist the controller in responding to data subject rights requests.\n4. Ensure compliance with data protection obligations as set out in the GDPR.\n5. Delete or return all personal data to the controller after the end of the processing services.\n6. Provide the controller with all necessary information to demonstrate compliance and allow for audits.\n\n**Documentation & Accountability**:\n\n1. Maintain a record of all processing activities carried out on behalf of the controller, including the name and contact details of the processor and controller, categories of processing, transfers of data to third countries, and a description of security measures (Article 30 GDPR).\n\n**Related Obligations**:\n\n- The controller and processor must designate a data protection officer in certain cases (Article 37 GDPR).\n- Codes of conduct approved under Article 40 GDPR may also be adhered to by controllers or processors to provide appropriate safeguards for data transfers to third countries (Article 40 GDPR).\n- The controller and processor must ensure that the data protection officer is involved in all issues related to the protection of personal data (Article 38 GDPR).",
+    "expert_response": "Processors must act only on documented instructions and are required to implement appropriate security measures, ensure confidentiality, keep records, assist with data subject rights and DPIAs, notify breaches to the controller without undue delay, and allow for audits and inspections. The controller–processor contract (DPA) must contain the clauses specified in Article 28(3): subject matter and duration of the processing, nature and purpose, type of personal data and categories of data subjects, obligations and rights of the controller; processing only on documented instructions; confidentiality; security measures; conditions for engaging a sub-processor; assistance with data subject rights and DPIAs; deletion or return upon termination of the contract; information necessary to demonstrate compliance; and audit support. Vague language should be avoided – security baselines, breach timelines, sub-processor notification, and cross-border transfer mechanisms must be clearly defined. Prompt disclosure of incidents and material changes must be required, and all obligations must flow down to sub-processors. A vendor assurance programme (including questionnaires, certificates, and audits) must be maintained to verify ongoing compliance.",
+    "sources": [
+      "32016R0679_028.004",
+      "32016R0679_028.003",
+      "32016R0679_039.001",
+      "32016R0679_006.001",
+      "32016R0679_028.001",
+      "32016R0679_037.001",
+      "32016R0679_038.001",
+      "32016R0679_046.001",
+      "32016R0679_040.003",
+      "32016R0679_030.002"
+    ]
+  },
+  {
+    "query": "What are the requirements for engaging a sub-processor?",
+    "rag_response": "**Legal Basis**: \n\nAccording to Article 28(2) GDPR, the processor shall not engage another processor without prior specific or general written authorisation of the controller. In the case of general written authorisation, the processor shall inform the controller of any intended changes concerning the addition or replacement of other processors, thereby giving the controller the opportunity to object to such changes.\n\n**Practical Measures**: \n\n1. Obtain specific or general written authorisation from the controller before engaging another processor.\n2. If there is general written authorisation, inform the controller of any intended changes regarding the addition or replacement of other processors.\n3. Provide the controller with the opportunity to object to such changes.\n\n**Documentation & Accountability**: \n\nMaintain records of the specific or general written authorisation from the controller for engaging another processor. Document any intended changes concerning the addition or replacement of other processors and the controller's response to these changes.\n\n**Related Obligations**: \n\n- Article 28(3) GDPR outlines the specific requirements that must be included in the contract or other legal act governing the processing by a processor, including the obligations and rights of the controller.\n- Article 28(4) GDPR states that when a processor engages another processor, the same data protection obligations as set out in the contract between the controller and the initial processor must be imposed on the sub-processor.",
+    "expert_response": "Sub-processing requires prior specific or general written authorisation from the controller. Under general authorisation models, the processor must inform the controller of intended changes, allowing the controller to object. Contracts with sub-processors must impose the same data protection obligations as between controller and processor, in particular providing sufficient guarantees to implement appropriate technical and organisational measures. A current list of sub-processor, including purposes, locations and transfer mechanisms, must be maintained. Due diligence and risk assessments must be conducted, covering security posture and incident history; and audit rights must flow down between processor and sub-processor. Onward transfer mechanisms must comply with Chapter V requirements (e.g. SCCs, adequacy decisions etc.). Exit plans and data return or deletion obligations must be defined. Changes must be monitored via notifications and periodic reviews, and evidence of approvals or objections must be retained. Sub-processor chains should not erode accountability, as the initial controller remains responsible for selecting processors capable of compliance.",
+    "sources": [
+      "32016R0679_028.002",
+      "32016R0679_028.004",
+      "32016R0679_028.003",
+      "32016R0679_042.007",
+      "32016R0679_028.001",
+      "32016R0679_042.006",
+      "32024R1689_033.001",
+      "32016R0679_030.002",
+      "32016R0679_028.005",
+      "32016R0679_028.006"
+    ]
+  },
+  {
+    "query": "When can legitimate interests be relied on and how is the LIA conducted?",
+    "rag_response": "**Legal Basis**: \n\nLegitimate interests can be relied on as a legal basis for processing personal data under Article 6(1)(f) of the GDPR. This provision allows for processing that is necessary for the purposes of the legitimate interests pursued by the controller or by a third party, except where such interests are overridden by the interests or fundamental rights and freedoms of the data subject which require protection of personal data.\n\n**Practical Measures**:\n\n1. **Identify Legitimate Interest**: The controller must first identify a legitimate interest for the processing of personal data. This could include purposes such as fraud prevention, network security, or direct marketing.\n\n2. **Conduct a Legitimate Interest Assessment (LIA)**: The controller must then conduct a Legitimate Interest Assessment (LIA) to ensure that the legitimate interests pursued are not overridden by the rights and freedoms of the data subjects. The LIA should include:\n   - **Purpose Specification**: Clearly define the purpose for processing the data.\n   - **Necessity**: Assess whether the processing is necessary for the identified purpose.\n   - **Balancing Test**: Weigh the legitimate interests of the controller against the rights and freedoms of the data subjects.\n   - **Mitigation Measures**: Implement measures to mitigate any risks to data subjects' rights and freedoms.\n\n3. **Document the LIA**: It is essential to document the LIA process, including the identified legitimate interest, the assessment conducted, and the decision-making process.\n\n**Documentation & Accountability**:\n\nThe controller should maintain records of the LIA, including the identified legitimate interest, the assessment conducted, and any measures taken to mitigate risks to data subjects' rights and freedoms. This documentation is crucial to demonstrate compliance with the GDPR's accountability principle.\n\n**Related Obligations**:\n\nArticle 6(4) of the GDPR requires controllers to inform data subjects of the legitimate interests pursued when relying on this legal basis for processing. Additionally, Article 13 and Article 14 outline the information that controllers must provide to data subjects when collecting their personal data, including the legal basis for processing.",
+    "expert_response": "Legitimate interests (Article 6(1)(f) of the GDPR) may apply where the controller (or a third party) has a legitimate interest that is not overridden by the interests or fundamental rights and freedoms of the data subject. A Legitimate Interests Assessment (LIA) must be conducted: (1) Purpose test—the specific interest and its legitimacy must be identified; (2) Necessity test— the controller must assess whether processing is necessary to achieve that interest or whether less intrusive means suffice; (3) Balancing test— the controller must consider data subject expectations, relationship, the nature of data, the impact of the processing, and the safeguards in place (e.g., minimisation, opt-outs, pseudonymisation). LIA outcomes must be documented and appropriate safeguards should be implemented accordingly. Controllers should also render it easy for data subjects to exercise their right to object to the processing where applicable, particularly in the context of direct marketing. The LIA should be updated whenever there is a change in the context of the processing (e.g., new data or new recipients).",
+    "sources": [
+      "32016R0679_049.001",
+      "32016R0679_006.001",
+      "32024R1689_060.004",
+      "32022R0868_021.001",
+      "32023R2854_032.003",
+      "32024R1689_027.002",
+      "32024R1689_007.002",
+      "32016R0679_006.003",
+      "32024R1689_067.002",
+      "32024R1689_062.002"
+    ]
+  },
+  {
+    "query": "How is the right to rectification exercised and managed?",
+    "rag_response": "**Legal Basis**: \n\nThe right to rectification is provided for in Article 16 of the GDPR. This article states that the data subject has the right to obtain from the controller without undue delay the rectification of inaccurate personal data concerning them.\n\n**Practical Measures**:\n\n1. Upon receiving a request for rectification from a data subject, the controller should promptly verify the accuracy of the personal data in question.\n2. If the data is found to be inaccurate, the controller must rectify it without undue delay and inform any recipients of the data about the rectification, as required by Article 19 of the GDPR.\n3. The controller should implement processes and procedures to ensure that requests for rectification are handled efficiently and effectively, including maintaining records of such requests and actions taken.\n\n**Documentation & Accountability**:\n\n1. The controller should keep a record of all requests for rectification received from data subjects, along with details of the actions taken to rectify the data.\n2. Documentation should also include any communications with data subjects regarding the rectification process and any notifications sent to recipients of the corrected data.\n\n**Related Obligations**:\n\n- Article 19 of the GDPR, which requires the controller to communicate any rectification of personal data to recipients to whom the data has been disclosed.\n- Article 17 of the GDPR, which provides for the right to erasure (\"right to be forgotten\") in certain circumstances, which may be relevant if inaccurate data cannot be rectified and needs to be deleted instead.",
+    "expert_response": "Data subjects have the right to obtain without undue delay the rectification of inaccurate personal data and to have incomplete data completed, including by means of a supplementary statement. Controllers should provide accessible channels for data subjects to request rectification. Controllers should also adopt proportionate measures to verify the identity of the data subject and assess evidence promptly. Where accuracy of the personal data is contested, processing may be restricted pending verification (as per Article 18 of the GDPR). Recipients to whom the data have been disclosed must be notified of any rectification unless such notification is impossible or entails disproportionate effort; upon request, data subject must be informed of those recipients. Audit trails of requests and outcomes must be maintained, and changes must be reflected in downstream systems and among vendors. For opinions or assessments, contextualisation rather than overwriting should be considered (e.g., adding a note). Processes must align with sector-specific obligations (e.g., credit referencing rules) and with transparency duties, including updating the privacy notice to reflect how individuals may exercise the right.",
+    "sources": [
+      "32022R0868_005.007",
+      "32016R0679_058.002",
+      "32022R0868_005.004",
+      "32022R0868_009.002",
+      "32022R0868_028.001",
+      "32016R0679_018.001",
+      "32016R0679_079.001",
+      "32023R2854_038.001",
+      "32016R0679_078.002",
+      "32023R2854_004.003"
+    ]
+  },
+  {
+    "query": "What does the right to erasure ('right to be forgotten') cover and what are its limits?",
+    "rag_response": "**Legal Basis**: \n\nThe right to erasure, also known as the 'right to be forgotten', is outlined in Article 17 of the General Data Protection Regulation (GDPR). According to Article 17(1), data subjects have the right to obtain from the controller the erasure of personal data concerning them without undue delay in certain circumstances.\n\n**Practical Measures**: \n\nThe right to erasure covers situations where:\n- The personal data are no longer necessary for the purposes for which they were collected.\n- The data subject withdraws consent and there is no other legal ground for processing.\n- The data subject objects to the processing and there are no overriding legitimate grounds.\n- The personal data have been unlawfully processed.\n- The erasure is necessary for compliance with a legal obligation.\n- The data was collected in relation to the offer of information society services.\n\nThe controller must take reasonable steps, including technical measures, to inform other controllers processing the data about the erasure request (Article 17(2)).\n\n**Documentation & Accountability**: \n\nControllers should maintain records of erasure requests and actions taken to comply with them. They should also document any communication with other controllers regarding the erasure request.\n\n**Related Obligations**: \n\nThe right to erasure should be balanced with the rights and freedoms of others (Article 17(3)). Additionally, individuals or organisations receiving the data pursuant to an erasure request may keep the data for up to six months for the original purpose (Article 17(4)).",
+    "expert_response": "Individuals may obtain erasure where: data are no longer necessary for the purposes collected; consent is withdrawn and no other basis for the processing exists; the individual successfully objects to the processing; the processing is unlawful; erasure is required by EU or member state law; or data were collected in relation to information society services offered to a child. Recipients to whom the data has been disclosed must be notified of the erasure unless such notification is impossible or entails disproportionate effort. Certain limits apply: data must not be erased where processing remains necessary for exercising freedom of expression and information, for compliance with legal obligations or public interest tasks, for archiving, research or statistical purposes subject to safeguards, or for the establishment, exercise or defence of legal claims. Identity-appropriate verification, conflict checks with legal holds, and coordinated deletion across systems, archives and vendors must be implemented. Clear erasure channels for erasure requests must be provided, and outcomes and residual data (e.g., backups, logs) must be communicated transparently.",
+    "sources": [
+      "32016R0679_017.001",
+      "32016R0679_018.001",
+      "32016R0679_015.001",
+      "32016R0679_017.002",
+      "32016R0679_013.002",
+      "32023R2854_021.004",
+      "32016R0679_020.004",
+      "32016R0679_015.004",
+      "32023R2854_019.001",
+      "32016R0679_078.002"
+    ]
+  },
+  {
+    "query": "What constitutes a personal data breach and when must it be notified?",
+    "rag_response": "**Legal Basis**: \n\nAccording to Article 4(12) of the GDPR, a personal data breach is defined as a breach of security leading to the accidental or unlawful destruction, loss, alteration, unauthorized disclosure of, or access to, personal data transmitted, stored, or otherwise processed.\n\nArticle 33(1) of the GDPR states that in the case of a personal data breach, the controller must notify the supervisory authority without undue delay and, where feasible, not later than 72 hours after becoming aware of it, unless the breach is unlikely to result in a risk to the rights and freedoms of natural persons.\n\n**Practical Measures**:\n\n1. Describe the nature of the breach, including the categories and approximate number of data subjects and personal data records affected.\n2. Provide the name and contact details of the data protection officer or another contact point for more information.\n3. Describe the likely consequences of the breach.\n4. Detail the measures taken or proposed to address the breach, including any mitigation efforts.\n\n**Documentation & Accountability**:\n\nThe controller must document any personal data breaches, including the facts related to the breach, its effects, and the remedial actions taken. This documentation should enable the supervisory authority to verify compliance with the notification requirements.\n\n**Related Obligations**:\n\n- Article 34 of the GDPR requires the controller to communicate the breach to the data subject without undue delay if it is likely to result in a high risk to their rights and freedoms.\n- Article 33(5) specifies that the documentation of personal data breaches must allow the supervisory authority to verify compliance with the notification requirements.",
+    "expert_response": "A personal data breach is a breach of security leading to accidental or unlawful destruction, loss, alteration, unauthorised disclosure of, or access to, personal data. Controllers must notify the supervisory authority of a personal data breach without undue delay and, where feasible, within 72 hours after becoming aware of it, unless the breach is unlikely to result in a risk to individuals’ rights and freedoms. If notification occurs after 72 hours, the controller must be give reasons for the delay. Where the breach is likely to result in a high risk to the rights and freedoms of individuals, the controller must also communicate the breach to affected individuals without undue delay, unless an exception applies (e.g. effective subsequent measures or disproportionate effort with public notice instead). Notifications should describe the nature of the breach, the categories and approximate numbers of data subjects and records, the likely consequences of the breach, measures taken or proposed to be taken to mitigate the breach, and contact details of the DPO or point of contact. Controllers should maintain a register of personal data breaches, run tabletop exercises, and ensure that contracts with processors require notification of any personal data breaches suffered by the processor without undue delay.",
+    "sources": [
+      "32016R0679_033.001",
+      "32016R0679_033.003",
+      "32016R0679_034.001",
+      "32016R0679_034.004",
+      "32016R0679_033.005",
+      "32016R0679_034.002",
+      "32016R0679_034.003",
+      "32016R0679_033.002",
+      "32023R2854_008.002",
+      "32016R0679_014.003"
+    ]
+  },
+  {
+    "query": "What are the roles of 'controller' and 'processor'?",
+    "rag_response": "**Legal Basis**: Article 4 GDPR defines the roles of 'controller' and 'processor'.\n\n**Controller**: The controller is the entity that determines the purposes and means of the processing of personal data. They are responsible for ensuring that the processing complies with the GDPR.\n\n**Processor**: The processor is an entity that processes personal data on behalf of the controller. They act only on the controller's instructions and are responsible for implementing appropriate technical and organizational measures to ensure the security of the data.\n\n**Practical Measures**: \n1. **Controller**: The controller must define the purposes and means of processing personal data, including what data is collected, how it is used, and for how long it is retained. They must also ensure that data subjects' rights are respected.\n2. **Processor**: The processor must only process personal data on documented instructions from the controller. They must implement appropriate security measures to protect the data and assist the controller in fulfilling data subject rights.\n\n**Documentation & Accountability**:\n1. The controller should maintain records of processing activities, including the purposes of processing, categories of data subjects, and data transfers.\n2. The processor should keep records of all processing activities carried out on behalf of the controller and any security measures implemented.\n\n**Related Obligations**:\n1. Article 28 GDPR outlines the specific obligations of processors, including the requirement to only act on documented instructions from the controller and to implement appropriate security measures.\n2. Article 82 GDPR addresses liability for both controllers and processors in case of data protection infringements.",
+    "expert_response": "A controller determines the purposes and means of processing, alone or jointly; a processor processes personal data on behalf of the controller. Determination of roles is based on factual influence over purposes and means, not contract labels. Entities may be controllers for some operations and processors for others. Indicators of controller status include deciding why processing happens, selecting data categories and retention, choosing recipients and defining user-facing terms. Processors typically provide services with limited discretion, following documented instructions, and must not repurpose data. Misclassification risks enforcement and liability exposure. Data flows and decision rights should be mapped, role analysis should be documented, and contractual terms should align with operational realities.",
+    "sources": [
+      "32016R0679_038.002",
+      "32016R0679_037.001",
+      "32016R0679_032.004",
+      "32016R0679_038.003",
+      "32016R0679_082.004",
+      "32016R0679_028.010",
+      "32016R0679_028.006",
+      "32016R0679_028.002",
+      "32016R0679_082.002",
+      "32016R0679_042.004"
+    ]
+  },
+  {
+    "query": "What are the requirements for international data transfers?",
+    "rag_response": "**Legal Basis**: \n\nThe requirements for international data transfers are outlined in Article 45 and Article 46 of the General Data Protection Regulation (GDPR).\n\n**Practical Measures**: \n\n1. **Adequacy Decision**: The transfer of personal data to a third country or international organisation can take place if the European Commission has decided that the third country or organisation ensures an adequate level of protection (Article 45 GDPR). This means that organisations must ensure that the destination country provides a level of data protection essentially equivalent to that within the EU.\n\n2. **Appropriate Safeguards**: In the absence of an adequacy decision, organisations can transfer data to a third country or international organisation if they have provided appropriate safeguards (Article 46 GDPR). This can include using standard contractual clauses, binding corporate rules, or other mechanisms to ensure data protection.\n\n3. **Derogations**: If neither an adequacy decision nor appropriate safeguards are in place, data transfers may still be allowed in specific situations outlined in Article 49 GDPR. These include explicit consent from the data subject, performance of a contract, important reasons of public interest, legal claims, vital interests, or other limited circumstances.\n\n**Documentation & Accountability**: \n\nOrganisations must maintain records of their data transfers, including the legal basis for the transfer, any safeguards implemented, and assessments of the risks involved. They should also inform the relevant supervisory authority of the transfer and, in certain cases, inform the data subjects as well.\n\n**Related Obligations**: \n\n- Article 49 GDPR provides derogations for specific situations where data transfers may be allowed in the absence of an adequacy decision or appropriate safeguards.\n- Article 46 GDPR requires organisations to ensure enforceable data subject rights and effective legal remedies for data subjects when transferring data internationally.",
+    "expert_response": "Transfers to third countries or international organisations require an appropriate mechanism under Chapter V. Options include: (a) an adequacy decision by the European Commission; (b) appropriate safeguards such as Standard Contractual Clauses (SCCs), Binding Corporate Rules (BCRs), approved codes or certifications with binding commitments; or (c) limited derogations under Article 49 of the GDPR (e.g., explicit consent, contract performance) for occasional, non-repetitive transfers. Reliance on the SCCs requires a transfer impact assessment (TIA) and, where necessary, supplementary measures to ensure essentially equivalent protection of the personal data concerned in the destination country. Controllers remain responsible for onward transfers by processors/sub-processors. Controllers should maintain an inventory of transfers, map data categories and recipients, and disclose transfer mechanisms in privacy notices. TIAs should be re-evaluated upon any legal or technical changes impacting the transfer (e.g., introduction of surveillance laws).",
+    "sources": [
+      "32016R0679_045.001",
+      "32023R2854_032.001",
+      "32022R0868_005.014",
+      "32016R0679_049.001",
+      "32023R2854_032.002",
+      "32023R2854_032.003",
+      "32016R0679_046.001",
+      "32016R0679_049.005",
+      "32022R0868_031.002",
+      "32023R2854_033.003"
+    ]
+  },
+  {
+    "query": "What is a Transfer Impact Assessment (TIA) and what should it contain?",
+    "rag_response": "**Legal Basis**: \n\nThe concept of a Transfer Impact Assessment (TIA) is not explicitly mentioned in the retrieved content. However, the closest relevant provision is Article 35 of the GDPR, which requires a Data Protection Impact Assessment (DPIA) in certain cases, including when there is a high risk to the rights and freedoms of individuals.\n\n**Practical Measures**:\n\nA Transfer Impact Assessment (TIA) should contain an evaluation of the potential risks associated with transferring personal data to a third country or international organisation. This assessment should consider factors such as the nature and sensitivity of the data being transferred, the purpose of the transfer, the volume of data, the security measures in place, and the legal framework of the receiving country.\n\nOrganisations should also assess the necessity and proportionality of the transfer, ensuring that it is justified under one of the conditions listed in Article 49 of the GDPR. Additionally, they should identify and implement appropriate safeguards to protect the data during and after the transfer.\n\n**Documentation & Accountability**:\n\nOrganisations should document the results of the Transfer Impact Assessment (TIA), including the identified risks, the safeguards implemented, and the legal basis for the transfer. This documentation should be maintained to demonstrate compliance with the GDPR requirements.\n\n**Related Obligations**:\n\nThe TIA process is closely related to the broader Data Protection Impact Assessment (DPIA) required under Article 35 of the GDPR. Organisations should ensure that the TIA aligns with the DPIA process and consider the specific risks associated with cross-border data transfers. Additionally, organisations should comply with the conditions for international data transfers set out in Articles 44 to 49 of the GDPR.",
+    "expert_response": "A TIA evaluates whether, for a given transfer of personal data to a third country on the basis of the SCCs or other safeguards, the laws and practices in the destination country may impinge on the effectiveness of the transfer tool. The TIA should document: (1) the transfer details (parties, roles, data categories, purposes, recipients, onward transfers); (2) the transfer tool used (e.g., SCCs module); (3) an assessment of the third country’s legal landscape, particularly with respect to government access to data and redress; (4) the likelihood of problematic access to personal data in practice; (5) technical and organisational measures (e.g., strong encryption with key control in the EEA, split processing, transparency); and (6) conclusions and residual risks, including whether to proceed with the proposed transfer or adopt additional measures. Evidence and sources relied upon in the TIA should be maintained and the TIA should be re-assessed periodically or upon any material change which may impact the transfer. TIAs should be integrated with vendor due diligence and contract management.",
+    "sources": [
+      "32016R0679_035.003",
+      "32016R0679_035.010",
+      "32016R0679_049.001",
+      "32016R0679_036.001",
+      "32016R0679_035.011",
+      "32024R1689_026.009",
+      "32024R1689_007.002",
+      "32016R0679_035.002",
+      "32016R0679_035.001",
+      "32024R1689_027.002"
+    ]
+  }
+]
