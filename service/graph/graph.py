@@ -58,14 +58,14 @@ class Neo4jGraph:
                         relationship, left_node_name, left_id, right_node_name, right_id)
 
     def create_vector_index(self, node_name, index_name, dimensions: int):
-        """Create a vector index on the specified node label and property."""
+        """Drop any existing vector index and create a fresh one with the given dimensions."""
         with self.driver.session() as session:
-            query = GeneralQueries.CREATE_VECTOR_INDEX.format(
+            session.run(GeneralQueries.DROP_INDEX_IF_EXISTS.format(index_name=index_name))
+            session.run(GeneralQueries.CREATE_VECTOR_INDEX.format(
                 node_name=node_name,
                 index_name=index_name,
                 dimensions=dimensions,
-            )
-            session.run(query)
+            ))
             logger.info("Created vector index %s on %s nodes (dimensions=%d)", index_name, node_name, dimensions)
 
     def generate_text_embeddings(

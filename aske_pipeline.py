@@ -28,8 +28,8 @@ logger.info("Total chunks extracted: %d", len(chunks))
 
 # Run full ASKE cycle for N generations
 N_GENERATIONS = 15      # Number of ASKE generations
-ALPHA = 0.3            # Classification threshold
-BETA = 0.3              # Terminology enrichment threshold
+ALPHA = 0.4            # Classification threshold
+BETA = 0.4             # Terminology enrichment threshold
 GAMMA = 7              # Max new terms per concept per generation
 
 test_seeds = SEEDS

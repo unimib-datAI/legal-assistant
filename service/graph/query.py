@@ -73,8 +73,10 @@ class RelationQueries:
 class GeneralQueries:
     """General purpose queries"""
     
+    DROP_INDEX_IF_EXISTS = "DROP INDEX {index_name} IF EXISTS"
+
     CREATE_VECTOR_INDEX = """
-    CREATE VECTOR INDEX {index_name} IF NOT EXISTS
+    CREATE VECTOR INDEX {index_name}
     FOR (n:{node_name}) ON (n.textEmbedding)
     OPTIONS {{ indexConfig: {{
         `vector.dimensions`: {dimensions},

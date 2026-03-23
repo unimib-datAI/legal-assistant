@@ -1,7 +1,7 @@
 import logging
 
 import config
-from langchain_openai import OpenAIEmbeddings
+from langchain_huggingface import HuggingFaceEmbeddings
 from service.graph.graph import Neo4jGraph
 from service.graph.graph_loader import GraphLoader
 from service.scraper.eurlex_document_utils import EurlexDocumentUtils
@@ -34,11 +34,14 @@ documents_config = [eurlex_document_utils.build_document_config(celex) for celex
 # Load all documents into the graph
 loader.load_all_documents(documents_config)
 
-# Generate embeddings for Paragraph nodes using OpenAI text-embedding-3-small
-openai_embeddings = OpenAIEmbeddings(model="text-embedding-3-small", api_key=config.OPENAI_API_KEY)
+# Generate embeddings for Paragraph nodes using BAAI/bge-large-en-v1.5
+bge_embeddings = HuggingFaceEmbeddings(
+    model_name="BAAI/bge-large-en-v1.5",
+    encode_kwargs={"normalize_embeddings": True},
+)
 dimensions = graph.generate_text_embeddings(
-    embed_fn=openai_embeddings.embed_documents,
-    embedding_dim=1536,
+    embed_fn=bge_embeddings.embed_documents,
+    embedding_dim=1024,
     node_name="Paragraph",
 )
 
