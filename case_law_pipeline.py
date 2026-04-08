@@ -30,7 +30,10 @@ def fetch_pdf(pdf_url: str) -> Path:
         page = context.new_page()
 
         with page.expect_download() as download_info:
-            page.goto(pdf_url, wait_until="networkidle", timeout=60_000)
+            try:
+                page.goto(pdf_url, wait_until="networkidle", timeout=60_000)
+            except Exception:
+                pass  # PDF URL triggers a download; navigation never reaches networkidle
 
         download = download_info.value
         tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
@@ -53,6 +56,6 @@ finally:
     pdf_path.unlink(missing_ok=True)
     logger.info("Deleted temp file %s", pdf_path)
 
-output_path = RESULTS_DIR / "case_law_result.md"
-output_path.write_text(doc.export_to_markdown(), encoding="utf-8")
+output_path = RESULTS_DIR / "case_law_result.txt"
+output_path.write_text(doc.export_to_text(), encoding="utf-8")
 logger.info("Saved markdown to %s", output_path)

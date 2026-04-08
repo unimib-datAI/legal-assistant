@@ -25,3 +25,4 @@ ollama
 huggingface_hub[hf_xet]
 docling
 ragas
+spacy
