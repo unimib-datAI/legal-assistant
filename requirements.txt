@@ -11,6 +11,8 @@ neo4j
 python-dotenv
 langchain
 langchain-community
+langchain-classic
+streamlit
 langchain-neo4j
 langchain_openai
 langchain-huggingface
