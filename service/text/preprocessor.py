@@ -1,4 +1,5 @@
 import logging
+import re
 import nltk
 from nltk.stem import WordNetLemmatizer
 from nltk.tokenize import sent_tokenize, word_tokenize
@@ -18,6 +19,8 @@ class TextPreprocessor:
 
     def __init__(self) -> None:
         self._lemmatizer = WordNetLemmatizer()
+
+    # ── ASKE preprocess ──────────────────────────────────────────────────────────
 
     def _tokenize_paragraphs(self, paragraphs: list[dict]) -> list[dict]:
         """Split each paragraph's text into sentences, preserving paragraph_id."""

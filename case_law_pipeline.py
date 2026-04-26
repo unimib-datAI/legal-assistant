@@ -3,7 +3,7 @@ import tempfile
 from pathlib import Path
 
 from docling.datamodel.base_models import InputFormat
-from docling.document_converter import DocumentConverter, PdfFormatOption
+from docling.document_converter import DocumentConverter, PdfFormatOption, HTMLFormatOption
 from playwright.sync_api import sync_playwright
 
 logging.basicConfig(
@@ -13,11 +13,11 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-url = "https://eur-lex.europa.eu/legal-content/EN/TXT/PDF/?uri=CELEX:62019CJ0645"
+url = "https://eur-lex.europa.eu/legal-content/IT/TXT/HTML/?uri=CELEX:62024CJ0422"
 
 converter = DocumentConverter(
-    allowed_formats=[InputFormat.PDF],
-    format_options={InputFormat.PDF: PdfFormatOption()},
+    allowed_formats=[InputFormat.HTML],
+    format_options={InputFormat.HTML: HTMLFormatOption()},
 )
 
 
@@ -56,6 +56,6 @@ finally:
     pdf_path.unlink(missing_ok=True)
     logger.info("Deleted temp file %s", pdf_path)
 
-output_path = RESULTS_DIR / "case_law_result.txt"
+output_path = RESULTS_DIR / "case_law_result_62024CJ0422.txt"
 output_path.write_text(doc.export_to_text(), encoding="utf-8")
 logger.info("Saved markdown to %s", output_path)
