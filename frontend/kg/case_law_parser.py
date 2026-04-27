@@ -137,11 +137,16 @@ with col_info:
         sections = [s for s in flat if s["heading"] != "Reports of Cases"]
         progress_bar = st.progress(0, text="Starting...")
         summaries: list[dict] = []
-        from service.case_law.agent import summarize_section
+        from service.case_law.llm_orchestrator import summarize_section, summarize_document
         for i, section in enumerate(sections):
             label = section["heading"][:48] + "..." if len(section["heading"]) > 48 else section["heading"]
             progress_bar.progress((i) / len(sections), text=f"Summarising: {label}")
-            summaries.append(summarize_section(section))
+            result = summarize_section(section)
+            if result is not None:
+                summaries.append(result)
+        progress_bar.progress(1.0, text="Summarising full document…")
+        doc_summary = summarize_document(pdf_path)
+        summaries.insert(0, {"heading": "Document Summary", "summary": doc_summary})
         progress_bar.progress(1.0, text="Done.")
         st.session_state["cl_summaries"] = summaries
 

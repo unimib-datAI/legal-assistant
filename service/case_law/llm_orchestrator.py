@@ -3,11 +3,22 @@ import logging
 import re
 
 import config
+from docling.document_converter import DocumentConverter, PdfFormatOption
+from docling.datamodel.pipeline_options import PdfPipelineOptions
 from service.case_law.doc_parser import extract_sample, build_tree, Node
 from service.rag.prompt import (CASE_LAW_DOCUMENT_PARSING_SYSTEM_PROMPT, CASE_LAW_DOCUMENT_PARSING_USER_PROMPT,
-                                CASE_LAW_ENTITY_SUMMARY_SYSTEM_PROMPT, CASE_LAW_ENTITY_SUMMARY_USER_PROMPT)
+                                CASE_LAW_ENTITY_SUMMARY_SYSTEM_PROMPT, CASE_LAW_ENTITY_SUMMARY_USER_PROMPT,
+                                CASE_LAW_ENTIRE_DOC_SUMMARY_SYSTEM_PROMPT, CASE_LAW_ENTIRE_DOC_SUMMARY_USER_PROMPT)
 
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    datefmt="%H:%M:%S",
+)
 logger = logging.getLogger(__name__)
+
+# Section that isn't necessary to summarize because there is no advantage in doing so, e.g. they don't contain substantive content, or they are too generic.
+_SKIP_SECTIONS = frozenset({"Reports of Cases", "Topics", "General Information"})
 
 
 def _call_llm(user_prompt: str, system_prompt: str) -> str:
@@ -30,9 +41,30 @@ def parse_document(pdf_path: str) -> tuple[dict, list[Node]]:
     return parsing_rules, roots
 
 
-def summarize_section(section: dict) -> dict:
-    """Call the LLM to produce a structured summary for a single flat section."""
-    body_text = "\n".join(section.get("body", [])) or "(no direct body text)"
+def summarize_document(pdf_path: str, char_length: int = 150) -> str:
+    """Produce a high-level summary of the entire document from the raw PDF text."""
+    opts = PdfPipelineOptions()
+    opts.do_ocr = False
+    opts.do_table_structure = False
+    converter = DocumentConverter(format_options={"pdf": PdfFormatOption(pipeline_options=opts)})
+    doc = converter.convert(pdf_path).document
+    document_content = "\n".join(
+        item.text.strip().replace("\n", " ")
+        for item, _ in doc.iterate_items()
+        if getattr(item, "text", None)
+    )
+    user_prompt = CASE_LAW_ENTIRE_DOC_SUMMARY_USER_PROMPT.format(
+        char_length=char_length,
+        document_content=document_content,
+    )
+    logger.info("Summarising full document from raw PDF: %s", pdf_path)
+    return _call_llm(user_prompt=user_prompt, system_prompt=CASE_LAW_ENTIRE_DOC_SUMMARY_SYSTEM_PROMPT)
+
+
+def summarize_section(section: dict) -> dict | None:
+    body_text = "\n".join(section.get("body", []))
+    if not body_text.strip() or section.get("heading") in _SKIP_SECTIONS:
+        return None
     user_prompt = CASE_LAW_ENTITY_SUMMARY_USER_PROMPT.format(
         heading=section["heading"],
         depth=section["depth"],

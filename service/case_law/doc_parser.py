@@ -3,6 +3,11 @@ import logging
 from dataclasses import dataclass, field
 from typing import NamedTuple
 
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    datefmt="%H:%M:%S",
+)
 logging.disable(logging.CRITICAL)
 
 from docling.document_converter import DocumentConverter, PdfFormatOption

@@ -140,3 +140,19 @@ Return ONLY a JSON object with the following fields:
 - "heading": the section heading (copied exactly as given)
 - "summary": your concise summary
 """
+
+CASE_LAW_ENTIRE_DOC_SUMMARY_SYSTEM_PROMPT = """You are an expert legal document summarizer."""
+
+CASE_LAW_ENTIRE_DOC_SUMMARY_USER_PROMPT = """
+Summarize the following CJEU judgment. Focus on:
+- The case number (e.g., C-XXX/YY)
+- The parties
+- The specific articles or regulations interpreted
+- The core legal question
+
+The summary must be concise, maximum {char_length} 
+characters long, and optimized for providing context 
+to smaller text chunks. Output only the summary text.
+
+Document: {document_content}
+"""

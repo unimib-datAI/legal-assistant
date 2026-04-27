@@ -19,6 +19,7 @@ langchain-huggingface
 langchain-core
 openai
 sentence-transformers
+transformers==4.49.0
 FlagEmbedding
 nltk
 rank-bm25
