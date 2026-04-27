@@ -12,7 +12,7 @@ import streamlit as st
 from dotenv import load_dotenv
 
 from utils.streamlit_log_handler import StreamlitLogHandler
-from service.case_law.agent import parse_document
+from service.case_law.llm_orchestrator import parse_document
 from service.case_law.doc_parser import flatten
 
 load_dotenv()
