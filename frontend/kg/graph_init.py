@@ -4,7 +4,11 @@ Graph Initialization page.
 Loads EU regulation documents into Neo4j and generates paragraph embeddings.
 """
 import logging
-
+from utils.streamlit_log_handler import StreamlitLogHandler
+from langchain_huggingface import HuggingFaceEmbeddings
+from service.graph.graph import Neo4jGraph
+from service.graph.graph_loader import GraphLoader
+from service.scraper.eurlex_document_utils import EurlexDocumentUtils
 import streamlit as st
 from dotenv import load_dotenv
 
@@ -16,22 +20,6 @@ st.caption(
     "Downloads EU regulation documents from EUR-Lex, loads them into Neo4j, "
     "and generates paragraph embeddings."
 )
-
-# ── log capture ───────────────────────────────────────────────────────────────
-
-class _LogHandler(logging.Handler):
-    def __init__(self, container):
-        super().__init__()
-        self._lines: list[str] = []
-        self._container = container
-        self.setFormatter(
-            logging.Formatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s", datefmt="%H:%M:%S")
-        )
-
-    def emit(self, record: logging.LogRecord) -> None:
-        self._lines.append(self.format(record))
-        self._container.text_area("Output", "\n".join(self._lines), height=350)
-
 
 # ── form ──────────────────────────────────────────────────────────────────────
 
@@ -50,17 +38,12 @@ if st.button("Run Graph Initialization", type="primary"):
         st.stop()
 
     log_area = st.empty()
-    handler = _LogHandler(log_area)
+    handler = StreamlitLogHandler(log_area)
     root_logger = logging.getLogger()
     root_logger.addHandler(handler)
 
     try:
         with st.spinner("Initializing graph — this may take several minutes…"):
-            from langchain_huggingface import HuggingFaceEmbeddings
-            from service.graph.graph import Neo4jGraph
-            from service.graph.graph_loader import GraphLoader
-            from service.scraper.eurlex_document_utils import EurlexDocumentUtils
-
             graph = Neo4jGraph(config.NEO4J_URI, config.NEO4J_USERNAME, config.NEO4J_PASSWORD)
             graph.verify_connection()
 

@@ -7,6 +7,7 @@ import logging
 
 import streamlit as st
 from dotenv import load_dotenv
+from utils.streamlit_log_handler import StreamlitLogHandler
 
 load_dotenv()
 import config  # noqa: E402
@@ -16,22 +17,6 @@ st.caption(
     "Extracts legal concepts from the knowledge graph using iterative "
     "seed-based classification and terminology enrichment."
 )
-
-# ── log capture ───────────────────────────────────────────────────────────────
-
-class _LogHandler(logging.Handler):
-    def __init__(self, container):
-        super().__init__()
-        self._lines: list[str] = []
-        self._container = container
-        self.setFormatter(
-            logging.Formatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s", datefmt="%H:%M:%S")
-        )
-
-    def emit(self, record: logging.LogRecord) -> None:
-        self._lines.append(self.format(record))
-        self._container.text_area("Output", "\n".join(self._lines), height=350)
-
 
 # ── parameters ────────────────────────────────────────────────────────────────
 
@@ -47,7 +32,7 @@ with col_g:
 
 if st.button("Run ASKE Pipeline", type="primary"):
     log_area = st.empty()
-    handler = _LogHandler(log_area)
+    handler = StreamlitLogHandler(log_area)
     root_logger = logging.getLogger()
     root_logger.addHandler(handler)
 

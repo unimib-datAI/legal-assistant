@@ -11,6 +11,10 @@ import tempfile
 import streamlit as st
 from dotenv import load_dotenv
 
+from utils.streamlit_log_handler import StreamlitLogHandler
+from service.case_law.agent import parse_document
+from service.case_law.doc_parser import flatten
+
 load_dotenv()
 
 st.title("Case Law Parser")
@@ -18,22 +22,6 @@ st.caption(
     "Upload an EU case law PDF. The parser infers the document structure using an LLM "
     "and renders the full hierarchical tree."
 )
-
-
-# -- log capture --------------------------------------------------------------
-
-class _LogHandler(logging.Handler):
-    def __init__(self, container):
-        super().__init__()
-        self._lines: list[str] = []
-        self._container = container
-        self.setFormatter(
-            logging.Formatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s", datefmt="%H:%M:%S")
-        )
-
-    def emit(self, record: logging.LogRecord) -> None:
-        self._lines.append(self.format(record))
-        self._container.text_area("Output", "\n".join(self._lines), height=200)
 
 
 # -- expandable tree renderer -------------------------------------------------
@@ -105,16 +93,14 @@ pdf_path = st.session_state["cl_tmp_path"]
 
 if st.button("Parse Document", type="primary"):
     log_area = st.empty()
-    handler = _LogHandler(log_area)
+    handler = StreamlitLogHandler(log_area)
     root_logger = logging.getLogger()
     root_logger.addHandler(handler)
 
     try:
         with st.spinner("Inferring document structure..."):
-            from service.case_law.agent import parse_document
-            from service.case_law.doc_parser import flatten
-            cfg, roots = parse_document(pdf_path)
-            st.session_state["cl_result"] = (cfg, roots, flatten(roots))
+            parsing_rules, roots = parse_document(pdf_path)
+            st.session_state["cl_result"] = (parsing_rules, roots, flatten(roots))
     except Exception as exc:
         st.error(f"Error: {exc}")
     finally:
@@ -125,18 +111,18 @@ if st.button("Parse Document", type="primary"):
 if "cl_result" not in st.session_state:
     st.stop()
 
-cfg, roots, flat = st.session_state["cl_result"]
+parsing_rules, roots, flat = st.session_state["cl_result"]
 
 col_info, col_main = st.columns([1, 3])
 
 with col_info:
     st.subheader("Document info")
-    st.markdown(f"**Domain:** {cfg.get('domain', '-')}")
-    if cfg.get("notes"):
-        st.markdown(f"**Notes:** {cfg['notes']}")
+    st.markdown(f"**Domain:** {parsing_rules.get('domain', '-')}")
+    if parsing_rules.get("notes"):
+        st.markdown(f"**Notes:** {parsing_rules['notes']}")
     st.divider()
     st.subheader("Inferred rules")
-    for rule in cfg.get("rules", []):
+    for rule in parsing_rules.get("rules", []):
         st.markdown(f"- `{rule['pattern']}` ({rule['type']}, depth {rule['depth']})")
     st.divider()
     st.download_button(
@@ -145,6 +131,27 @@ with col_info:
         file_name=f"{uploaded.name.removesuffix('.pdf')}_parsed.json",
         mime="application/json",
     )
+
+    if st.button("Generate Summaries", type="secondary"):
+        st.session_state.pop("cl_summaries", None)
+        sections = [s for s in flat if s["heading"] != "Reports of Cases"]
+        progress_bar = st.progress(0, text="Starting...")
+        summaries: list[dict] = []
+        from service.case_law.agent import summarize_section
+        for i, section in enumerate(sections):
+            label = section["heading"][:48] + "..." if len(section["heading"]) > 48 else section["heading"]
+            progress_bar.progress((i) / len(sections), text=f"Summarising: {label}")
+            summaries.append(summarize_section(section))
+        progress_bar.progress(1.0, text="Done.")
+        st.session_state["cl_summaries"] = summaries
+
+    if "cl_summaries" in st.session_state:
+        st.download_button(
+            label="Download Summaries JSON",
+            data=json.dumps(st.session_state["cl_summaries"], indent=2, ensure_ascii=False),
+            file_name=f"{uploaded.name.removesuffix('.pdf')}_summaries.json",
+            mime="application/json",
+        )
 
 with col_main:
     tab_tree, tab_diagram = st.tabs(["Document Tree", "Tree Diagram"])
