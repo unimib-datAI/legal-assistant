@@ -7,12 +7,15 @@ and renders the parsed document tree.
 import json
 import logging
 import tempfile
+import re as _re
+import config
 
 import streamlit as st
 from dotenv import load_dotenv
 
+from service.graph.graph import Neo4jGraph
 from utils.streamlit_log_handler import StreamlitLogHandler
-from service.case_law.llm_orchestrator import parse_document
+from service.case_law.llm_orchestrator import parse_document, create_case_law_kg
 from service.case_law.doc_parser import flatten
 
 load_dotenv()
@@ -157,6 +160,29 @@ with col_info:
             file_name=f"{uploaded.name.removesuffix('.pdf')}_summaries.json",
             mime="application/json",
         )
+
+        st.divider()
+        _match = _re.search(r"CELEX_(\w+)_", uploaded.name, _re.IGNORECASE)
+        _default_celex = _match.group(1) if _match else ""
+        celex_input = st.text_input("CELEX ID", value=_default_celex, placeholder="e.g. 62019CJ0645")
+        if st.button("Create Case Law KG", type="primary"):
+            if not celex_input.strip():
+                st.error("Enter a CELEX ID.")
+            else:
+                try:
+                    with st.spinner(f"Writing {celex_input.strip()} to Neo4j…"):
+                        graph = Neo4jGraph(config.NEO4J_URI, config.NEO4J_USERNAME, config.NEO4J_PASSWORD)
+                        graph.verify_connection()
+                        create_case_law_kg(
+                            celex=celex_input.strip(),
+                            flat=flat,
+                            summaries=st.session_state["cl_summaries"],
+                            graph=graph,
+                        )
+                        graph.close()
+                    st.success(f"KG created for {celex_input.strip()}.")
+                except Exception as exc:
+                    st.error(f"Error: {exc}")
 
 with col_main:
     tab_tree, tab_diagram = st.tabs(["Document Tree", "Tree Diagram"])

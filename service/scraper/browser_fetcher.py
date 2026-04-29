@@ -1,4 +1,5 @@
 import logging
+import concurrent.futures
 
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
 
@@ -29,16 +30,10 @@ class BrowserFetcher:
         """
         logger.info("Fetching %s", url)
 
-        with sync_playwright() as pw:
-            browser = pw.chromium.launch(headless=True)
-            page = browser.new_page()
-            try:
-                page.goto(url, wait_until=self.wait_until, timeout=self.timeout_ms)
-                html = page.content()
-            except PlaywrightTimeoutError as exc:
-                raise TimeoutError(f"Timed out loading {url}") from exc
-            finally:
-                browser.close()
+        # Run in a dedicated thread so sync_playwright can create its own event
+        # loop without conflicting with any existing loop (e.g. Streamlit's).
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+            html = pool.submit(self._fetch_in_thread, url).result()
 
         if len(html) < MIN_CONTENT_LENGTH:
             raise ValueError(
@@ -48,3 +43,18 @@ class BrowserFetcher:
 
         logger.debug("Fetched %s (%d chars)", url, len(html))
         return html
+
+    def _fetch_in_thread(self, url: str) -> str:
+        import asyncio, sys
+        if sys.platform == "win32":
+            asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
+        with sync_playwright() as pw:
+            browser = pw.chromium.launch(headless=True)
+            page = browser.new_page()
+            try:
+                page.goto(url, wait_until=self.wait_until, timeout=self.timeout_ms)
+                return page.content()
+            except PlaywrightTimeoutError as exc:
+                raise TimeoutError(f"Timed out loading {url}") from exc
+            finally:
+                browser.close()

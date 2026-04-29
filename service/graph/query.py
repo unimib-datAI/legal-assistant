@@ -10,6 +10,11 @@ Neo4j Cypher query repository
 class NodeQueries:
     """Queries for node operations"""
 
+    EXISTS_NODE = """
+    MATCH (n:{node_name} {{id: $node_id}})
+    RETURN count(n) > 0 AS exists
+    """
+
     CREATE_NODE = """
     MERGE (n:{node_name} {{id: $node_properties.id}})
     SET n = $node_properties

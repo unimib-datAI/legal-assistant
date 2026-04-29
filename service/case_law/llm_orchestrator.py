@@ -40,7 +40,6 @@ def parse_document(pdf_path: str) -> tuple[dict, list[Node]]:
     roots = build_tree(pdf_path, parsing_rules)
     return parsing_rules, roots
 
-
 def summarize_document(pdf_path: str, char_length: int = 150) -> str:
     """Produce a high-level summary of the entire document from the raw PDF text."""
     opts = PdfPipelineOptions()
@@ -60,7 +59,6 @@ def summarize_document(pdf_path: str, char_length: int = 150) -> str:
     logger.info("Summarising full document from raw PDF: %s", pdf_path)
     return _call_llm(user_prompt=user_prompt, system_prompt=CASE_LAW_ENTIRE_DOC_SUMMARY_SYSTEM_PROMPT)
 
-
 def summarize_section(section: dict) -> dict | None:
     body_text = "\n".join(section.get("body", []))
     if not body_text.strip() or section.get("heading") in _SKIP_SECTIONS:
@@ -76,6 +74,75 @@ def summarize_section(section: dict) -> dict | None:
         return _parse_json(raw)
     except (json.JSONDecodeError, ValueError):
         return {"heading": section["heading"], "summary": raw}
+
+def create_case_law_kg(
+    celex: str,
+    flat: list[dict],
+    summaries: list[dict],
+    graph,
+) -> None:
+    """Build the case law subgraph in Neo4j from parsed sections and their summaries.
+
+    Graph structure:
+      (CaseLaw {celex}) -[:HAS_SECTION]-> (CaseLawSection)  — depth-based parent/child via [:CONTAINS]
+      (CaseLaw)         -[:HAS_TOPIC]->   (CaseLawTopic)    — one node per topic string
+    """
+    summary_by_heading: dict[str, str] = {s["heading"]: s.get("summary", "") for s in summaries}
+
+    case_law_id = f"{celex}"
+    if graph.node_exists("CaseLaw", case_law_id):
+        logger.info("CaseLaw node %s already exists — reusing it", celex)
+    else:
+        graph.create_graph_node("CaseLaw", {"id": case_law_id, "celex": celex})
+        logger.info("Created CaseLaw node: %s", celex)
+
+    topics_section = next((s for s in flat if s["heading"] == "Topics"), None)
+    if topics_section:
+        for topic in topics_section.get("body", []):
+            topic = topic.strip()
+            if not topic:
+                continue
+            topic_id = f"case_law_topic:{celex}:{topic}"
+            graph.create_graph_node("CaseLawTopic", {"id": topic_id, "label": topic, "celex": celex})
+            graph.create_relationship("CaseLaw", "CaseLawTopic", case_law_id, topic_id, "HAS_TOPIC")
+
+    # Stack maps depth → section_id of the most recent ancestor at that depth.
+    depth_stack: dict[int, str] = {}
+
+    sections = [s for s in flat if s["heading"] != "Topics"]
+    for i, section in enumerate(sections):
+        heading = section["heading"]
+        depth = section["depth"]
+        body = "\n".join(section.get("body", []))
+        summary = summary_by_heading.get(heading, "")
+
+        section_id = f"case_law_section:{celex}:{i}:{heading[:60]}"
+        graph.create_graph_node("CaseLawSection", {
+            "id": section_id,
+            "heading": heading,
+            "depth": depth,
+            "body": body,
+            "summary": summary,
+        })
+
+        # Find the closest ancestor: walk up from depth-1 until we find one in the stack
+        parent_id = next(
+            (depth_stack[d] for d in range(depth - 1, -1, -1) if d in depth_stack),
+            None,
+        )
+        if parent_id is None:
+            graph.create_relationship("CaseLaw", "CaseLawSection", case_law_id, section_id, "HAS_SECTION")
+        else:
+            parent_label = "CaseLaw" if parent_id == case_law_id else "CaseLawSection"
+            graph.create_relationship(parent_label, "CaseLawSection", parent_id, section_id, "CONTAINS")
+
+        depth_stack[depth] = section_id
+        # Invalidate any deeper entries so they don't become false ancestors
+        for d in list(depth_stack):
+            if d > depth:
+                del depth_stack[d]
+
+    logger.info("Case law KG created for %s (%d sections)", celex, len(sections))
 
 
 def _parse_json(raw: str) -> dict:

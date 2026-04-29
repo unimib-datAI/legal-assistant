@@ -36,6 +36,13 @@ class Neo4jGraph:
             session.run("MATCH (n) DETACH DELETE n")
             logger.info("Database cleared")
 
+    def node_exists(self, node_name: str, node_id: str) -> bool:
+        """Return True if a node with the given id already exists."""
+        with self.driver.session() as session:
+            query = NodeQueries.EXISTS_NODE.format(node_name=node_name)
+            result = session.run(query, node_id=node_id)
+            return result.single()["exists"]
+
     def create_graph_node(self, node_name, node_properties):
         """Create a node with the given name and properties, returning its ID."""
         with self.driver.session() as session:
