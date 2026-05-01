@@ -1,0 +1,451 @@
+[
+  {
+    "label": "AI conformity assessment procedure",
+    "terms": [
+      "AI conformity assessment procedure"
+    ]
+  },
+  {
+    "label": "AI deployer obligation",
+    "terms": [
+      "AI deployer obligation"
+    ]
+  },
+  {
+    "label": "AI importer and distributor obligation",
+    "terms": [
+      "AI importer and distributor obligation"
+    ]
+  },
+  {
+    "label": "AI in administration of justice",
+    "terms": [
+      "AI in administration of justice"
+    ]
+  },
+  {
+    "label": "AI in education and vocational training",
+    "terms": [
+      "AI in education and vocational training"
+    ]
+  },
+  {
+    "label": "AI in employment and worker management",
+    "terms": [
+      "AI in employment and worker management"
+    ]
+  },
+  {
+    "label": "AI in migration and border control",
+    "terms": [
+      "AI in migration and border control"
+    ]
+  },
+  {
+    "label": "AI provider obligation",
+    "terms": [
+      "AI provider obligation"
+    ]
+  },
+  {
+    "label": "AI regulatory sandbox",
+    "terms": [
+      "AI regulatory sandbox"
+    ]
+  },
+  {
+    "label": "AI risk management system",
+    "terms": [
+      "AI risk management system",
+      "harm",
+      "protection",
+      "risk",
+      "safety",
+      "security"
+    ]
+  },
+  {
+    "label": "CE marking for AI system",
+    "terms": [
+      "CE marking for AI system"
+    ]
+  },
+  {
+    "label": "European data innovation board",
+    "terms": [
+      "European data innovation board"
+    ]
+  },
+  {
+    "label": "IoT data and connected device",
+    "terms": [
+      "IoT data and connected device",
+      "metadata"
+    ]
+  },
+  {
+    "label": "adequacy decision for data transfer",
+    "terms": [
+      "adequacy decision for data transfer"
+    ]
+  },
+  {
+    "label": "administrative fine and penalty",
+    "terms": [
+      "administrative fine and penalty",
+      "agency",
+      "fine",
+      "penalty"
+    ]
+  },
+  {
+    "label": "auditability and traceability requirement",
+    "terms": [
+      "audit",
+      "auditability and traceability requirement",
+      "controller"
+    ]
+  },
+  {
+    "label": "automated individual decision-making and profiling",
+    "terms": [
+      "assessment",
+      "automated individual decision-making and profiling",
+      "life",
+      "member",
+      "personality",
+      "profiling"
+    ]
+  },
+  {
+    "label": "certification and code of conduct",
+    "terms": [
+      "accreditation",
+      "certification",
+      "certification and code of conduct",
+      "mark"
+    ]
+  },
+  {
+    "label": "cloud switching and interoperability",
+    "terms": [
+      "cloud switching and interoperability",
+      "interoperability",
+      "metadata",
+      "transfer",
+      "website"
+    ]
+  },
+  {
+    "label": "controller responsibility and accountability",
+    "terms": [
+      "compliance",
+      "conduct",
+      "controller responsibility and accountability",
+      "operation",
+      "scope"
+    ]
+  },
+  {
+    "label": "cross-border processing cooperation",
+    "terms": [
+      "cross-border processing cooperation",
+      "place",
+      "scope",
+      "state",
+      "territory"
+    ]
+  },
+  {
+    "label": "data access right for connected product user",
+    "terms": [
+      "data access right for connected product user"
+    ]
+  },
+  {
+    "label": "data accuracy obligation",
+    "terms": [
+      "data accuracy obligation"
+    ]
+  },
+  {
+    "label": "data altruism organisation and registration",
+    "terms": [
+      "data altruism organisation and registration"
+    ]
+  },
+  {
+    "label": "data made available to public sector body",
+    "terms": [
+      "board",
+      "controller",
+      "data made available to public sector body",
+      "officer",
+      "organisation",
+      "recipient",
+      "request"
+    ]
+  },
+  {
+    "label": "data minimisation principle",
+    "terms": [
+      "data minimisation principle"
+    ]
+  },
+  {
+    "label": "data protection by design and by default",
+    "terms": [
+      "data protection by design and by default",
+      "investigation",
+      "offence",
+      "prevention",
+      "protection",
+      "surveillance"
+    ]
+  },
+  {
+    "label": "data protection officer tasks and independence",
+    "terms": [
+      "board",
+      "commission",
+      "competent",
+      "controller",
+      "data protection officer tasks and independence",
+      "organisation"
+    ]
+  },
+  {
+    "label": "data recipient obligation and use limitation",
+    "terms": [
+      "contract",
+      "data recipient obligation and use limitation",
+      "infringement",
+      "issue"
+    ]
+  },
+  {
+    "label": "data sharing for connected product and service",
+    "terms": [
+      "data sharing for connected product and service"
+    ]
+  },
+  {
+    "label": "emotion recognition system",
+    "terms": [
+      "emotion recognition system",
+      "person"
+    ]
+  },
+  {
+    "label": "general-purpose AI systemic risk",
+    "terms": [
+      "general-purpose AI systemic risk"
+    ]
+  },
+  {
+    "label": "harmonised standard and standardisation",
+    "terms": [
+      "compliance",
+      "harmonised standard and standardisation",
+      "practice",
+      "standardisation"
+    ]
+  },
+  {
+    "label": "high-risk AI accuracy robustness and cybersecurity",
+    "terms": [
+      "high-risk AI accuracy robustness and cybersecurity"
+    ]
+  },
+  {
+    "label": "high-risk AI data governance requirement",
+    "terms": [
+      "high-risk AI data governance requirement"
+    ]
+  },
+  {
+    "label": "high-risk AI system classification",
+    "terms": [
+      "high-risk AI system classification"
+    ]
+  },
+  {
+    "label": "high-risk AI technical documentation",
+    "terms": [
+      "high-risk AI technical documentation"
+    ]
+  },
+  {
+    "label": "high-risk AI transparency requirement",
+    "terms": [
+      "high-risk AI transparency requirement"
+    ]
+  },
+  {
+    "label": "incident reporting obligation",
+    "terms": [
+      "breach",
+      "compliance",
+      "incident reporting obligation",
+      "infringement"
+    ]
+  },
+  {
+    "label": "integrity and confidentiality of processing",
+    "terms": [
+      "competent",
+      "integrity and confidentiality of processing",
+      "processing"
+    ]
+  },
+  {
+    "label": "joint controller arrangement",
+    "terms": [
+      "joint controller arrangement"
+    ]
+  },
+  {
+    "label": "lawfulness fairness and transparency of processing",
+    "terms": [
+      "access",
+      "authority",
+      "consent",
+      "contract",
+      "freedom",
+      "infringement",
+      "lawfulness fairness and transparency of processing",
+      "organisation"
+    ]
+  },
+  {
+    "label": "market surveillance for regulated product",
+    "terms": [
+      "market surveillance for regulated product"
+    ]
+  },
+  {
+    "label": "personal data breach notification",
+    "terms": [
+      "personal data breach notification"
+    ]
+  },
+  {
+    "label": "processing of criminal offence data",
+    "terms": [
+      "processing of criminal offence data"
+    ]
+  },
+  {
+    "label": "processing of special category data",
+    "terms": [
+      "processing of special category data"
+    ]
+  },
+  {
+    "label": "purpose limitation principle",
+    "terms": [
+      "purpose limitation principle",
+      "restriction"
+    ]
+  },
+  {
+    "label": "re-use of protected public sector data",
+    "terms": [
+      "re-use of protected public sector data"
+    ]
+  },
+  {
+    "label": "real-world AI testing condition",
+    "terms": [
+      "real-world AI testing condition",
+      "testing"
+    ]
+  },
+  {
+    "label": "records of processing activities",
+    "terms": [
+      "case",
+      "identification",
+      "manner",
+      "monitoring",
+      "records of processing activities",
+      "safeguard",
+      "system"
+    ]
+  },
+  {
+    "label": "redress and complaint mechanism",
+    "terms": [
+      "authority",
+      "communication",
+      "redress and complaint mechanism",
+      "request"
+    ]
+  },
+  {
+    "label": "right to compensation for data protection violation",
+    "terms": [
+      "right to compensation for data protection violation"
+    ]
+  },
+  {
+    "label": "right to erasure",
+    "terms": [
+      "access",
+      "erasure",
+      "right to erasure"
+    ]
+  },
+  {
+    "label": "right to judicial remedy",
+    "terms": [
+      "authority",
+      "complainant",
+      "court",
+      "infringement",
+      "judicial",
+      "proceeding",
+      "right to judicial remedy"
+    ]
+  },
+  {
+    "label": "single information point for data re-use",
+    "terms": [
+      "single information point for data re-use"
+    ]
+  },
+  {
+    "label": "storage limitation principle",
+    "terms": [
+      "address",
+      "application",
+      "category",
+      "consistency",
+      "holder",
+      "metadata",
+      "record",
+      "retention",
+      "storage",
+      "storage limitation principle",
+      "transfer"
+    ]
+  },
+  {
+    "label": "transfer impact assessment",
+    "terms": [
+      "transfer impact assessment"
+    ]
+  },
+  {
+    "label": "transparent information and communication",
+    "terms": [
+      "communication",
+      "conformity",
+      "disclosure",
+      "language",
+      "request",
+      "requirement",
+      "transparent information and communication"
+    ]
+  }
+]

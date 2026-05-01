@@ -1,9 +1,16 @@
 import os
+from pathlib import Path
 
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
 load_dotenv()
+
+# Project root (directory containing this config file)
+PROJECT_ROOT = Path(__file__).resolve().parent
+
+# Evaluation directories
+EVALS_DIR = PROJECT_ROOT / "test" / "rag_eval" / "evals"
 
 # Neo4j configuration
 NEO4J_URI = os.getenv("NEO4J_URI")

@@ -10,6 +10,11 @@ Neo4j Cypher query repository
 class NodeQueries:
     """Queries for node operations"""
 
+    EXISTS_NODE = """
+    MATCH (n:{node_name} {{id: $node_id}})
+    RETURN count(n) > 0 AS exists
+    """
+
     CREATE_NODE = """
     MERGE (n:{node_name} {{id: $node_properties.id}})
     SET n = $node_properties
@@ -17,13 +22,13 @@ class NodeQueries:
     """
     GET_NODE_WITHOUT_EMBEDDING = """
     MATCH (n:{node_name})
-    WHERE n.textEmbeddingKaLM IS NULL
+    WHERE n.textEmbedding IS NULL
     return n.id as node_id, n.text as text
     """
     PUT_EMBEDDING = """
     MATCH (n:{node_name})
     WHERE n.id = $node_id
-    CALL db.create.setNodeVectorProperty(n, "textEmbeddingKaLM", $vector)
+    CALL db.create.setNodeVectorProperty(n, "textEmbedding", $vector)
     """
     
     GET_ALL_PARAGRAPHS = """
@@ -58,7 +63,6 @@ class NodeQueries:
            p.text AS text,
            topics,
            a.title AS article_title
-    LIMIT $limit
     """
     
 class RelationQueries:
@@ -74,8 +78,10 @@ class RelationQueries:
 class GeneralQueries:
     """General purpose queries"""
     
+    DROP_INDEX_IF_EXISTS = "DROP INDEX {index_name} IF EXISTS"
+
     CREATE_VECTOR_INDEX = """
-    CREATE VECTOR INDEX {index_name} IF NOT EXISTS
+    CREATE VECTOR INDEX {index_name}
     FOR (n:{node_name}) ON (n.textEmbedding)
     OPTIONS {{ indexConfig: {{
         `vector.dimensions`: {dimensions},

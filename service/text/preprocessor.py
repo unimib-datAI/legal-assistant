@@ -1,4 +1,5 @@
 import logging
+import re
 import nltk
 from nltk.stem import WordNetLemmatizer
 from nltk.tokenize import sent_tokenize, word_tokenize
@@ -19,7 +20,9 @@ class TextPreprocessor:
     def __init__(self) -> None:
         self._lemmatizer = WordNetLemmatizer()
 
-    def tokenize_paragraphs(self, paragraphs: list[dict]) -> list[dict]:
+    # ── ASKE preprocess ──────────────────────────────────────────────────────────
+
+    def _tokenize_paragraphs(self, paragraphs: list[dict]) -> list[dict]:
         """Split each paragraph's text into sentences, preserving paragraph_id."""
         tokenized = []
         for para in paragraphs:
@@ -30,7 +33,7 @@ class TextPreprocessor:
         logger.debug("Tokenized %d paragraphs into sentences", len(tokenized))
         return tokenized
 
-    def lemmatize_paragraphs(self, paragraphs: list[dict]) -> list[dict]:
+    def _lemmatize_paragraphs(self, paragraphs: list[dict]) -> list[dict]:
         """Lemmatize each sentence in a tokenized paragraph, preserving paragraph_id.
 
         Expects tokenized input: {"paragraph_id": ..., "text": ["sentence1", ...]}
@@ -60,8 +63,8 @@ class TextPreprocessor:
         Returns:
             List of dicts with 'paragraph_id', 'chunk_index', and 'text'
         """
-        tokenized = self.tokenize_paragraphs(paragraphs)
-        lemmatized = self.lemmatize_paragraphs(tokenized)
+        tokenized = self._tokenize_paragraphs(paragraphs)
+        lemmatized = self._lemmatize_paragraphs(tokenized)
         return self._to_chunks(lemmatized, skip_first)
 
     @staticmethod
