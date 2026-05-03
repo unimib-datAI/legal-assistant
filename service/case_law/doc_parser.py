@@ -1,14 +1,10 @@
 import re
 import logging
+from collections import Counter
 from dataclasses import dataclass, field
 from typing import NamedTuple
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-    datefmt="%H:%M:%S",
-)
-logging.disable(logging.CRITICAL)
+logger = logging.getLogger(__name__)
 
 from docling.document_converter import DocumentConverter, PdfFormatOption
 from docling.datamodel.pipeline_options import PdfPipelineOptions
@@ -21,6 +17,17 @@ _TOPICS_PATTERN = re.compile(r"^\(.+" + _DASH + r".+\)$", re.DOTALL)
 _TOPIC_SPLIT = re.compile(r"\s+" + _DASH + r"\s*(?=[A-Z’’’])")
 _GIVES_FOLLOWING = re.compile(r"gives the following", re.IGNORECASE)
 _JUDGMENT_HEADER = re.compile(r"^judgment$", re.IGNORECASE)
+
+_LAW_SECTION_RE = re.compile(r'^[A-Z][A-Za-z\s]+\s+law$', re.IGNORECASE)
+
+_EU_CASE_LAW_MANDATORY_RULES = [
+    {"pattern": "European Union law", "type": "prefix", "depth": 1},
+    {"pattern": r"^[A-Z][a-z]+(\s+[A-Za-z]+)*\s+law$", "type": "regex", "depth": 1},
+    {"pattern": r"^(Question|The.+[Qq]uestions?)$", "type": "regex", "depth": 1},
+    {"pattern": r"^\d+\.?\s", "type": "regex", "depth": 2},
+]
+_NUMBERED_PARA_RE = re.compile(r'^\d+[.)]\s')
+_LEADING_QUOTES = frozenset({'\u0027', '\u0022', '\u2018', '\u2019', '\u201c', '\u201d'})
 
 _DANGLING_WORDS = frozenset({
     "a", "an", "the", "of", "in", "to", "for", "with", "by", "on", "at",
@@ -145,16 +152,43 @@ def build_tree(pdf_path: str, parsing_rules: dict) -> list[Node]:
         node: Node
 
     rules = parsing_rules["rules"]
+    domain = parsing_rules.get("domain", "").lower()
+    if "case law" in domain:
+        rules = _EU_CASE_LAW_MANDATORY_RULES + rules
     roots: list[Node] = []
     stack: list[_StackEntry] = []
     current_node: Node | None = None
+
+    # Running page headers repeat on every PDF page. Docling may label them
+    # as either "page_header" or "section_header", so check by frequency:
+    # any structural text that appears more than once is a page header.
+    _heading_freq = Counter(
+        e["text"] for e in final_items if e["label"] in STRUCTURAL
+    )
 
     for entry in final_items:
         label, text = entry["label"], entry["text"]
 
         if label in STRUCTURAL:
+            # Skip page headers (by docling label or by repetition across pages).
+            if label == "page_header" or _heading_freq[text] > 2:
+                continue
+
             matched_depth = _match_depth(text, rules)
             rule_matched = matched_depth is not None
+
+            # Demote structural items whose text starts with a quote character:
+            # docling sometimes misclassifies quoted legal article text as section_header.
+            # Also demote numbered paragraphs like "110. Furthermore..." that docling
+            # mis-labels as section_header (rule ^\d+\s misses the period variant).
+            if text and text[0] in _LEADING_QUOTES:
+                if current_node is not None:
+                    current_node.body.append(text)
+                continue
+            if _NUMBERED_PARA_RE.match(text.strip()) and current_node is not None:
+                current_node.body.append(text)
+                continue
+
             depth = matched_depth if rule_matched else max(0, entry.get("docling_level", 1) - 1)
             node = Node(text=text, label=label, depth=depth, rule_matched=rule_matched)
 
@@ -170,7 +204,23 @@ def build_tree(pdf_path: str, parsing_rules: dict) -> list[Node]:
             current_node = node
 
         elif label in BODY_LABELS and current_node is not None:
-            current_node.body.append(text)
+            # Promote short "[Country] law" body items to child section nodes.
+            # Docling labels these as "text" even though they are structural
+            # subsections of "Legal context" in EU case law documents.
+            if _LAW_SECTION_RE.match(text.strip()) and "legal" in current_node.text.lower():
+                matched = _match_depth(text.strip(), rules)
+                depth = matched if matched is not None else current_node.depth + 1
+                node = Node(text=text.strip(), label="section_header", depth=depth, rule_matched=matched is not None)
+                while stack and stack[-1].depth >= depth:
+                    stack.pop()
+                if stack:
+                    stack[-1].node.children.append(node)
+                else:
+                    roots.append(node)
+                stack.append(_StackEntry(depth, node))
+                current_node = node
+            else:
+                current_node.body.append(text)
 
     return roots
 
@@ -187,18 +237,19 @@ def flatten(roots: list[Node]) -> list[dict]:
     return out
 
 def _match_depth(text: str, rules: list[dict]) -> int | None:
+    normalized = " ".join(text.split())
     for rule in rules:
         pattern, rtype = rule["pattern"], rule.get("type", "prefix")
         if rtype == "regex" or pattern.startswith("^") or pattern.endswith("$"):
             try:
-                if re.match(pattern, text.strip(), re.IGNORECASE):
+                if re.match(pattern, normalized, re.IGNORECASE):
                     return rule["depth"]
                 continue
             except re.error:
                 pass
-        if rtype == "prefix" and text.lower().startswith(pattern.lower()):
+        if rtype == "prefix" and normalized.lower().startswith(pattern.lower()):
             return rule["depth"]
-        if rtype == "exact" and text.strip().lower() == pattern.lower():
+        if rtype == "exact" and normalized.lower() == pattern.lower():
             return rule["depth"]
     return None
 

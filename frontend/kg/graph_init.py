@@ -59,12 +59,18 @@ if st.button("Run Graph Initialization", type="primary"):
                 model_name="BAAI/bge-large-en-v1.5",
                 encode_kwargs={"normalize_embeddings": True},
             )
-            dimensions = graph.generate_text_embeddings(
+            paragraph_dimension = graph.generate_text_embeddings(
                 embed_fn=bge_embeddings.embed_documents,
                 embedding_dim=1536,
                 node_name="Paragraph",
             )
-            graph.create_vector_index("Paragraph", "Paragraph", dimensions)
+            rec_dimension = graph.generate_text_embeddings(
+                embed_fn=bge_embeddings.embed_documents,
+                embedding_dim=1536,
+                node_name="Recital",
+            )
+            graph.create_vector_index("Paragraph", "Paragraph", paragraph_dimension)
+            graph.create_vector_index("Recital", "Recital", rec_dimension)
             graph.close()
 
         st.success(f"Graph initialized — {len(celex_ids)} document(s) loaded.")

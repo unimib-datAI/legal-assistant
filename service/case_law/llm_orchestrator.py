@@ -90,11 +90,9 @@ def create_case_law_kg(
     summary_by_heading: dict[str, str] = {s["heading"]: s.get("summary", "") for s in summaries}
 
     case_law_id = f"{celex}"
-    if graph.node_exists("CaseLaw", case_law_id):
-        logger.info("CaseLaw node %s already exists — reusing it", celex)
-    else:
-        graph.create_graph_node("CaseLaw", {"id": case_law_id, "celex": celex})
-        logger.info("Created CaseLaw node: %s", celex)
+    doc_summary = summary_by_heading.get("Document Summary", "")
+    graph.upsert_graph_node("CaseLaw", {"id": case_law_id, "celex": celex, "summary": doc_summary})
+    logger.info("Upserted CaseLaw node: %s", celex)
 
     topics_section = next((s for s in flat if s["heading"] == "Topics"), None)
     if topics_section:
@@ -103,7 +101,7 @@ def create_case_law_kg(
             if not topic:
                 continue
             topic_id = f"case_law_topic:{celex}:{topic}"
-            graph.create_graph_node("CaseLawTopic", {"id": topic_id, "label": topic, "celex": celex})
+            graph.upsert_graph_node("CaseLawTopic", {"id": topic_id, "label": topic, "celex": celex})
             graph.create_relationship("CaseLaw", "CaseLawTopic", case_law_id, topic_id, "HAS_TOPIC")
 
     # Stack maps depth → section_id of the most recent ancestor at that depth.
@@ -117,7 +115,7 @@ def create_case_law_kg(
         summary = summary_by_heading.get(heading, "")
 
         section_id = f"case_law_section:{celex}:{i}:{heading[:60]}"
-        graph.create_graph_node("CaseLawSection", {
+        graph.upsert_graph_node("CaseLawSection", {
             "id": section_id,
             "heading": heading,
             "depth": depth,

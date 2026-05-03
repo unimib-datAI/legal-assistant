@@ -43,13 +43,13 @@ class Neo4jGraph:
             result = session.run(query, node_id=node_id)
             return result.single()["exists"]
 
-    def create_graph_node(self, node_name, node_properties):
-        """Create a node with the given name and properties, returning its ID."""
+    def upsert_graph_node(self, node_name, node_properties):
+        """Create or update a node with the given name and properties, returning its ID."""
         with self.driver.session() as session:
             query = NodeQueries.CREATE_NODE.format(node_name=node_name)
             result = session.run(query, node_properties=node_properties)
             node_id = result.single()["node_id"]
-            logger.info("Created %s node (ID: %s)", node_name, node_id)
+            logger.info("Upserted %s node (ID: %s)", node_name, node_id)
             return node_id
 
     def create_relationship(self, left_node_name, right_node_name, left_id, right_id, relationship):
