@@ -58,13 +58,27 @@ class NodeQueries:
     MATCH (p:Paragraph)-[:RELATED_TO]->(t:Topic)
     WHERE t.label IN $topics
     MATCH (p)<-[:CONTAINS]-(a:Article)
+    MATCH (p)<-[:CONTAINS*]-(act:Act)
+    WHERE size($acts) = 0 OR act.id IN $acts
     WITH p, a, collect(t.label) AS topics
     RETURN p.id AS id,
            p.text AS text,
            topics,
            a.title AS article_title
     """
-    
+
+    GET_ALL_RECITALS_BY_ACT = """
+    MATCH (a:Act {id: $celex})-[:CONTAINS]->(r:Recital)
+    RETURN r
+    ORDER BY toInteger(r.number)
+    """
+
+    GET_ALL_ACTS = """
+    MATCH (a:Act)
+    RETURN a.id AS celex, a.title AS title
+    ORDER BY a.id
+    """
+
 class RelationQueries:
     """Queries for relation operations"""
 

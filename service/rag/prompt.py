@@ -1,4 +1,30 @@
-TOPIC_SELECTION_PROMPT = """Act as an expert analyst in EU legal 
+QUERY_CLASSIFICATION_PROMPT = """You are an expert in EU digital legislation. Classify the user query along three axes to guide retrieval.
+
+=== AXES ===
+
+1. intent:
+   - DEFINITIONAL: asks what a provision says, what a term means, what the rules are. Answerable from articles/recitals alone.
+   - INTERPRETIVE: asks how a provision has been applied, interpreted by courts, or how it should be construed in a borderline case. Requires CJEU case law.
+
+2. acts: a list of available acts will be provided, if you're not sure of what act the query is about, return an empty list.
+If the question include the act EXPLICITLY include it.
+
+=== AVAILABLE ACTS ===
+{acts}
+
+=== FEW-SHOT EXAMPLES ===
+
+Query: "What entities fall under the personal scope of Chapter II?"
+{{"intent": "DEFINITIONAL", "acts": ["32022R0868"]}}
+
+Query: "What does communication 'in a clear and comprehensible manner' entail?"
+{{"intent": "DEFINITIONAL", "acts": ["32023R2854"]}}
+
+=== QUERY ===
+{query}
+"""
+
+TOPIC_SELECTION_PROMPT = """Act as an expert analyst in EU legal
 documents (GDPR, AI Act, Data Act, Data Governance Act), specialising 
 in topic classification and legal concept mapping.
 
@@ -27,24 +53,8 @@ provided list to guide retrieval of relevant legal paragraphs.
 {query}
 """
 
-ANSWER_SYNTHESIS_PROMPT = """Act as an EU legal expert specialising in GDPR, AI Act, Data Act, and Data Governance Act.
-
-=== GROUND RULES ===
-
-1. Ground every claim in the retrieved content below. Cite the specific article and regulation (e.g. "Article 32 GDPR"). Do not invent article numbers.
-2. If the retrieved content is insufficient or off-topic, say so explicitly and point the user to the correct provisions.
-3. When the question asks "how" or "what in practice", go beyond restating the law — explain what an organisation must concretely do, what documentation to maintain, and what technical or organisational measures to adopt.
-4. Note cross-references to related articles or regulations when the retrieved content supports them.
-
-=== RESPONSE FORMAT ===
-
-**Legal Basis**: The applicable provision(s) and what they require.
-
-**Practical Measures**: Specific, actionable steps — technical controls, process design, contractual clauses, access policies — grounded in the retrieved content.
-
-**Documentation & Accountability**: Records, policies, or assessments the organisation should maintain.
-
-**Related Obligations**: Connected provisions from the same or other regulations, if supported by the context.
+ANSWER_SYNTHESIS_PROMPT = """You are an EU data law expert specialising in the GDPR, 
+AI Act, Data Act, and Data Governance Act.
 
 === RETRIEVED CONTENT ===
 
@@ -53,6 +63,45 @@ ANSWER_SYNTHESIS_PROMPT = """Act as an EU legal expert specialising in GDPR, AI 
 === QUESTION ===
 
 {question}
+
+=== INSTRUCTIONS ===
+
+Answer strictly from the retrieved content above. Follow these rules:
+
+1. PRIORITISE THE MOST SPECIFIC SOURCE. If a recital directly answers the question, 
+   lead with it — recitals are often more actionable than articles for "how" and 
+   "what in practice" questions. Do not default to article-level citations when a 
+   recital provides the concrete answer.
+
+2. CITE PRECISELY. Reference the exact provision (e.g. "Recital 24 Data Act", 
+   "Article 25(2) DGA"). Never invent or infer article numbers not present in the 
+   retrieved content.
+
+3. IF THE RETRIEVED CONTENT IS INSUFFICIENT, say so explicitly. Identify which 
+   regulation and provision would answer the question and recommend the user refine 
+   the search toward those sources. Do not fill gaps with general legal reasoning 
+   or principles from other regulations.
+
+4. DO NOT IMPORT OBLIGATIONS FROM OTHER REGULATIONS unless the retrieved content 
+   explicitly cross-references them. A question about the Data Act must not default 
+   to GDPR principles unless the retrieved chunks support that connection.
+
+5. FOR "HOW" AND "WHAT IN PRACTICE" QUESTIONS, extract the concrete mechanism 
+   described in the source — a specific tool, format, process, or technical 
+   arrangement — rather than paraphrasing it into generic compliance advice.
+
+=== RESPONSE FORMAT ===
+
+**Legal basis**: The specific provision(s) from the retrieved content that govern 
+this question, with regulation name and article or recital number.
+
+**Answer**: What the law requires or permits, grounded directly in the retrieved 
+content. For practical questions, describe the concrete mechanism as specified 
+in the source — not a generalisation of it.
+
+**Related obligations**: Only if the retrieved content explicitly supports a 
+cross-reference to another provision or regulation. Omit this section entirely 
+if no such link appears in the retrieved content.
 """
 
 # Prompt to extract case law document hierarchy rules from structural elements
@@ -100,20 +149,40 @@ Ordering:
 
 Domain conventions to follow when applicable:
     EU legislation  → CHAPTER > Section > Article > paragraph
-    EU case law     → depth 0: top sections (Judgment, Legal context, The dispute in the main proceedings,
+    EU case law (Judgment) → depth 0: top sections (Judgment, Legal context, The dispute in the main proceedings,
                                Consideration of the questions referred, Costs, Signatures)
-                      depth 1: named subsections of Legal context (European Union law, National law)
-                               AND numbered sub-questions (The first question, The second question, The N-th question)
-                      depth 2: numbered paragraphs (^\\d+\\s)
+                      depth 1: subsections of Legal context — any "[Country/adjective] law" heading
+                               (e.g. "European Union law", "Spanish law", "French law", "National law")
+                               AND question sub-sections (match with regex "^(Question|The .+ [Qq]uestion)")
+                      depth 2: numbered paragraphs (^\\d+\\.?\\s)
+    EU case law (Advocate General Opinion, CELEX type CC) → depth 0: Roman-numeral sections
+                               (e.g. "I. The facts…", "II. My assessment", "III. Conclusion")
+                      depth 1: lettered sub-sections nested under their Roman-numeral parent
+                               (e.g. "A. The first and second questions", "B. …", "C. …")
+                      depth 2: numbered paragraphs (^\\d+\\.?\\s)
+                      Rules to generate for this document type:
+                        {{"pattern": "^[IVX]+\\.\\s", "type": "regex", "depth": 0}}
+                        {{"pattern": "^[A-Z]\\.\\s", "type": "regex", "depth": 1}}
+                        {{"pattern": "^\\d+\\.?\\s", "type": "regex", "depth": 2}}
     Academic        → numeric dot notation (1 > 1.1 > 1.1.1)
     Technical doc   → Part > Chapter > Section > Subsection
 - also use docling_level as a signal when it varies meaningfully across elements
 
-CRITICAL for EU case law — these rules are MANDATORY if those headers appear in the sample:
+CRITICAL for EU case law — these rules are MANDATORY and must always appear in your output:
   {{"pattern": "European Union law", "type": "prefix", "depth": 1}}
-  {{"pattern": "National law", "type": "prefix", "depth": 1}}
-  Reason: docling assigns them docling_level=1 (same as their parent "Legal context"),
-  so without an explicit depth-1 rule they will be placed at depth 0 instead of nested inside Legal context.
+  {{"pattern": "^[A-Z][a-z]+(\\s+[A-Za-z]+)*\\s+law$", "type": "regex", "depth": 1}}
+  {{"pattern": "^(Question|The.+[Qq]uestions?)$", "type": "regex", "depth": 1}}
+  {{"pattern": "^\\d+\\.?\\s", "type": "regex", "depth": 2}}
+  Reason: docling assigns legal-context subsections docling_level=1 (same as their parent),
+  so without explicit depth-1 rules they end up at depth 0 instead of nested inside Legal context.
+  The "[Country] law" regex covers all national-law variants: "Spanish law", "French law", etc.
+  The question regex uses $ to avoid matching headings like "The dispute in the main proceedings
+  and the question referred for a preliminary ruling" which contain "question" mid-string.
+
+NEVER include EU case law running page headers as rules. These are repeated headers that appear on
+every page in the format "JUDGMENT OF [date] — CASE [identifier] [party names]".
+They are NOT content sections — exclude them completely even if they appear as section_header in the sample.
+Example of what to NEVER add as a rule: "JUDGMENT OF 13. 5. 2014 — CASE C-131/12 GOOGLE SPAIN AND GOOGLE"
 """
 
 CASE_LAW_ENTITY_SUMMARY_SYSTEM_PROMPT = """

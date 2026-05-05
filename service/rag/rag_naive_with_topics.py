@@ -16,6 +16,7 @@ from service.graph.query import NodeQueries
 
 logger = logging.getLogger(__name__)
 
+_CASE_EXTRACTION = re.compile("^\d+[A-Z]+\d+", re.IGNORECASE)
 
 class GraphEnrichedRetriever(BaseRetriever):
     """Retriever combining semantic topic filtering with vector similarity search."""
@@ -28,6 +29,7 @@ class GraphEnrichedRetriever(BaseRetriever):
     embedding_model: Any = SentenceTransformer("all-MiniLM-L6-v2")
     cross_encoder: Any = CrossEncoder('cross-encoder/ms-marco-MiniLM-L-6-v2')
     graph_topic: dict = None
+    classifier: Any = None
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
@@ -73,19 +75,26 @@ class GraphEnrichedRetriever(BaseRetriever):
 
         return matches[:self.top_k_topic]
 
-    def _get_paragraphs_by_topics(self, user_query:str, topics: List[str]) -> List[Document]:
-        """Retrieve paragraphs associated with the given topics."""
+    def _get_paragraphs_by_topics(self, user_query: str, topics: List[str], target_acts: List[str] = None) -> list[Any] | tuple[
+        list[Document], list[Document]]:
+        """Retrieve paragraphs associated with the given topics.
+
+        Recitals are fetched from `target_acts` (from classification) when provided,
+        otherwise the CELEX list is derived from the top-ranked paragraphs.
+        """
         if not topics:
             return []
 
         results = self.graph.query(
             NodeQueries.GET_ALL_PARAGRAPHS_BY_TOPIC,
-            params={"topics": topics}
+            params={"topics": topics, "acts": target_acts or []}
         )
-        extracted_paragraphs = self._get_document_from_query_result(results)
+        extracted_paragraphs = self._create_document_from_retrieved_paragraph(results)
         ranked_docs = self._rank_extracted_documents(user_query, extracted_paragraphs, 3)
-
-        return ranked_docs
+        celex_list = target_acts if target_acts else self._get_celex_from_ranked_docs(ranked_docs)
+        retrieved_recital = self._get_relevant_recitals(celex_list)
+        ranked_recital = self._rank_extracted_documents(user_query, retrieved_recital, 2)
+        return ranked_docs, ranked_recital
 
     @staticmethod
     def _extract_paragraph_id(content: str) -> str:
@@ -93,9 +102,25 @@ class GraphEnrichedRetriever(BaseRetriever):
         match = re.search(r'\nid:\s*(\S+)', content)
         return match.group(1) if match else None
 
+    def _matches_act_filter(self, paragraph_id: str, acts: List[str]) -> bool:
+        """A paragraph ID like '32016R0679_002.002' starts with its act's CELEX."""
+        if not acts:
+            return True
+        return any(paragraph_id.startswith(celex) for celex in acts)
+
+    def _get_case_law_documents(self, user_query: str, acts: List[str]) -> List[Document]:
+        """Stub for INTERPRETIVE intent — case law retrieval not yet implemented."""
+        logger.info("[Case Law] INTERPRETIVE intent detected but case law retrieval is not implemented yet.")
+        return []
+
     def _get_relevant_documents(self, user_query: str, *, run_manager: CallbackManagerForRetrieverRun = None) -> List[Document]:
         seen_ids = set()
         relevant_docs = []
+        recitals = []
+
+        classification = self.classifier.classify(user_query) if self.classifier else None
+        target_acts = classification.acts if classification else []
+        is_interpretive = classification is not None and classification.intent == "INTERPRETIVE"
 
         if self.use_topic_filter:
             matched_topics = self._match_topics(user_query)
@@ -106,17 +131,26 @@ class GraphEnrichedRetriever(BaseRetriever):
 
                 topic_names = [t for t, _ in matched_topics]
                 topic_docs = []
-                for curr_doc in self._get_paragraphs_by_topics(user_query, topic_names):
+                topic_paragraphs, retrieved_recits = self._get_paragraphs_by_topics(user_query, topic_names, target_acts)
+                for curr_doc in topic_paragraphs:
                     paragraph_id = curr_doc.metadata.get("id")
+                    if not self._matches_act_filter(paragraph_id or "", target_acts):
+                        continue
                     if paragraph_id and paragraph_id not in seen_ids:
                         seen_ids.add(paragraph_id)
                         relevant_docs.append(curr_doc)
                         topic_docs.append(paragraph_id)
+                recitals.extend(
+                    r for r in retrieved_recits
+                    if self._matches_act_filter(r.metadata.get("id") or "", target_acts)
+                )
                 logger.info("[Topic Filter] Retrieved %d paragraphs: %s", len(topic_docs), topic_docs)
 
         vector_ids = []
         for curr_doc in self.vector_store.similarity_search(user_query, k=self.k * 2):
             paragraph_id = curr_doc.metadata.get("id") or self._extract_paragraph_id(curr_doc.page_content)
+            if not self._matches_act_filter(paragraph_id or "", target_acts):
+                continue
             if paragraph_id not in seen_ids:
                 curr_doc.metadata["id"] = paragraph_id
                 curr_doc.metadata["source"] = "vector_search"
@@ -125,7 +159,12 @@ class GraphEnrichedRetriever(BaseRetriever):
                 vector_ids.append(paragraph_id)
         logger.info("[Vector Search] Retrieved %d paragraphs: %s", len(vector_ids), vector_ids)
 
-        logger.info("[Retriever] Reranking %d documents total", len(relevant_docs))
+        if is_interpretive:
+            relevant_docs.extend(self._get_case_law_documents(user_query, target_acts))
+
+        relevant_docs.extend(recitals)
+
+        logger.info("[Retriever] Reranking %d documents total (incl. %d recitals)", len(relevant_docs), len(recitals))
         if not relevant_docs:
             return []
 
@@ -134,8 +173,13 @@ class GraphEnrichedRetriever(BaseRetriever):
 
         ranked_indices = np.argsort(scores)[::-1]
         ranked_docs = [relevant_docs[i] for i in ranked_indices][:self.k * 2]
+        ranked_scores = [float(scores[i]) for i in ranked_indices][:self.k * 2]
 
-        logger.info("[Retriever] Final top-%d: %s", self.k, [d.metadata.get("id") for d in ranked_docs])
+        logger.info(
+            "[Retriever] Final top-%d: %s",
+            self.k,
+            [f"{d.metadata.get('id')}({s:.3f})" for d, s in zip(ranked_docs, ranked_scores)],
+        )
         return ranked_docs
 
 
@@ -149,7 +193,7 @@ class GraphEnrichedRetriever(BaseRetriever):
 
         return results
 
-    def _get_document_from_query_result(self, query_result):
+    def _create_document_from_retrieved_paragraph(self, query_result):
         return [
             Document(
                 page_content=f"{r['text']}",
@@ -163,4 +207,35 @@ class GraphEnrichedRetriever(BaseRetriever):
             for r in query_result
         ]
 
+    def _create_document_from_retrieved_recitals(self, query_result):
+        return [
+            Document(
+                page_content=r["r"]["text"],
+                metadata={
+                    "id": r["r"]["id"],
+                    "number": r["r"]["number"]
+                }
+            )
+            for r in query_result
+        ]
+
+    def _get_celex_from_ranked_docs(self, result_paragraphs: List[Document]) -> List[str]:
+        celex_to_extract = []
+
+        for paragraph in result_paragraphs:
+            match = _CASE_EXTRACTION.match(paragraph.metadata.get("id", ""))
+            if match and (celex := match.group()) not in celex_to_extract:
+                celex_to_extract.append(celex)
+
+        return celex_to_extract
+
+    def _get_relevant_recitals(self, celex_list: List[str]) -> List[Document]:
+        recitals = []
+        for celex in celex_list:
+            results = self.graph.query(
+                NodeQueries.GET_ALL_RECITALS_BY_ACT,
+                params={"celex": celex}
+            )
+            recitals.extend(self._create_document_from_retrieved_recitals(results))
+        return recitals
 

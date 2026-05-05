@@ -61,12 +61,12 @@ if st.button("Run Graph Initialization", type="primary"):
             )
             paragraph_dimension = graph.generate_text_embeddings(
                 embed_fn=bge_embeddings.embed_documents,
-                embedding_dim=1536,
+                embedding_dim=1024,
                 node_name="Paragraph",
             )
             rec_dimension = graph.generate_text_embeddings(
                 embed_fn=bge_embeddings.embed_documents,
-                embedding_dim=1536,
+                embedding_dim=1024,
                 node_name="Recital",
             )
             graph.create_vector_index("Paragraph", "Paragraph", paragraph_dimension)

@@ -10,6 +10,7 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_openai import ChatOpenAI
 
 import config
+from service.rag.intent_classifier import QueryClassifier
 from service.rag.prompt import ANSWER_SYNTHESIS_PROMPT
 from service.rag.rag_naive_with_topics import GraphEnrichedRetriever
 
@@ -49,11 +50,20 @@ class RAGPipeline:
             embedding_node_property="textEmbedding"
         )
 
+        classifier_llm = ChatOpenAI(
+            model="gpt-4o-mini",
+            temperature=0,
+            api_key=config.OPENAI_API_KEY,
+            base_url=config.OPENAI_BASE_URL,
+        )
+        classifier = QueryClassifier(graph=graph, llm=classifier_llm)
+
         retriever = GraphEnrichedRetriever(
             vector_store=vector_store,
             graph=graph,
             k=5,
-            use_topic_filter=True
+            use_topic_filter=True,
+            classifier=classifier,
         )
 
         self.qa_chain = RetrievalQA.from_chain_type(
@@ -96,4 +106,4 @@ class RAGPipeline:
 
 if __name__ == "__main__":
     rag = RAGPipeline()
-    rag.run_batch("docs/golden_dataset.json", "results/rag_result.json")
+    rag.run_batch("docs/question_recital_required.json", "results/rag_result.json")
