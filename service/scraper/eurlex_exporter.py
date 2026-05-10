@@ -190,6 +190,22 @@ class EURLexHTMLParser:
                 'text': ' '.join(text_parts)
             })
 
+        if not paragraphs:
+            # Articles with no numbered subdivisions (e.g. GDPR art_4 "Definitions",
+            # single-clause articles) still carry their text as oj-normal children of
+            # the article div. Collect them as a single synthetic paragraph so the
+            # content reaches the graph instead of being silently dropped.
+            text_parts = [
+                p.get_text(separator=' ', strip=True)
+                for p in article_div.find_all('p', class_='oj-normal')
+            ]
+            text = ' '.join(t for t in text_parts if t)
+            if text:
+                paragraphs.append({
+                    'id': f'{article_num}.0',
+                    'text': text
+                })
+
         return paragraphs
 
     def _get_recitals(self):
