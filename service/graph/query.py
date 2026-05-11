@@ -79,6 +79,45 @@ class NodeQueries:
     ORDER BY a.id
     """
 
+    GET_ALL_ARTICLES_WITH_PARAGRAPHS = """
+    MATCH (act:Act)-[:CONTAINS*]->(art:Article)
+    WHERE art.summary IS NULL
+    WITH act, art
+    MATCH (art)-[:CONTAINS]->(p:Paragraph)
+    WITH act, art, collect(p.text) AS paragraphs
+    RETURN art.id        AS article_id,
+           art.title     AS article_title,
+           act.id        AS celex,
+           act.title     AS act_title,
+           reduce(body = '', t IN paragraphs | body + '\n\n' + t) AS body
+    ORDER BY act.id, art.id
+    """
+
+    UPDATE_ARTICLE_SUMMARY = """
+    MATCH (art:Article {id: $article_id})
+    SET art.summary = $summary
+    """
+
+    GET_ALL_ARTICLE_TITLES = """
+    MATCH (act:Act)-[:CONTAINS*]->(art:Article)
+    RETURN art.id AS article_id, art.title AS article_title, act.id AS act_id
+    ORDER BY act.id, art.id
+    """
+
+    GET_ARTICLE_TITLES_BY_ACTS = """
+    MATCH (act:Act)-[:CONTAINS*]->(art:Article)
+    WHERE act.id IN $acts
+    RETURN art.id AS article_id, coalesce(art.summary, art.title) AS article_title
+    ORDER BY art.id
+    """
+
+    GET_PARAGRAPHS_BY_ARTICLES = """
+    MATCH (art:Article)-[:CONTAINS]->(p:Paragraph)
+    WHERE art.id IN $article_ids
+    RETURN p.id AS id, p.text AS text, art.title AS article_title, art.id AS article_id
+    ORDER BY art.id, p.id
+    """
+
 class RelationQueries:
     """Queries for relation operations"""
 

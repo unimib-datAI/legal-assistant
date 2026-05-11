@@ -1,6 +1,8 @@
 import re
 
 from bs4 import BeautifulSoup
+
+_SPLIT_DEF_NUM_RE = re.compile(r'^\((\d+)\)$')
 from service.scraper.metadata_parser import MetadataParser
 
 
@@ -199,12 +201,26 @@ class EURLexHTMLParser:
                 p.get_text(separator=' ', strip=True)
                 for p in article_div.find_all('p', class_='oj-normal')
             ]
-            text = ' '.join(t for t in text_parts if t)
-            if text:
-                paragraphs.append({
-                    'id': f'{article_num}.0',
-                    'text': text
-                })
+            text_parts = [t for t in text_parts if t]
+
+            if text_parts and any(_SPLIT_DEF_NUM_RE.match(t) for t in text_parts):
+                # EUR-Lex definition articles split each entry across two oj-normal
+                # elements: a standalone "(N)" followed by the definition text.
+                # Zip them into one paragraph per definition.
+                i = 0
+                while i < len(text_parts):
+                    m = _SPLIT_DEF_NUM_RE.match(text_parts[i])
+                    if m and i + 1 < len(text_parts):
+                        def_num = m.group(1)
+                        paragraphs.append({
+                            'id': f'{article_num}.{def_num}',
+                            'text': f'({def_num}) {text_parts[i + 1]}',
+                        })
+                        i += 2
+                    else:
+                        i += 1  # skip preamble or trailing non-definition parts
+            elif text_parts:
+                paragraphs.append({'id': f'{article_num}.0', 'text': ' '.join(text_parts)})
 
         return paragraphs
 
