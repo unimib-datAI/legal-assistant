@@ -11,8 +11,9 @@ from langchain_openai import ChatOpenAI
 
 import config
 from service.rag.intent_classifier import QueryClassifier
-from service.rag.prompt import ANSWER_SYNTHESIS_PROMPT
+from service.rag.prompt import ANSWER_SYNTHESIS_PROMPT, ANSWER_FILTER_PROMPT
 from service.rag.rag_naive_with_topics import GraphEnrichedRetriever
+from service.rag.rag_alternative import ArticleTraversalRetriever
 
 logging.basicConfig(
     level=logging.INFO,
@@ -29,7 +30,8 @@ QA_PROMPT = PromptTemplate(
 
 class RAGPipeline:
 
-    def __init__(self):
+    def __init__(self, use_answer_filter: bool = False):
+        self.use_answer_filter = use_answer_filter
         graph = Neo4jGraph(
             url=config.NEO4J_URI,
             username=config.NEO4J_USERNAME,
@@ -58,11 +60,18 @@ class RAGPipeline:
         )
         classifier = QueryClassifier(graph=graph, llm=classifier_llm)
 
-        retriever = GraphEnrichedRetriever(
-            vector_store=vector_store,
+        # retriever = GraphEnrichedRetriever(
+        #     vector_store=vector_store,
+        #     graph=graph,
+        #     k=15,
+        #     use_topic_filter=True,
+        #     top_k_topic_paragraphs=20,
+        #     filter_by_act=False,
+        #     classifier=classifier,
+        # )
+
+        retriever = ArticleTraversalRetriever(
             graph=graph,
-            k=5,
-            use_topic_filter=True,
             classifier=classifier,
         )
 
@@ -74,10 +83,28 @@ class RAGPipeline:
             chain_type_kwargs={"prompt": QA_PROMPT}
         )
 
+        self.filter_llm = (
+            ChatOpenAI(
+                temperature=0,
+                api_key=config.OPENAI_API_KEY,
+                base_url=config.OPENAI_BASE_URL,
+            )
+            if self.use_answer_filter
+            else None
+        )
+
     def query(self, question: str) -> dict:
         result = self.qa_chain.invoke({"query": question})
+        answer = result["result"].replace("\r\n", "\n").replace("\r", "\n").strip()
+
+        if self.use_answer_filter:
+            filtered = self.filter_llm.invoke(
+                ANSWER_FILTER_PROMPT.format(question=question, draft_answer=answer)
+            )
+            answer = filtered.content.replace("\r\n", "\n").replace("\r", "\n").strip()
+
         return {
-            "answer": result["result"].replace("\r\n", "\n").replace("\r", "\n").strip(),
+            "answer": answer,
             "sources": [doc.metadata.get("id") for doc in result["source_documents"]],
             "contexts": [doc.page_content for doc in result["source_documents"]],
         }

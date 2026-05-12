@@ -118,6 +118,13 @@ class NodeQueries:
     ORDER BY art.id, p.id
     """
 
+    GET_RECITALS_BY_ACTS = """
+    MATCH (a:Act)-[:CONTAINS]->(r:Recital)
+    WHERE a.id IN $acts
+    RETURN r.id AS recital_id, r.text AS text, a.id AS celex
+    ORDER BY a.id, toInteger(r.number)
+    """
+
 class RelationQueries:
     """Queries for relation operations"""
 
