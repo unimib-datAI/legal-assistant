@@ -125,6 +125,33 @@ class NodeQueries:
     ORDER BY a.id, toInteger(r.number)
     """
 
+    GET_GENERAL_PROVISIONS_BY_ACTS = """
+    MATCH (act:Act)-[:CONTAINS*]->(art:Article)
+    WHERE act.id IN $acts
+    WITH act, art, toInteger(split(art.id, 'art_')[-1]) AS art_num
+    WHERE art_num <= $max_article_num
+    MATCH (art)-[:CONTAINS]->(p:Paragraph)
+    RETURN p.id AS id, p.text AS text, art.title AS article_title, art.id AS article_id
+    ORDER BY act.id, art_num, p.id
+    """
+
+    GET_CHAPTER_PARAGRAPHS = """
+    MATCH (act:Act)-[:CONTAINS]->(c:Chapter)
+    WHERE act.id IN $acts AND c.number = $chapter_number
+    MATCH (c)-[:CONTAINS*1..2]->(art:Article)-[:CONTAINS]->(p:Paragraph)
+    WITH p, art, toInteger(split(art.id, 'art_')[-1]) AS art_num
+    RETURN p.id AS id, p.text AS text, art.title AS article_title, art.id AS article_id
+    ORDER BY art_num, p.id
+    """
+
+    GET_DEFINITIONS_BY_ACTS = """
+    MATCH (act:Act)-[:CONTAINS*]->(art:Article)
+    WHERE act.id IN $acts AND art.title = 'Definitions'
+    MATCH (art)-[:CONTAINS]->(p:Paragraph)
+    RETURN p.id AS id, p.text AS text, art.title AS article_title, art.id AS article_id
+    ORDER BY art.id, p.id
+    """
+
 class RelationQueries:
     """Queries for relation operations"""
 

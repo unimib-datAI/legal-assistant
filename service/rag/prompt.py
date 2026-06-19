@@ -1,4 +1,4 @@
-QUERY_CLASSIFICATION_PROMPT = """You are an expert in EU digital legislation. Classify the user query along two axes to guide retrieval.
+QUERY_CLASSIFICATION_PROMPT = """You are an expert in EU digital legislation. Classify the user query along four axes to guide retrieval.
 
 === AXES ===
 
@@ -6,9 +6,20 @@ QUERY_CLASSIFICATION_PROMPT = """You are an expert in EU digital legislation. Cl
    - DEFINITIONAL: asks what a provision says, what a term means, what the rules are. Answerable from articles/recitals alone.
    - INTERPRETIVE: asks how a provision has been applied, interpreted by courts, or how it should be construed in a borderline case. Requires CJEU case law.
 
-2. acts: identify which act(s) the query is about using the topic descriptions below to disambiguate.
+2. query_type: pick the retrieval strategy that best fits the structural shape of the question.
+   - SCOPE_OF_ACT: asks about the overall subject matter, purpose, or scope of applicability of an entire act.
+   - SCOPE_OF_CHAPTER: asks which entities, services, or data fall under (or are excluded from) a specific Chapter.
+   - DEFINITION_LOOKUP: asks for the meaning of a specific defined term, body, or instrument.
+   - ENUMERATION: asks for a list of conditions, requirements, obligations, rights, or procedures.
+   - SPECIFIC_QUESTION: yes/no or single specific rule — asks whether something is required/permitted, or what a single provision says.
+
+3. acts: identify which act(s) the query is about using the topic descriptions below to disambiguate.
    - If the act is mentioned explicitly, always include it.
    - If uncertain, pick the most likely act based on the topic match — do not return an empty list unless the query is completely unrelated to any available act.
+
+4. chapter_number: Arabic integer when query_type = SCOPE_OF_CHAPTER, null otherwise.
+   DISAMBIGUATION: when the query mentions "Chapter II", "Chapter III", or "Chapter IV" without naming an act,
+   default to the Data Governance Act (32022R0868) — its chapters are the most frequently queried by number.
 
 === AVAILABLE ACTS ===
 {acts}
@@ -22,31 +33,58 @@ QUERY_CLASSIFICATION_PROMPT = """You are an expert in EU digital legislation. Cl
 === FEW-SHOT EXAMPLES ===
 
 Query: "What entities fall under the personal scope of Chapter II?"
-{{"intent": "DEFINITIONAL", "acts": ["32022R0868"]}}
+{{"intent": "DEFINITIONAL", "query_type": "SCOPE_OF_CHAPTER", "acts": ["32022R0868"], "chapter_number": 2}}
 
 Query: "Does Chapter II create an obligation to allow the re-use of data?"
-{{"intent": "DEFINITIONAL", "acts": ["32022R0868"]}}
+{{"intent": "DEFINITIONAL", "query_type": "SCOPE_OF_CHAPTER", "acts": ["32022R0868"], "chapter_number": 2}}
 
 Query: "Does Chapter II impose specific requirements regarding the nature of the data they are making available for re-use?"
-{{"intent": "DEFINITIONAL", "acts": ["32022R0868"]}}
+{{"intent": "DEFINITIONAL", "query_type": "SCOPE_OF_CHAPTER", "acts": ["32022R0868"], "chapter_number": 2}}
 
 Query: "What services fall under the material scope of Chapter IV of the Data Governance Act?"
-{{"intent": "DEFINITIONAL", "acts": ["32022R0868"]}}
+{{"intent": "DEFINITIONAL", "query_type": "SCOPE_OF_CHAPTER", "acts": ["32022R0868"], "chapter_number": 4}}
+
+Query: "What is the subject matter and objectives of the Data Governance Act?"
+{{"intent": "DEFINITIONAL", "query_type": "SCOPE_OF_ACT", "acts": ["32022R0868"], "chapter_number": null}}
+
+Query: "What is the scope of the GDPR — which processing activities does it cover?"
+{{"intent": "DEFINITIONAL", "query_type": "SCOPE_OF_ACT", "acts": ["32016R0679"], "chapter_number": null}}
+
+Query: "What does 'data intermediation service' mean under the Data Governance Act?"
+{{"intent": "DEFINITIONAL", "query_type": "DEFINITION_LOOKUP", "acts": ["32022R0868"], "chapter_number": null}}
 
 Query: "What does communication 'in a clear and comprehensible manner' entail?"
-{{"intent": "DEFINITIONAL", "acts": ["32023R2854"]}}
+{{"intent": "DEFINITIONAL", "query_type": "DEFINITION_LOOKUP", "acts": ["32023R2854"], "chapter_number": null}}
+
+Query: "What is a 'high-risk AI system' under the AI Act?"
+{{"intent": "DEFINITIONAL", "query_type": "DEFINITION_LOOKUP", "acts": ["32024R1689"], "chapter_number": null}}
+
+Query: "What is the definition of 'personal data' under the GDPR?"
+{{"intent": "DEFINITIONAL", "query_type": "DEFINITION_LOOKUP", "acts": ["32016R0679"], "chapter_number": null}}
 
 Query: "How should connected products and related services be designed and manufactured/provided?"
-{{"intent": "DEFINITIONAL", "acts": ["32023R2854"]}}
+{{"intent": "DEFINITIONAL", "query_type": "SPECIFIC_QUESTION", "acts": ["32023R2854"], "chapter_number": null}}
 
-Query: "In which cases is a data holder obliged to make data available to a public sector body, the Commission, the European Central Bank or a Union body?"
-{{"intent": "DEFINITIONAL", "acts": ["32023R2854"]}}
+Query: "Can a public sector body charge fees for allowing re-use of its data?"
+{{"intent": "DEFINITIONAL", "query_type": "SPECIFIC_QUESTION", "acts": ["32022R0868"], "chapter_number": null}}
 
 Query: "Which terms are considered and which are presumed to be unfair for the purposes of Article 8(1)?"
-{{"intent": "DEFINITIONAL", "acts": ["32023R2854"]}}
+{{"intent": "DEFINITIONAL", "query_type": "ENUMERATION", "acts": ["32023R2854"], "chapter_number": null}}
+
+Query: "In which cases is a data holder obliged to make data available to a public sector body, the Commission, the European Central Bank or a Union body?"
+{{"intent": "DEFINITIONAL", "query_type": "ENUMERATION", "acts": ["32023R2854"], "chapter_number": null}}
 
 Query: "What obligations does the data holder have towards the data recipient?"
-{{"intent": "DEFINITIONAL", "acts": ["32023R2854"]}}
+{{"intent": "DEFINITIONAL", "query_type": "ENUMERATION", "acts": ["32023R2854"], "chapter_number": null}}
+
+Query: "What are the conditions for lawful processing of personal data under the GDPR?"
+{{"intent": "DEFINITIONAL", "query_type": "ENUMERATION", "acts": ["32016R0679"], "chapter_number": null}}
+
+Query: "What requirements must a high-risk AI system meet before being placed on the market?"
+{{"intent": "DEFINITIONAL", "query_type": "ENUMERATION", "acts": ["32024R1689"], "chapter_number": null}}
+
+Query: "How has the CJEU interpreted the right to erasure in the context of search engines?"
+{{"intent": "INTERPRETIVE", "query_type": "SPECIFIC_QUESTION", "acts": ["32016R0679"], "chapter_number": null}}
 
 === QUERY ===
 {query}
@@ -87,6 +125,9 @@ AI Act, Data Act, and Data Governance Act.
 Each retrieved passage is prefixed with its source in the format:
 [Regulation, Article N — Title]
 
+=== ANSWER GUIDANCE ===
+{guidance}
+
 === RETRIEVED CONTENT ===
 
 {context}
@@ -98,7 +139,6 @@ Each retrieved passage is prefixed with its source in the format:
 === STRICT RULES ===
 
 1. Base your entire answer exclusively on the retrieved content above.
-2. Do NOT use background knowledge. If a fact is not stated in the retrieved content, do not assert it.
 3. When citing a legal basis, copy the article or recital reference EXACTLY from the source prefix of the passage that supports the claim. Never infer, guess, or recall an article number from memory.
 4. If the retrieved content does not contain enough information to answer the question fully, state this explicitly rather than filling gaps from memory.
 5. Do not repeat or paraphrase any article reference that appears in the user question anywhere in your answer — not in the Legal basis, not in the Answer body, not anywhere. Cite only from the exact [Regulation, Article N — Title] source prefix headers of the retrieved passages.
@@ -116,6 +156,40 @@ Each retrieved passage is prefixed with its source in the format:
 
 **Related obligations**: Only if the retrieved content explicitly states a cross-reference to another provision. Omit "Related obligations" if no such link appears.
 """
+
+SYNTHESIS_GUIDANCE_BY_TYPE = {
+    "SCOPE_OF_ACT": (
+        "DISAMBIGUATE first:\n"
+        "- 'subject matter': enumerate ONLY Art. 1(1) items (a),(b),(c),(d)\n"
+        "- 'scope of applicability': enumerate ONLY personal-scope article items\n"
+        "**FORBIDDEN**: do NOT mention Chapter II-VII when question is subject matter/applicability\n"
+        "Cite exact article/paragraph. Aim 5-10 claims."
+    ),
+    "SCOPE_OF_CHAPTER": (
+        "Exhaustive enumeration of ALL INCLUDED and EXCLUDED categories. "
+        "Cite exact article/paragraph. Aim 6-10 items. "
+        "IMPORTANT: cite Art.2 definitions ONLY when they define terms used by queried Chapter's "
+        "substantive articles. Do NOT pull in definitions from OTHER chapters."
+    ),
+    "DEFINITION_LOOKUP": (
+        "Definition first, then enumerate ALL key attributes/components. "
+        "Cite defining article. Aim 4-8 attribute claims."
+    ),
+    "ENUMERATION": (
+        "Enumerate ALL items — do NOT collapse. Aim 6-12 items. "
+        "Cite specific article/paragraph for each. "
+        "If governed by single article, state total count and enumerate each."
+    ),
+    "SPECIFIC_QUESTION": (
+        "Answer directly first, then ground in cited provision.\n"
+        "- Short self-contained provision: 2-4 claims.\n"
+        "- Provision lists multiple conditions/modalities: enumerate ALL, aim 5-10.\n"
+        "- Relevant recital present: extract practical details as additional claims.\n"
+        "Cite exact governing provision for each claim."
+    ),
+}
+
+DEFAULT_SYNTHESIS_GUIDANCE = SYNTHESIS_GUIDANCE_BY_TYPE["ENUMERATION"]
 
 ANSWER_FILTER_PROMPT = """You are filtering a draft legal answer to keep only the sentences that directly answer the user's question.
 

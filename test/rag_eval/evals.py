@@ -40,7 +40,7 @@ class RagasEvaluatorUtils:
             writer.writerows(report)
         return path
 
-    async def extract_claims(self, text: str, atomicity: str = "low", coverage: str = "low") -> list[str]:
+    async def extract_claims(self, text: str, atomicity: str = "low", coverage: str = "high") -> list[str]:
         scorer = FactualCorrectness(llm=self.llm, atomicity=atomicity, coverage=coverage)
         return await scorer._decompose_claims(text)
 

@@ -2,7 +2,6 @@ import json
 import logging
 import pathlib
 
-from langchain_classic.chains.retrieval_qa.base import RetrievalQA
 from langchain_community.vectorstores import Neo4jVector
 from langchain_core.prompts import PromptTemplate
 from langchain_neo4j import Neo4jGraph
@@ -11,7 +10,12 @@ from langchain_openai import ChatOpenAI
 
 import config
 from service.rag.intent_classifier import QueryClassifier
-from service.rag.prompt import ANSWER_SYNTHESIS_PROMPT, ANSWER_FILTER_PROMPT
+from service.rag.prompt import (
+    ANSWER_SYNTHESIS_PROMPT,
+    ANSWER_FILTER_PROMPT,
+    SYNTHESIS_GUIDANCE_BY_TYPE,
+    DEFAULT_SYNTHESIS_GUIDANCE,
+)
 from service.rag.rag_naive_with_topics import GraphEnrichedRetriever
 from service.rag.rag_alternative import ArticleTraversalRetriever
 
@@ -24,7 +28,7 @@ logger = logging.getLogger(__name__)
 
 QA_PROMPT = PromptTemplate(
     template=ANSWER_SYNTHESIS_PROMPT,
-    input_variables=["context", "question"]
+    input_variables=["context", "question", "guidance"],
 )
 
 
@@ -58,29 +62,17 @@ class RAGPipeline:
             api_key=config.OPENAI_API_KEY,
             base_url=config.OPENAI_BASE_URL,
         )
-        classifier = QueryClassifier(graph=graph, llm=classifier_llm)
+        self.classifier = QueryClassifier(graph=graph, llm=classifier_llm)
 
-        # retriever = GraphEnrichedRetriever(
-        #     vector_store=vector_store,
-        #     graph=graph,
-        #     k=15,
-        #     use_topic_filter=True,
-        #     top_k_topic_paragraphs=20,
-        #     filter_by_act=False,
-        #     classifier=classifier,
-        # )
-
-        retriever = ArticleTraversalRetriever(
+        self.retriever = ArticleTraversalRetriever(
             graph=graph,
-            classifier=classifier,
+            classifier=self.classifier,
         )
 
-        self.qa_chain = RetrievalQA.from_chain_type(
-            llm=ChatOpenAI(temperature=0, api_key=config.OPENAI_API_KEY, base_url=config.OPENAI_BASE_URL),
-            chain_type="stuff",
-            retriever=retriever,
-            return_source_documents=True,
-            chain_type_kwargs={"prompt": QA_PROMPT}
+        self.synthesis_llm = ChatOpenAI(
+            temperature=0,
+            api_key=config.OPENAI_API_KEY,
+            base_url=config.OPENAI_BASE_URL,
         )
 
         self.filter_llm = (
@@ -93,9 +85,27 @@ class RAGPipeline:
             else None
         )
 
+    def _select_guidance(self) -> str:
+        classification = self.classifier.last_classification
+        if classification is None:
+            return DEFAULT_SYNTHESIS_GUIDANCE
+        return SYNTHESIS_GUIDANCE_BY_TYPE.get(
+            classification.query_type, DEFAULT_SYNTHESIS_GUIDANCE
+        )
+
     def query(self, question: str) -> dict:
-        result = self.qa_chain.invoke({"query": question})
-        answer = result["result"].replace("\r\n", "\n").replace("\r", "\n").strip()
+        docs = self.retriever.invoke(question)
+        guidance = self._select_guidance()
+        logger.info("[Synthesis] using guidance for query_type=%s",
+                    self.classifier.last_classification.query_type
+                    if self.classifier.last_classification else "DEFAULT")
+
+        context = "\n\n".join(doc.page_content for doc in docs)
+        prompt_text = QA_PROMPT.format(
+            context=context, question=question, guidance=guidance,
+        )
+        answer_msg = self.synthesis_llm.invoke(prompt_text)
+        answer = answer_msg.content.replace("\r\n", "\n").replace("\r", "\n").strip()
 
         if self.use_answer_filter:
             filtered = self.filter_llm.invoke(
@@ -105,8 +115,8 @@ class RAGPipeline:
 
         return {
             "answer": answer,
-            "sources": [doc.metadata.get("id") for doc in result["source_documents"]],
-            "contexts": [doc.page_content for doc in result["source_documents"]],
+            "sources": [doc.metadata.get("id") for doc in docs],
+            "contexts": [doc.page_content for doc in docs],
         }
 
     def run_batch(self, questions_path: str, output_path: str) -> None:
