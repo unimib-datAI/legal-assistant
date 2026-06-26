@@ -13,8 +13,7 @@ from service.rag.intent_classifier import QueryClassifier
 from service.rag.prompt import (
     ANSWER_SYNTHESIS_PROMPT,
     ANSWER_FILTER_PROMPT,
-    SYNTHESIS_GUIDANCE_BY_TYPE,
-    DEFAULT_SYNTHESIS_GUIDANCE,
+    registry as prompt_registry,
 )
 from service.rag.rag_naive_with_topics import GraphEnrichedRetriever
 from service.rag.rag_alternative import ArticleTraversalRetriever
@@ -36,6 +35,7 @@ class RAGPipeline:
 
     def __init__(self, use_answer_filter: bool = False):
         self.use_answer_filter = use_answer_filter
+        logger.info("[Prompts] active versions: %s", prompt_registry.active_versions())
         graph = Neo4jGraph(
             url=config.NEO4J_URI,
             username=config.NEO4J_USERNAME,
@@ -85,24 +85,20 @@ class RAGPipeline:
             else None
         )
 
-    def _select_guidance(self) -> str:
-        classification = self.classifier.last_classification
-        if classification is None:
-            return DEFAULT_SYNTHESIS_GUIDANCE
-        return SYNTHESIS_GUIDANCE_BY_TYPE.get(
-            classification.query_type, DEFAULT_SYNTHESIS_GUIDANCE
-        )
+    def retrieve(self, question: str) -> dict:
+        """Run only the retrieval step, without any LLM answer synthesis."""
+        docs = self.retriever.invoke(question)
+        return {
+            "sources": [doc.metadata.get("id") for doc in docs],
+            "contexts": [doc.page_content for doc in docs],
+        }
 
     def query(self, question: str) -> dict:
         docs = self.retriever.invoke(question)
-        guidance = self._select_guidance()
-        logger.info("[Synthesis] using guidance for query_type=%s",
-                    self.classifier.last_classification.query_type
-                    if self.classifier.last_classification else "DEFAULT")
 
         context = "\n\n".join(doc.page_content for doc in docs)
         prompt_text = QA_PROMPT.format(
-            context=context, question=question, guidance=guidance,
+            context=context, question=question, guidance="",
         )
         answer_msg = self.synthesis_llm.invoke(prompt_text)
         answer = answer_msg.content.replace("\r\n", "\n").replace("\r", "\n").strip()

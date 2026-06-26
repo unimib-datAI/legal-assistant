@@ -3,6 +3,7 @@ import csv
 import logging
 import pathlib
 from collections import defaultdict
+from datetime import datetime
 from typing import Any
 import uuid
 
@@ -40,7 +41,7 @@ class RagasEvaluatorUtils:
             writer.writerows(report)
         return path
 
-    async def extract_claims(self, text: str, atomicity: str = "low", coverage: str = "high") -> list[str]:
+    async def extract_claims(self, text: str, atomicity: str = "low", coverage: str = "low") -> list[str]:
         scorer = FactualCorrectness(llm=self.llm, atomicity=atomicity, coverage=coverage)
         return await scorer._decompose_claims(text)
 
@@ -173,6 +174,11 @@ class RagasEvaluatorUtils:
 
 evals = RagasEvaluatorUtils()
 
+# Set to True to test retrieval only: skips LLM answer synthesis and metric
+# computation (both require LLM calls). Flip back to False for full evaluation.
+RETRIEVAL_ONLY = True
+
+
 @experiment()
 async def base_rag_experiment(dataset_name: str, root_dir: str, output_path: str):
     dataset = evals.load_dataset_from_csv(dataset_name, root_dir)
@@ -181,6 +187,16 @@ async def base_rag_experiment(dataset_name: str, root_dir: str, output_path: str
     for i, row in enumerate(dataset, 1):
         try:
             logger.info("Query %d/%d: %s", i, len(dataset), row["question"])
+
+            if RETRIEVAL_ONLY:
+                response = evals.rag.retrieve(row["question"])
+                report.append({
+                    **row,
+                    "sources": "|".join(response["sources"]),
+                    "contexts": "|".join(response["contexts"]),
+                })
+                continue
+
             response = evals.rag.query(row["question"])
             scores = await evals.calculate_metrics(response["contexts"], response["answer"], row["ground_truth"])
             report.append({
@@ -196,7 +212,8 @@ async def base_rag_experiment(dataset_name: str, root_dir: str, output_path: str
     result_path = evals.create_csv_report(report, output_path)
     logger.info("Results saved to: %s", result_path)
 
-    log_metric_averages(report)
+    if not RETRIEVAL_ONLY:
+        log_metric_averages(report)
 
     return report
 
@@ -227,11 +244,40 @@ def log_metric_averages(report: list[dict]) -> None:
         logger.info("  [%s] (n=%d)  %s", act, len(rows), scores)
 
 
+def setup_run_logging() -> pathlib.Path:
+    """Tee all INFO logs of this run to a timestamped file under evals/logs.
+
+    A FileHandler is attached explicitly (rather than via logging.basicConfig,
+    which is a no-op here because importing rag_pipeline already configured the
+    root logger). Returns the log path so the run can report where it was saved.
+    """
+    log_dir = config.EVALS_DIR / "logs"
+    log_dir.mkdir(parents=True, exist_ok=True)
+    log_path = log_dir / f"eval_run_{datetime.now():%Y%m%d_%H%M%S}.log"
+
+    file_handler = logging.FileHandler(log_path, encoding="utf-8")
+    file_handler.setFormatter(
+        logging.Formatter(
+            "%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+            datefmt="%Y-%m-%d %H:%M:%S",
+        )
+    )
+    root = logging.getLogger()
+    root.setLevel(logging.INFO)
+    root.addHandler(file_handler)
+    return log_path
+
+
 if __name__ == "__main__":
-    asyncio.run(base_rag_experiment(
-        dataset_name="golden_dataset_light",
-        root_dir=str(config.EVALS_DIR),
-        output_path=str(config.EVALS_DIR / "evaluations" / f"rag_eval_{uuid.uuid4()}.csv"),
-    ))
+    log_path = setup_run_logging()
+    logger.info("Saving full run log to: %s", log_path)
+    try:
+        asyncio.run(base_rag_experiment(
+            dataset_name="subset_retrieval_scarso",
+            root_dir=str(config.EVALS_DIR),
+            output_path=str(config.EVALS_DIR / "evaluations" / f"rag_eval_{uuid.uuid4()}.csv"),
+        ))
+    finally:
+        logger.info("Full run log saved to: %s", log_path.resolve())
 
 

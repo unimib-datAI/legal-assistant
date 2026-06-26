@@ -79,6 +79,43 @@ class NodeQueries:
     ORDER BY a.id
     """
 
+    GET_ALL_CHAPTERS_BY_ACTS = """
+    MATCH (act:Act)-[:CONTAINS]->(c:Chapter)
+    WHERE act.id IN $acts
+    RETURN c.number   AS chapter_number,
+           c.title    AS chapter_title,
+           c.summary  AS chapter_summary,
+           act.id     AS act_id
+    ORDER BY act.id, c.number
+    """
+
+    GET_PARAGRAPHS_BY_CHAPTERS = """
+    MATCH (act:Act)-[:CONTAINS]->(c:Chapter)
+    WHERE act.id IN $acts AND c.number IN $chapter_numbers
+    MATCH (c)-[:CONTAINS*1..2]->(art:Article)-[:CONTAINS]->(p:Paragraph)
+    WITH p, art, toInteger(split(art.id, 'art_')[-1]) AS art_num
+    RETURN p.id AS id, p.text AS text, art.title AS article_title, art.id AS article_id
+    ORDER BY art_num, p.id
+    """
+
+    GET_ALL_CHAPTERS_WITHOUT_SUMMARY = """
+    MATCH (act:Act)-[:CONTAINS]->(c:Chapter)
+    WHERE c.summary IS NULL
+    MATCH (c)-[:CONTAINS*1..2]->(art:Article)
+    WITH act, c, collect(art.title) AS article_titles
+    RETURN c.number     AS chapter_number,
+           c.title      AS chapter_title,
+           act.id       AS celex,
+           act.title    AS act_title,
+           article_titles
+    ORDER BY act.id, c.number
+    """
+
+    UPDATE_CHAPTER_SUMMARY = """
+    MATCH (act:Act {id: $celex})-[:CONTAINS]->(c:Chapter {number: $chapter_number})
+    SET c.summary = $summary
+    """
+
     GET_ALL_ARTICLES_WITH_PARAGRAPHS = """
     MATCH (act:Act)-[:CONTAINS*]->(art:Article)
     WHERE art.summary IS NULL
@@ -107,7 +144,9 @@ class NodeQueries:
     GET_ARTICLE_TITLES_BY_ACTS = """
     MATCH (act:Act)-[:CONTAINS*]->(art:Article)
     WHERE act.id IN $acts
-    RETURN art.id AS article_id, coalesce(art.summary, art.title) AS article_title
+    RETURN art.id AS article_id,
+           art.title AS article_title,
+           art.summary AS article_summary
     ORDER BY art.id
     """
 

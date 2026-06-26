@@ -16,29 +16,14 @@ class QueryClassification(BaseModel):
         description="DEFINITIONAL for lookups answerable from the legislation itself; "
                     "INTERPRETIVE for questions requiring CJEU case law."
     )
-    query_type: Literal[
-        "SCOPE_OF_ACT",
-        "SCOPE_OF_CHAPTER",
-        "DEFINITION_LOOKUP",
-        "ENUMERATION",
-        "SPECIFIC_QUESTION",
-    ] = Field(
-        description="Retrieval strategy hint based on the structural shape of the question."
-    )
     acts: List[str] = Field(
         default_factory=list,
         description="CELEX IDs of the acts the query is about. Empty list when generic or uncertain."
     )
-    chapter_number: Optional[int] = Field(
-        default=None,
-        description="Arabic chapter number when the query targets a specific Chapter "
-                    "(e.g. 'Chapter II' -> 2). Must be set when query_type=SCOPE_OF_CHAPTER, "
-                    "null otherwise."
-    )
 
 
 class QueryClassifier:
-    """LLM-based classifier that gates retrieval based on query intent, target acts, and recital need."""
+    """LLM-based classifier that gates retrieval based on query intent and target acts."""
 
     def __init__(self, graph, llm: ChatOpenAI):
         self.graph = graph
@@ -58,8 +43,8 @@ class QueryClassifier:
         prompt = self._prompt.format(query=query, acts=self._format_acts())
         result: QueryClassification = self._structured_llm.invoke(prompt)
         logger.info(
-            "[Classifier] intent=%s query_type=%s acts=%s chapter=%s",
-            result.intent, result.query_type, result.acts, result.chapter_number,
+            "[Classifier] intent=%s acts=%s",
+            result.intent, result.acts,
         )
         self.last_classification = result
         return result

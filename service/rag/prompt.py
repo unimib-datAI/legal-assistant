@@ -1,4 +1,8 @@
-QUERY_CLASSIFICATION_PROMPT = """You are an expert in EU digital legislation. Classify the user query along four axes to guide retrieval.
+from datetime import date
+
+from service.rag.prompt_registry import PromptRegistry, PromptVersion
+
+QUERY_CLASSIFICATION_V1 = """You are an expert in EU digital legislation. Classify the user query along three axes to guide retrieval.
 
 === AXES ===
 
@@ -7,28 +11,21 @@ QUERY_CLASSIFICATION_PROMPT = """You are an expert in EU digital legislation. Cl
    - INTERPRETIVE: asks how a provision has been applied, interpreted by courts, or how it should be construed in a borderline case. Requires CJEU case law.
 
 2. query_type: pick the retrieval strategy that best fits the structural shape of the question.
-   - SCOPE_OF_ACT: asks about the overall subject matter, purpose, or scope of applicability of an entire act.
    - SCOPE_OF_CHAPTER: asks which entities, services, or data fall under (or are excluded from) a specific Chapter.
    - DEFINITION_LOOKUP: asks for the meaning of a specific defined term, body, or instrument.
-   - ENUMERATION: asks for a list of conditions, requirements, obligations, rights, or procedures.
+   - ENUMERATION: asks for an explicit list of conditions, requirements, obligations, rights, or procedures — the question clearly expects multiple distinct items.
    - SPECIFIC_QUESTION: yes/no or single specific rule — asks whether something is required/permitted, or what a single provision says.
+   - GENERAL: default catch-all for any question that does not fit a more specific structural shape. Use for questions about the subject matter, objectives, purpose, or general applicability of an act, or whenever none of the above types clearly applies.
 
 3. acts: identify which act(s) the query is about using the topic descriptions below to disambiguate.
    - If the act is mentioned explicitly, always include it.
    - If uncertain, pick the most likely act based on the topic match — do not return an empty list unless the query is completely unrelated to any available act.
 
-4. chapter_number: Arabic integer when query_type = SCOPE_OF_CHAPTER, null otherwise.
-   DISAMBIGUATION: when the query mentions "Chapter II", "Chapter III", or "Chapter IV" without naming an act,
-   default to the Data Governance Act (32022R0868) — its chapters are the most frequently queried by number.
+4. chapter_number: Arabic integer when query_type = SCOPE_OF_CHAPTER (e.g. 'Chapter II' -> 2), null otherwise.
+default to the Data Governance Act (32022R0868) — it is the most frequently queried act by chapter number in this dataset.
 
 === AVAILABLE ACTS ===
 {acts}
-
-=== KEY TOPICS PER ACT (use for disambiguation) ===
-- Data Governance Act (32022R0868): public-sector data re-use and the conditions/fees/exclusions governing it (Chapter II covers public sector bodies, fees, protected data, re-use conditions); data intermediation services, notification procedure, one-stop-shop (Chapter III); data altruism organisations and their registration (Chapter IV); European Data Innovation Board (Chapter V)
-- Data Act (32023R2854): connected products; user rights to access product and service data (Art. 3–4); third-party data sharing by the data holder (Art. 5); processing obligations of the third party (Art. 6); B2B data sharing and fair/unfair contract terms (Art. 8–13, including Art. 8(1) on data holder obligations, Art. 8(4)–8(5) on unfair terms, Art. 13(3) on the definition of unfairness); public sector exceptional need (Art. 14–22); switching between data processing services (Art. 23–31); smart contracts (Art. 36)
-- AI Act (32024R1689): classification of AI systems by risk level; requirements for high-risk AI systems; general-purpose AI (GPAI) models; conformity assessment; market surveillance; prohibited AI practices
-- GDPR (32016R0679): lawful basis for personal data processing; data subject rights (access, erasure, portability, rectification); controller and processor obligations; DPIAs (Art. 35–36); personal data breaches (Art. 33–34); international transfers (Art. 45–49)
 
 === FEW-SHOT EXAMPLES ===
 
@@ -45,10 +42,10 @@ Query: "What services fall under the material scope of Chapter IV of the Data Go
 {{"intent": "DEFINITIONAL", "query_type": "SCOPE_OF_CHAPTER", "acts": ["32022R0868"], "chapter_number": 4}}
 
 Query: "What is the subject matter and objectives of the Data Governance Act?"
-{{"intent": "DEFINITIONAL", "query_type": "SCOPE_OF_ACT", "acts": ["32022R0868"], "chapter_number": null}}
+{{"intent": "DEFINITIONAL", "query_type": "GENERAL", "acts": ["32022R0868"], "chapter_number": null}}
 
-Query: "What is the scope of the GDPR — which processing activities does it cover?"
-{{"intent": "DEFINITIONAL", "query_type": "SCOPE_OF_ACT", "acts": ["32016R0679"], "chapter_number": null}}
+Query: "What does the AI Act regulate?"
+{{"intent": "DEFINITIONAL", "query_type": "GENERAL", "acts": ["32024R1689"], "chapter_number": null}}
 
 Query: "What does 'data intermediation service' mean under the Data Governance Act?"
 {{"intent": "DEFINITIONAL", "query_type": "DEFINITION_LOOKUP", "acts": ["32022R0868"], "chapter_number": null}}
@@ -90,7 +87,61 @@ Query: "How has the CJEU interpreted the right to erasure in the context of sear
 {query}
 """
 
-TOPIC_SELECTION_PROMPT = """Act as an expert analyst in EU legal
+QUERY_CLASSIFICATION_V2 = """You are an expert in EU digital legislation. Classify the user query to guide retrieval.
+
+=== AXES ===
+
+1. intent:
+   - DEFINITIONAL: asks what a provision says, what a term means, what the rules are. Answerable from articles/recitals alone.
+   - INTERPRETIVE: asks how a provision has been applied, interpreted by courts, or how it should be construed in a borderline case. Requires CJEU case law.
+
+2. acts: identify which act(s) the query is about using the topic descriptions below to disambiguate.
+   - If the act is mentioned explicitly, always include it.
+   - If uncertain, pick the most likely act based on the topic match — do not return an empty list unless the query is completely unrelated to any available act.
+
+=== AVAILABLE ACTS ===
+{acts}
+
+=== FEW-SHOT EXAMPLES ===
+
+Query: "What entities fall under the personal scope of Chapter II?"
+{{"intent": "DEFINITIONAL", "acts": ["32022R0868"]}}
+
+Query: "What is the subject matter and objectives of the Data Governance Act?"
+{{"intent": "DEFINITIONAL", "acts": ["32022R0868"]}}
+
+Query: "What does the AI Act regulate?"
+{{"intent": "DEFINITIONAL", "acts": ["32024R1689"]}}
+
+Query: "What does 'data intermediation service' mean under the Data Governance Act?"
+{{"intent": "DEFINITIONAL", "acts": ["32022R0868"]}}
+
+Query: "What does communication 'in a clear and comprehensible manner' entail?"
+{{"intent": "DEFINITIONAL", "acts": ["32023R2854"]}}
+
+Query: "What is a 'high-risk AI system' under the AI Act?"
+{{"intent": "DEFINITIONAL", "acts": ["32024R1689"]}}
+
+Query: "What is the definition of 'personal data' under the GDPR?"
+{{"intent": "DEFINITIONAL", "acts": ["32016R0679"]}}
+
+Query: "Can a public sector body charge fees for allowing re-use of its data?"
+{{"intent": "DEFINITIONAL", "acts": ["32022R0868"]}}
+
+Query: "What are the conditions for lawful processing of personal data under the GDPR?"
+{{"intent": "DEFINITIONAL", "acts": ["32016R0679"]}}
+
+Query: "What requirements must a high-risk AI system meet before being placed on the market?"
+{{"intent": "DEFINITIONAL", "acts": ["32024R1689"]}}
+
+Query: "How has the CJEU interpreted the right to erasure in the context of search engines?"
+{{"intent": "INTERPRETIVE", "acts": ["32016R0679"]}}
+
+=== QUERY ===
+{query}
+"""
+
+TOPIC_SELECTION_V1 = """Act as an expert analyst in EU legal
 documents (GDPR, AI Act, Data Act, Data Governance Act), specialising 
 in topic classification and legal concept mapping.
 
@@ -119,7 +170,7 @@ provided list to guide retrieval of relevant legal paragraphs.
 {query}
 """
 
-ANSWER_SYNTHESIS_PROMPT = """You are an EU data law expert specialising in the GDPR,
+ANSWER_SYNTHESIS_V1 = """You are an EU data law expert specialising in the GDPR,
 AI Act, Data Act, and Data Governance Act.
 
 Each retrieved passage is prefixed with its source in the format:
@@ -142,10 +193,10 @@ Each retrieved passage is prefixed with its source in the format:
 3. When citing a legal basis, copy the article or recital reference EXACTLY from the source prefix of the passage that supports the claim. Never infer, guess, or recall an article number from memory.
 4. If the retrieved content does not contain enough information to answer the question fully, state this explicitly rather than filling gaps from memory.
 5. Do not repeat or paraphrase any article reference that appears in the user question anywhere in your answer — not in the Legal basis, not in the Answer body, not anywhere. Cite only from the exact [Regulation, Article N — Title] source prefix headers of the retrieved passages.
-6. If the primary question has a yes/no answer, state it first using the passage that most directly answers it. Add qualifications and exceptions only after the direct answer, and only if the retrieved content explicitly supports them as conditions on the primary rule — do not elevate a narrow exception into the main answer.
+6. If the primary question has a yes/no answer, state it first using the passage that most directly answers it. If the answer is "yes" AND the retrieved content lists the conditions, requirements, or measures that justify the "yes", enumerate ALL of them exhaustively after the direct answer (one claim per paragraph). Do not elevate a narrow exception into the main answer.
 7. If the question asks about two distinct categories (e.g., "which are considered X" and "which are presumed Y"), address each category separately and explicitly in your answer, drawing from all relevant retrieved passages — do not merge them into a single list.
-8. Address ONLY the specific question asked. Do not enumerate adjacent provisions, related obligations, procedural details, downstream consequences, or definitions that the question does not require. If the retrieved content covers multiple paragraphs of the same article but only some are responsive to the question, cite only the responsive ones.
-9. Be exhaustive within scope: cover ALL rules in the retrieved content that bear on the question, but only those. Do not cap the number of claims, but do not invent or pad.
+8. Stay on topic, but err on the side of inclusion. Do not pull in definitions, downstream consequences, or unrelated provisions the question clearly does not need. However, when the retrieved content is dominated by paragraphs of a single article (i.e. the retriever has identified the central provision), treat ALL its paragraphs as potentially responsive and enumerate them — do NOT silently drop paragraphs you judge "adjacent". The retriever's selection is the floor for what is in scope.
+9. Be exhaustive: cover EVERY rule, condition, requirement, or measure in the retrieved content that bears on the question. There is no upper cap on the number of claims. Under-enumeration (collapsing multiple distinct paragraphs into one summary claim) is a worse failure mode than over-enumeration.
 10. Do not pad the answer with definitions, scope clauses, or background already implicit in the question.
 
 === RESPONSE FORMAT ===
@@ -157,41 +208,168 @@ Each retrieved passage is prefixed with its source in the format:
 **Related obligations**: Only if the retrieved content explicitly states a cross-reference to another provision. Omit "Related obligations" if no such link appears.
 """
 
-SYNTHESIS_GUIDANCE_BY_TYPE = {
-    "SCOPE_OF_ACT": (
-        "DISAMBIGUATE first:\n"
-        "- 'subject matter': enumerate ONLY Art. 1(1) items (a),(b),(c),(d)\n"
-        "- 'scope of applicability': enumerate ONLY personal-scope article items\n"
-        "**FORBIDDEN**: do NOT mention Chapter II-VII when question is subject matter/applicability\n"
-        "Cite exact article/paragraph. Aim 5-10 claims."
-    ),
-    "SCOPE_OF_CHAPTER": (
-        "Exhaustive enumeration of ALL INCLUDED and EXCLUDED categories. "
-        "Cite exact article/paragraph. Aim 6-10 items. "
-        "IMPORTANT: cite Art.2 definitions ONLY when they define terms used by queried Chapter's "
-        "substantive articles. Do NOT pull in definitions from OTHER chapters."
-    ),
-    "DEFINITION_LOOKUP": (
-        "Definition first, then enumerate ALL key attributes/components. "
-        "Cite defining article. Aim 4-8 attribute claims."
-    ),
-    "ENUMERATION": (
-        "Enumerate ALL items — do NOT collapse. Aim 6-12 items. "
-        "Cite specific article/paragraph for each. "
-        "If governed by single article, state total count and enumerate each."
-    ),
-    "SPECIFIC_QUESTION": (
-        "Answer directly first, then ground in cited provision.\n"
-        "- Short self-contained provision: 2-4 claims.\n"
-        "- Provision lists multiple conditions/modalities: enumerate ALL, aim 5-10.\n"
-        "- Relevant recital present: extract practical details as additional claims.\n"
-        "Cite exact governing provision for each claim."
-    ),
-}
+ANSWER_SYNTHESIS_V2 = """You are an EU data law expert specialising in the GDPR,
+AI Act, Data Act, and Data Governance Act.
 
-DEFAULT_SYNTHESIS_GUIDANCE = SYNTHESIS_GUIDANCE_BY_TYPE["ENUMERATION"]
+Each retrieved passage is prefixed with its source in the format:
+[Regulation, Article N — Title]
 
-ANSWER_FILTER_PROMPT = """You are filtering a draft legal answer to keep only the sentences that directly answer the user's question.
+=== ANSWER GUIDANCE ===
+{guidance}
+
+=== RETRIEVED CONTENT ===
+
+{context}
+
+=== QUESTION ===
+
+{question}
+
+=== STRICT RULES ===
+
+1. Base your entire answer exclusively on the retrieved content above.
+3. When citing a legal basis, copy the article or recital reference EXACTLY from the source prefix of the passage that supports the claim. Never infer, guess, or recall an article number from memory.
+4. If the retrieved content does not contain enough information to answer the question fully, state this explicitly rather than filling gaps from memory.
+5. Do not repeat or paraphrase any article reference that appears in the user question anywhere in your answer — not in the Legal basis, not in the Answer body, not anywhere. Cite only from the exact [Regulation, Article N — Title] source prefix headers of the retrieved passages.
+6. If the primary question has a yes/no answer, state it first using the passage that most directly answers it. If the answer is "yes" AND the retrieved content lists the conditions, requirements, or measures that justify the "yes", enumerate ALL of them exhaustively after the direct answer (one claim per paragraph). Do not elevate a narrow exception into the main answer.
+7. If the question asks about two distinct categories (e.g., "which are considered X" and "which are presumed Y"), address each category separately and explicitly in your answer, drawing from all relevant retrieved passages — do not merge them into a single list.
+8. Stay on topic, but err on the side of inclusion. Do not pull in definitions, downstream consequences, or unrelated provisions the question clearly does not need. However, when the retrieved content is dominated by paragraphs of a single article (i.e. the retriever has identified the central provision), treat ALL its paragraphs as potentially responsive and enumerate them — do NOT silently drop paragraphs you judge "adjacent". The retriever's selection is the floor for what is in scope.
+9. Be exhaustive: cover EVERY rule, condition, requirement, or measure in the retrieved content that bears on the question. There is no upper cap on the number of claims. Under-enumeration (collapsing multiple distinct paragraphs into one summary claim) is a worse failure mode than over-enumeration.
+10. Do not pad the answer with definitions, scope clauses, or background already implicit in the question.
+
+=== RESPONSE FORMAT ===
+State the answer as a flat list of atomic factual statements, one rule per line.
+- Each line asserts exactly ONE legal rule and cites its article inline,
+  e.g. "Under Article 1(1)(a), the Act establishes conditions for the re-use of ...".
+- Do NOT use section headers (no "Legal basis", no "Related obligations").
+- Do NOT write summarising, framing, or transitional sentences.
+- Do NOT add closing lines such as "None" or "In conclusion".
+- Mirror the granularity of a statutory enumeration: if the provision has
+  items (a),(b),(c), produce one line per item.
+- Be exhaustive within the scope of the question; cover every responsive rule
+  in the retrieved content, but introduce nothing the passages do not state.
+"""
+
+ANSWER_SYNTHESIS_V3 = """You are an EU data law expert specialising in the GDPR,
+AI Act, Data Act, and Data Governance Act.
+
+Each retrieved passage is prefixed with its source in the format:
+[Regulation, Article N — Title]
+
+=== ANSWER GUIDANCE ===
+{guidance}
+
+=== RETRIEVED CONTENT ===
+
+{context}
+
+=== QUESTION ===
+
+{question}
+
+=== STRICT RULES ===
+
+1. Base your entire answer exclusively on the retrieved content above. Introduce nothing the passages do not state, and do not fill gaps from memory.
+2. When citing a legal basis, copy the article or recital reference EXACTLY from the source prefix of the passage that supports the claim. Never infer, guess, or recall an article number from memory.
+3. If the retrieved content does not contain enough information to answer the question fully, state this explicitly rather than filling gaps.
+4. Cite only from the exact [Regulation, Article N — Title] source prefix headers of the retrieved passages.
+5. If the primary question has a yes/no answer, open with the direct yes/no, immediately anchored to the governing provision, before any qualification.
+6. Be exhaustive: cover EVERY distinct rule, condition, requirement, or measure in the retrieved content that bears on the question. Under-enumeration (collapsing several distinct provisions into one claim) is a worse failure than over-enumeration. There is no upper cap on the number of statements.
+7. State the general rule first; introduce any derogation, exception, or exclusion only afterwards, marked as such (e.g. "However, ...").
+
+=== RESPONSE FORMAT ===
+
+Write the answer as connected legal prose — not bullet points, not section headers (no "Legal basis", no "Related obligations", no "Answer").
+
+Model every answer on the following stylistic conventions, which mirror how the reference answers are written:
+
+- Anchor each rule to its provision INLINE, at the START of the sentence that asserts it, using natural legal connectives:
+    "As per Article 1(1), the Act establishes ..."
+    "According to Article 1(2), ..."
+    "Under Article 5(1)(d), ..."
+  Do not collect citations into a trailing list; weave each one into the sentence it supports.
+
+- When the governing provision enumerates lettered or numbered items, reproduce that enumeration INLINE within the prose using the SAME lettering, e.g.:
+    "As per Article 1(1), the Data Governance Act establishes: (a) conditions for the re-use ...; (b) a notification and supervisory framework ...; (c) a framework for voluntary registration ...; (d) a framework for the establishment of ...."
+  One clause per statutory item — do not merge two items into one, do not drop any.
+
+- For a yes/no question, open with the verdict bound to the provision:
+    "No, as according to Article 1(2), the Act does not create any obligation ..."
+    "As a general rule, as per Article 4(1), Chapter II prohibits ...."
+  Then, if the retrieved content supplies the conditions, derogations, or exceptions, continue:
+    "However, a derogation to this general prohibition can be granted upon fulfilling the requirements enshrined in Article 4(2)-(5)."
+
+- Where the retrieved content frames a provision against a broader principle or a related instrument, state that framing in a single connective sentence, then ground the specific rule in its article. Keep such framing to what the passages explicitly support.
+
+- Keep each asserted rule as its own self-contained statement so that it reads as one atomic, independently verifiable claim, while still flowing as prose.
+
+- Do NOT add closing or summarising lines ("In conclusion", "None", etc.). End once every responsive rule has been stated.
+"""
+
+ANSWER_SYNTHESIS_V4 = """You are an EU data law expert specialising in the GDPR,
+AI Act, Data Act, and Data Governance Act.
+
+Each retrieved passage is prefixed with its source in the format:
+[Regulation, Article N — Title]
+
+=== ANSWER GUIDANCE ===
+{guidance}
+
+=== RETRIEVED CONTENT ===
+
+{context}
+
+=== QUESTION ===
+
+{question}
+
+=== STRICT RULES ===
+
+1. Base your entire answer exclusively on the retrieved content above. Introduce nothing the passages do not state, and do not fill gaps from memory.
+2. When citing a legal basis, copy the article or recital reference EXACTLY from the source prefix of the passage that supports the claim. Never infer, guess, or recall an article number from memory.
+3. Cite only from the exact [Regulation, Article N — Title] source prefix headers of the retrieved passages.
+4. If the retrieved content does not contain enough information to answer the question fully, state this explicitly rather than filling gaps.
+5. If the primary question has a yes/no answer, open with the direct yes/no, immediately anchored to the governing provision, before any qualification.
+6. Be exhaustive but ONLY within the scope of the question: cover every distinct rule, condition, or measure in the retrieved content that the question actually asks for. Under-enumeration of responsive rules is bad; importing rules the question does not ask for is equally bad, because it inflates unverifiable claims.
+7. State the general rule first; introduce any derogation, exception, or exclusion afterwards, marked as such (e.g. "However, ...").
+
+=== RESPONSE FORMAT ===
+
+Write the answer as connected legal prose: continuous sentences and paragraphs. Match the register of a legal commentary — dense, flowing, every sentence carrying a substantive rule. Use no section headers, no bullet points, and no vertically numbered or lettered lists.
+
+CALIBRATION — your answer should read like, and be roughly the same length as, the following reference answers. They are the target style; do not exceed their density of citation or their economy of words.
+
+REFERENCE 1 (subject-matter, lettered enumeration folded into prose):
+"As per Article 1(1), the Data Governance Act establishes: (a) conditions for the re-use, within the Union, of certain categories of data held by public sector bodies; (b) a notification and supervisory framework for the provision of data intermediation services; (c) a framework for voluntary registration of entities which collect and process data made available for altruistic purposes; (d) a framework for the establishment of a European Data Innovation Board."
+
+REFERENCE 2 (yes/no, rule then derogation):
+"No, as according to Article 1(2), the Data Governance Act does not create any obligation on public sector bodies to allow the re-use of data, nor does it release them from their confidentiality obligations under Union or national law. However, a derogation to this general prohibition can be granted upon fulfilling the requirements enshrined in Article 4(2)-(5)."
+
+REFERENCE 3 (recital-based, single dense sentence chain):
+"As per Recital 24, the information obligation could be fulfilled by maintaining a stable uniform resource locator (URL) on the web, distributed as a web link or QR code, pointing to the relevant information; it is, in any case, necessary that the user is able to store the information in a way that allows the unchanged reproduction of the information stored."
+
+CONVENTIONS — follow each one:
+
+- Anchor every rule to its provision INLINE, at the START of the sentence that asserts it:
+    "As per Article 1(1), ..."  /  "According to Article 1(2), ..."  /  "Under Article 5(1)(d), ..."
+  Never place the citation at the end of the sentence, and never collect citations into a trailing list.
+
+- When a provision enumerates lettered items, fold that enumeration INLINE into ONE sentence using the statute's own lettering: "... establishes: (a) ...; (b) ...; (c) ...." Never break it onto separate numbered lines.
+
+- BANNED — do not write any of these:
+    * Preamble or framing sentences that announce what you are about to say
+      (e.g. "To fulfil this obligation, the provider must ...", "This information includes:", "The following requirements apply:").
+      Delete the announcement and state the rule directly with its citation.
+    * Restating the question, or naming the act/article the question already names.
+    * Generic glue clauses not grounded in a specific retrieved passage
+      (e.g. "these requirements must be non-discriminatory, proportionate and objective")
+      unless a retrieved passage states exactly that for this question.
+    * Closing or summarising lines ("In conclusion", "None", "Overall ...").
+
+- Every sentence must be a self-contained, independently verifiable claim tied to one cited provision. If a sentence does not assert a rule that the retrieved content supports for THIS question, delete it. Length discipline: prefer the shortest phrasing that still carries the rule; never pad to seem thorough.
+"""
+
+ANSWER_FILTER_V1 = """You are filtering a draft legal answer to keep only the sentences that directly answer the user's question.
 
 === QUESTION ===
 {question}
@@ -217,12 +395,12 @@ ANSWER_FILTER_PROMPT = """You are filtering a draft legal answer to keep only th
 === FILTERED ANSWER ===
 """
 
-ARTICLE_SUMMARY_SYSTEM_PROMPT = """You are an expert in EU digital legislation (GDPR, AI Act, Data Act, Data Governance Act).
+ARTICLE_SUMMARY_SYSTEM_V1 = """You are an expert in EU digital legislation (GDPR, AI Act, Data Act, Data Governance Act).
 Produce concise retrieval-optimised summaries of legal articles so that semantic similarity search
 can correctly match user questions to the right article. Use plain, query-friendly language.
 Follow the output format exactly — do not add extra sections or omit any field."""
 
-ARTICLE_SUMMARY_USER_PROMPT = """Summarise the following legal article using the template below.
+ARTICLE_SUMMARY_USER_V1 = """Summarise the following legal article using the template below.
 
 === OUTPUT TEMPLATE ===
 Act: {{regulation_name}} ({{celex}})
@@ -321,15 +499,152 @@ Body:
 OUTPUT
 """
 
+CHAPTER_SUMMARY_SYSTEM_V1 = """You are an expert in EU digital legislation (GDPR, AI Act, Data Act, Data Governance Act).
+Produce concise retrieval-optimised summaries of legal chapters. These summaries will be
+embedded and matched against user questions via semantic similarity search.
+
+Core principle: write for queries, not for readers.
+A good chapter summary reads like an answer to "what kinds of question does this chapter answer?" —
+not like a table-of-contents entry. Use the plain language a practitioner uses when asking a question;
+avoid reproducing the formal register of the legislature.
+
+ANTI-PATTERNS — never do any of the following:
+- Restate the chapter title as the Topic sentence (e.g. "This chapter covers requirements applicable to...")
+- Use hollow verbs like "establishes", "sets out", "provides for", "lays down"
+- List article numbers without explaining what each article does
+- Write "Typical questions" as abstract descriptions instead of real user questions
+
+Follow the output format exactly — do not add extra sections or omit any field."""
+
+CHAPTER_SUMMARY_USER_V1 = """Summarise the following legal chapter using the template below.
+The input lists the chapter title and the titles of the articles it contains.
+If article summaries are provided, use them to write richer Typical questions and Key concepts.
+
+=== OUTPUT TEMPLATE ===
+Act: {{regulation_name}} ({{celex}})
+Chapter {{number}} — {{title}}
+Topic: {{1-2 sentences: what this chapter governs, in plain language that mirrors how a user would describe the problem}}
+Applies to: {{entities, roles, and organisations covered — be specific, avoid "relevant parties"}}
+Typical questions: {{3-5 verbatim user questions this chapter answers; write them exactly as a user would type them, not as abstract descriptions; cover both broad and narrow questions}}
+Key concepts: {{legal terms side-by-side with their plain-language synonyms, comma-separated; include both the formal term and what a non-lawyer would search for}}
+
+=== FEW-SHOT EXAMPLES ===
+
+--- Example 1 ---
+INPUT
+Act: Data Governance Act (32022R0868)
+Chapter I — General provisions
+Articles:
+- Subject matter and objectives
+- Definitions
+- Material scope
+
+OUTPUT
+Act: Data Governance Act (32022R0868)
+Chapter I — General provisions
+Topic: Defines the purpose of the Data Governance Act, determines which organisations and data types fall within its scope, and establishes the meaning of its key terms. Draws the boundary between the DGA and related EU instruments such as the GDPR and the Open Data Directive.
+Applies to: Public sector bodies, private companies, data holders, data users, data subjects, data intermediation service providers, data altruism organisations, competent authorities, the European Commission.
+Typical questions:
+What is the Data Governance Act about?
+Which organisations does the DGA apply to?
+What activities or data types are excluded from the scope of the DGA?
+What does 'data intermediation service' mean under the DGA?
+What is the difference between a data holder and a data user?
+How does the DGA relate to the GDPR?
+Key concepts: scope of applicability, subject matter, objectives, definitions, material scope, exclusions, personal data, non-personal data, public sector body, data holder, data user, data subject, data intermediation service, data altruism organisation, re-use
+
+--- Example 2 ---
+INPUT
+Act: General Data Protection Regulation (32016R0679)
+Chapter III — Rights of the data subject
+Articles:
+- Transparent information, communication and modalities for the exercise of the rights of the data subject
+- Information to be provided where personal data are collected from the data subject
+- Information to be provided where personal data have not been obtained from the data subject
+- Right of access by the data subject
+- Right to rectification
+- Right to erasure ('right to be forgotten')
+- Right to restriction of processing
+- Notification obligation regarding rectification or erasure or restriction
+- Right to data portability
+- Right to object
+- Automated individual decision-making, including profiling
+
+OUTPUT
+Act: General Data Protection Regulation (32016R0679)
+Chapter III — Rights of the data subject
+Topic: Grants individuals enforceable rights over their personal data held by controllers: the right to know what is processed and why, to correct or delete it, to obtain a copy in portable format, to restrict processing, and to object to automated decisions and profiling.
+Applies to: Data subjects (natural persons whose data is processed), controllers (entities that determine the purpose and means of processing), processors, supervisory authorities.
+Typical questions:
+Can I ask a company to delete my personal data?
+What information must a company give me before collecting my data?
+How long does a company have to respond to a data access request?
+Can I get a copy of my personal data in a machine-readable format?
+Can I opt out of being profiled or targeted by automated decisions?
+Is the right to erasure absolute, or are there exceptions?
+What happens if a controller shares my data with third parties before I request erasure?
+Key concepts: right of access, right to erasure, right to be forgotten, right to rectification, right to data portability, right to object, restriction of processing, automated decision-making, profiling, transparent information, subject access request, response deadline, controller obligations
+
+--- Example 3 ---
+INPUT
+Act: AI Act (32024R1689)
+Chapter III — High-risk AI systems
+Articles:
+- Classification of AI systems as high-risk
+- High-risk AI systems referred to in Annex I
+- High-risk AI systems referred to in Annex III
+- Risk management system
+- Data and data governance
+- Technical documentation
+- Record-keeping
+- Transparency and provision of information to deployers
+- Human oversight
+- Accuracy, robustness and cybersecurity
+- Obligations of providers of high-risk AI systems
+- Obligations of product manufacturers
+- Authorised representatives of providers established outside the EU
+- Obligations of importers
+- Obligations of distributors
+- Obligations of deployers of high-risk AI systems
+- Responsibilities along the AI value chain
+- Conformity assessment
+- EU declaration of conformity
+- CE marking
+- Registration
+
+OUTPUT
+Act: AI Act (32024R1689)
+Chapter III — High-risk AI systems
+Topic: Determines which AI systems are classified as high-risk and what technical, organisational, and procedural requirements they must satisfy before and after being placed on the market. Assigns specific compliance obligations to every actor in the AI supply chain — providers, deployers, importers, and distributors.
+Applies to: Providers of high-risk AI systems, deployers, importers, distributors, product manufacturers integrating AI, authorised representatives, notified bodies, national market surveillance authorities.
+Typical questions:
+Which AI systems are considered high-risk under the AI Act?
+What technical requirements must a high-risk AI system meet before it can be sold in the EU?
+What documentation does a provider need to prepare for a high-risk AI system?
+Who is responsible for compliance when a high-risk AI system is embedded in a physical product?
+What human oversight measures must be in place for a high-risk AI system?
+What obligations does a company deploying a high-risk AI system have?
+How does the conformity assessment process work for high-risk AI?
+Key concepts: high-risk AI system, Annex I, Annex III, risk management system, technical documentation, conformity assessment, CE marking, EU declaration of conformity, human oversight, data governance, accuracy, robustness, cybersecurity, provider obligations, deployer obligations, AI value chain, notified body, market surveillance
+
+=== CHAPTER TO SUMMARISE ===
+Act: {act_title} ({celex})
+Chapter {number} — {title}
+Articles:
+{articles}
+
+OUTPUT
+"""
+
 # Prompt to extract case law document hierarchy rules from structural elements
 
-CASE_LAW_DOCUMENT_PARSING_SYSTEM_PROMPT = """You are an expert document analyst.
+CASE_LAW_DOCUMENT_PARSING_SYSTEM_V1 = """You are an expert document analyst.
 Given structural elements extracted from a PDF, infer the document's hierarchical rules.
 Consider the domain (legal, academic, technical, corporate, etc.) and its conventions
 when assigning depth levels.
 """
 
-CASE_LAW_DOCUMENT_PARSING_USER_PROMPT = """Analyze these structural elements from a PDF document:
+CASE_LAW_DOCUMENT_PARSING_USER_V1 = """Analyze these structural elements from a PDF document:
 
 {sample}
 
@@ -402,13 +717,13 @@ They are NOT content sections — exclude them completely even if they appear as
 Example of what to NEVER add as a rule: "JUDGMENT OF 13. 5. 2014 — CASE C-131/12 GOOGLE SPAIN AND GOOGLE"
 """
 
-CASE_LAW_ENTITY_SUMMARY_SYSTEM_PROMPT = """
+CASE_LAW_ENTITY_SUMMARY_SYSTEM_V1 = """
 You are an AI assistant that helps a human analyst to perform general information discovery. Information
 discovery is the process of identifying and assessing relevant information associated with certain
 entities (e.g., organizations and individuals) within a network.
 """
 
-CASE_LAW_ENTITY_SUMMARY_USER_PROMPT = """
+CASE_LAW_ENTITY_SUMMARY_USER_V1 = """
 You are analyzing a single section of a structured EU legal document.
 
 Section heading: {heading}
@@ -427,9 +742,9 @@ Return ONLY a JSON object with the following fields:
 - "summary": your concise summary
 """
 
-CASE_LAW_ENTIRE_DOC_SUMMARY_SYSTEM_PROMPT = """You are an expert legal document summarizer."""
+CASE_LAW_ENTIRE_DOC_SUMMARY_SYSTEM_V1 = """You are an expert legal document summarizer."""
 
-CASE_LAW_ENTIRE_DOC_SUMMARY_USER_PROMPT = """
+CASE_LAW_ENTIRE_DOC_SUMMARY_USER_V1 = """
 Summarize the following CJEU judgment. Focus on:
 - The case number (e.g., C-XXX/YY)
 - The parties
@@ -442,3 +757,157 @@ to smaller text chunks. Output only the summary text.
 
 Document: {document_content}
 """
+
+# ---------------------------------------------------------------------------
+# Prompt registry
+#
+# Every prompt above is registered as a versioned PromptVersion. The names
+# exported at the bottom resolve to the *active* version's body, so downstream
+# imports stay unchanged. To ship a new version of a prompt: add a new
+# <NAME>_V<n> text constant, register it with active=True, and flip the
+# previous version to active=False. Rollback is the reverse flip.
+# ---------------------------------------------------------------------------
+
+registry = PromptRegistry()
+
+registry.register(PromptVersion(
+    name="query_classification", version="v1", created=date(2026, 6, 20),
+    notes="Initial tracked version. Classifies along 3 axes "
+          "(intent, query_type, acts) with few-shot examples.",
+    body=QUERY_CLASSIFICATION_V1, active=False,
+))
+
+registry.register(PromptVersion(
+    name="query_classification", version="v2", created=date(2026, 6, 26),
+    notes="Removes query_type and chapter_number axes. Classifies only by "
+          "intent (DEFINITIONAL/INTERPRETIVE) and acts.",
+    body=QUERY_CLASSIFICATION_V2, active=True,
+))
+
+registry.register(PromptVersion(
+    name="topic_selection", version="v1", created=date(2026, 6, 20),
+    notes="Initial tracked version. NOTE: defined but not currently imported "
+          "by any consumer.",
+    body=TOPIC_SELECTION_V1, active=True,
+))
+
+registry.register(PromptVersion(
+    name="answer_synthesis", version="v2", created=date(2026, 6, 20),
+    notes="Flat atomic-line list format. Superseded by v3.",
+    body=ANSWER_SYNTHESIS_V2, active=False,
+))
+
+registry.register(PromptVersion(
+    name="answer_synthesis", version="v3", created=date(2026, 6, 24),
+    notes="GT-style prose. Improved recall/F1 but over-long answers raised FP "
+          "and lowered faithfulness (padding, preamble, vertical lists). "
+          "Superseded by v4.",
+    body=ANSWER_SYNTHESIS_V3, active=False,
+))
+
+registry.register(PromptVersion(
+    name="answer_synthesis", version="v4", created=date(2026, 6, 24),
+    notes="Tightens v3 against dilution: bans preamble/framing sentences, "
+          "vertical numbered lists, end-of-sentence citations, and ungrounded "
+          "glue clauses. Adds three GT reference answers as length/density "
+          "calibration. Goal: discursive but dense like the golden dataset, "
+          "to cut FP and restore faithfulness without losing recall.",
+    body=ANSWER_SYNTHESIS_V4, active=True,
+))
+
+registry.register(PromptVersion(
+    name="answer_filter", version="v1", created=date(2026, 6, 20),
+    notes="Initial tracked version. Optional post-synthesis filter "
+          "(enabled via RAGPipeline use_answer_filter).",
+    body=ANSWER_FILTER_V1, active=True,
+))
+
+registry.register(PromptVersion(
+    name="article_summary_system", version="v1", created=date(2026, 6, 20),
+    notes="Initial tracked version. System prompt for retrieval-optimised "
+          "article summaries.",
+    body=ARTICLE_SUMMARY_SYSTEM_V1, active=True,
+))
+
+registry.register(PromptVersion(
+    name="article_summary_user", version="v1", created=date(2026, 6, 20),
+    notes="Initial tracked version. User prompt with summarisation template "
+          "and few-shot examples.",
+    body=ARTICLE_SUMMARY_USER_V1, active=True,
+))
+
+registry.register(PromptVersion(
+    name="chapter_summary_system", version="v1", created=date(2026, 6, 25),
+    notes="Initial version. System prompt for retrieval-optimised chapter summaries. "
+          "Emphasises query-friendly language and bans hollow legislative phrasing.",
+    body=CHAPTER_SUMMARY_SYSTEM_V1, active=True,
+))
+
+registry.register(PromptVersion(
+    name="chapter_summary_user", version="v1", created=date(2026, 6, 25),
+    notes="Initial version. User prompt with 3 few-shot examples covering a generic "
+          "(Ch. I General provisions), a rights-based (GDPR Ch. III), and a complex "
+          "domain-specific chapter (AI Act Ch. III High-risk AI).",
+    body=CHAPTER_SUMMARY_USER_V1, active=True,
+))
+
+registry.register(PromptVersion(
+    name="case_law_document_parsing_system", version="v1", created=date(2026, 6, 20),
+    notes="Initial tracked version. System prompt for inferring case-law "
+          "document hierarchy rules.",
+    body=CASE_LAW_DOCUMENT_PARSING_SYSTEM_V1, active=True,
+))
+
+registry.register(PromptVersion(
+    name="case_law_document_parsing_user", version="v1", created=date(2026, 6, 20),
+    notes="Initial tracked version. User prompt that infers hierarchy rules "
+          "from sampled PDF structural elements.",
+    body=CASE_LAW_DOCUMENT_PARSING_USER_V1, active=True,
+))
+
+registry.register(PromptVersion(
+    name="case_law_entity_summary_system", version="v1", created=date(2026, 6, 20),
+    notes="Initial tracked version. System prompt for section-level entity "
+          "summaries.",
+    body=CASE_LAW_ENTITY_SUMMARY_SYSTEM_V1, active=True,
+))
+
+registry.register(PromptVersion(
+    name="case_law_entity_summary_user", version="v1", created=date(2026, 6, 20),
+    notes="Initial tracked version. User prompt for summarising a single "
+          "document section as JSON.",
+    body=CASE_LAW_ENTITY_SUMMARY_USER_V1, active=True,
+))
+
+registry.register(PromptVersion(
+    name="case_law_entire_doc_summary_system", version="v1", created=date(2026, 6, 20),
+    notes="Initial tracked version. System prompt for whole-judgment "
+          "summarisation.",
+    body=CASE_LAW_ENTIRE_DOC_SUMMARY_SYSTEM_V1, active=True,
+))
+
+registry.register(PromptVersion(
+    name="case_law_entire_doc_summary_user", version="v1", created=date(2026, 6, 20),
+    notes="Initial tracked version. User prompt for summarising an entire "
+          "CJEU judgment within a character budget.",
+    body=CASE_LAW_ENTIRE_DOC_SUMMARY_USER_V1, active=True,
+))
+
+# ---------------------------------------------------------------------------
+# Backwards-compatible exports — resolve to the active version's body.
+# ---------------------------------------------------------------------------
+
+QUERY_CLASSIFICATION_PROMPT = registry.active("query_classification").body
+TOPIC_SELECTION_PROMPT = registry.active("topic_selection").body
+ANSWER_SYNTHESIS_PROMPT = registry.active("answer_synthesis").body
+ANSWER_FILTER_PROMPT = registry.active("answer_filter").body
+ARTICLE_SUMMARY_SYSTEM_PROMPT = registry.active("article_summary_system").body
+ARTICLE_SUMMARY_USER_PROMPT = registry.active("article_summary_user").body
+CHAPTER_SUMMARY_SYSTEM_PROMPT = registry.active("chapter_summary_system").body
+CHAPTER_SUMMARY_USER_PROMPT = registry.active("chapter_summary_user").body
+CASE_LAW_DOCUMENT_PARSING_SYSTEM_PROMPT = registry.active("case_law_document_parsing_system").body
+CASE_LAW_DOCUMENT_PARSING_USER_PROMPT = registry.active("case_law_document_parsing_user").body
+CASE_LAW_ENTITY_SUMMARY_SYSTEM_PROMPT = registry.active("case_law_entity_summary_system").body
+CASE_LAW_ENTITY_SUMMARY_USER_PROMPT = registry.active("case_law_entity_summary_user").body
+CASE_LAW_ENTIRE_DOC_SUMMARY_SYSTEM_PROMPT = registry.active("case_law_entire_doc_summary_system").body
+CASE_LAW_ENTIRE_DOC_SUMMARY_USER_PROMPT = registry.active("case_law_entire_doc_summary_user").body
