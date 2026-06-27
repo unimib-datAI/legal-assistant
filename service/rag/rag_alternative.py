@@ -47,7 +47,9 @@ def _doc_id(doc: Document) -> str:
 class HybridRetriever(BaseRetriever):
     """Hybrid retriever: dense (vector) + sparse (BM25) article search fused with RRF.
 
-    Recitals are retrieved separately via BM25 and appended as additional context.
+    Recitals are retrieved via BM25 and judged by the same cross-encoder pass as the
+    articles, then kept only if they clear `recital_score_threshold` — so irrelevant
+    recitals are dropped instead of always padding the context.
     """
 
     graph: Any
@@ -57,6 +59,7 @@ class HybridRetriever(BaseRetriever):
     top_k_sparse: int = 10
     top_k_final: int = 5
     top_k_recitals: int = 3
+    recital_score_threshold: float = 0.3
     rrf_k: int = 60
     use_reranker: bool = True
     cross_encoder: Any = CrossEncoder("BAAI/bge-reranker-v2-m3")
@@ -175,33 +178,61 @@ class HybridRetriever(BaseRetriever):
             sparse_docs = bm25.invoke(user_query)
         logger.info("[HybridRetriever] Sparse: %d article(s)", len(sparse_docs))
 
-        # RRF fusion
+        # RRF fusion → article candidates
         fused = self._rrf_fusion(dense_docs, sparse_docs, k=self.rrf_k)
-        candidates = fused[: self.top_k_final * 2]
+        article_candidates = fused[: self.top_k_final * 2]
 
-        # Ensure all candidates have `id` in metadata; enrich from sparse corpus when possible
+        # Ensure all article candidates have `id` in metadata; enrich from sparse corpus
         by_id = article_data.get("by_id", {})
-        for doc in candidates:
+        for doc in article_candidates:
+            doc.metadata.setdefault("type", "article")
             if not doc.metadata.get("id"):
                 doc.metadata["id"] = _doc_id(doc)
             if not doc.metadata.get("act") and doc.metadata["id"] in by_id:
                 doc.metadata.update(by_id[doc.metadata["id"]].metadata)
 
-        # Cross-encoder re-rank on fused candidates
-        if self.use_reranker and candidates:
+        # Recital candidates: a wider BM25 pool to give the threshold room to choose
+        recital_data = self._load_recitals(target_acts)
+        bm25_r = recital_data.get("bm25")
+        recital_candidates: List[Document] = []
+        if bm25_r is not None:
+            bm25_r.k = self.top_k_recitals * 2
+            recital_candidates = bm25_r.invoke(user_query)
+
+        candidates = article_candidates + recital_candidates
+        if not candidates:
+            return []
+
+        # Single cross-encoder pass over articles + recitals → comparable scores
+        if self.use_reranker:
             pairs = [[user_query, doc.page_content] for doc in candidates]
             ce_scores = self.cross_encoder.predict(pairs)
-            top_indices = np.argsort(ce_scores)[::-1][: self.top_k_final]
-            article_docs = [candidates[i] for i in top_indices]
-            logger.info(
-                "[HybridRetriever] After reranking: %s",
-                [f"{doc.metadata.get('id')}({float(ce_scores[i]):.2f})"
-                 for doc, i in zip(article_docs, top_indices)],
-            )
         else:
-            article_docs = candidates[: self.top_k_final]
+            # Preserve RRF/BM25 order: descending pseudo-scores by position
+            ce_scores = np.arange(len(candidates), 0, -1, dtype=float)
 
-        # Decorate article docs with act + title header
+        scored = list(zip(candidates, (float(s) for s in ce_scores)))
+        article_scored = [(d, s) for d, s in scored if d.metadata.get("type") != "recital"]
+        recital_scored = [(d, s) for d, s in scored if d.metadata.get("type") == "recital"]
+
+        # Articles: guaranteed slots, top_k_final by score
+        article_scored.sort(key=lambda x: -x[1])
+        article_docs = [d for d, _ in article_scored[: self.top_k_final]]
+        logger.info(
+            "[HybridRetriever] Articles after reranking: %s",
+            [f"{d.metadata.get('id')}({s:.2f})" for d, s in article_scored[: self.top_k_final]],
+        )
+
+        # Recitals: kept only if above threshold, capped at top_k_recitals
+        recital_scored.sort(key=lambda x: -x[1])
+        surviving = [(d, s) for d, s in recital_scored if s >= self.recital_score_threshold][: self.top_k_recitals]
+        logger.info(
+            "[HybridRetriever] Recitals kept %d/%d (threshold=%.2f): %s",
+            len(surviving), len(recital_scored), self.recital_score_threshold,
+            [f"{d.metadata.get('id')}({s:.2f})" for d, s in recital_scored],
+        )
+
+        # Decorate articles with act + title header
         for doc in article_docs:
             act_name = _CELEX_TO_ACT_NAME.get(
                 doc.metadata.get("act", ""), doc.metadata.get("act", "")
@@ -209,18 +240,18 @@ class HybridRetriever(BaseRetriever):
             title = doc.metadata.get("title", "")
             doc.page_content = f"[{act_name}, {title}]\n{doc.page_content}"
 
-        # Recital enrichment: BM25 retrieval, separate from article ranking
-        recital_data = self._load_recitals(target_acts)
-        bm25_r = recital_data.get("bm25")
+        # Decorate surviving recitals with their header
         recital_docs: List[Document] = []
-        if bm25_r is not None:
-            bm25_r.k = self.top_k_recitals
-            raw = bm25_r.invoke(user_query)
-            for doc in raw:
-                header = _recital_header(doc.metadata["celex"], doc.page_content)
-                body = _DISPLAY_NUM_RE.sub("", doc.page_content)
-                doc.page_content = f"{header}\n{body}"
-            recital_docs = raw
-        logger.info("[HybridRetriever] Recitals: %d", len(recital_docs))
+        for doc, _ in surviving:
+            header = _recital_header(doc.metadata["celex"], doc.page_content)
+            body = _DISPLAY_NUM_RE.sub("", doc.page_content)
+            doc.page_content = f"{header}\n{body}"
+            recital_docs.append(doc)
 
-        return article_docs + recital_docs
+        final_docs = article_docs + recital_docs
+        logger.info(
+            "[HybridRetriever] Final top-%d: %s",
+            len(final_docs),
+            [f"{d.metadata.get('id')}({d.metadata.get('type', '?')})" for d in final_docs],
+        )
+        return final_docs
