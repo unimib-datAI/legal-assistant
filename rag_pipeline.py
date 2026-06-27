@@ -15,8 +15,7 @@ from service.rag.prompt import (
     ANSWER_FILTER_PROMPT,
     registry as prompt_registry,
 )
-from service.rag.rag_naive_with_topics import GraphEnrichedRetriever
-from service.rag.rag_alternative import ArticleTraversalRetriever
+from service.rag.rag_alternative import HybridRetriever
 
 logging.basicConfig(
     level=logging.INFO,
@@ -42,7 +41,7 @@ class RAGPipeline:
             password=config.NEO4J_PASSWORD
         )
 
-        vector_store = Neo4jVector.from_existing_graph(
+        article_vector_store = Neo4jVector.from_existing_graph(
             embedding=HuggingFaceEmbeddings(
                 model_name="BAAI/bge-large-en-v1.5",
                 encode_kwargs={"normalize_embeddings": True},
@@ -50,10 +49,10 @@ class RAGPipeline:
             url=config.NEO4J_URI,
             username=config.NEO4J_USERNAME,
             password=config.NEO4J_PASSWORD,
-            index_name="Paragraph",
-            node_label="Paragraph",
-            text_node_properties=["text", "id"],
-            embedding_node_property="textEmbedding"
+            index_name="Article",
+            node_label="Article",
+            text_node_properties=["text", "id", "title"],
+            embedding_node_property="textEmbedding",
         )
 
         classifier_llm = ChatOpenAI(
@@ -64,8 +63,9 @@ class RAGPipeline:
         )
         self.classifier = QueryClassifier(graph=graph, llm=classifier_llm)
 
-        self.retriever = ArticleTraversalRetriever(
+        self.retriever = HybridRetriever(
             graph=graph,
+            article_vector_store=article_vector_store,
             classifier=self.classifier,
         )
 

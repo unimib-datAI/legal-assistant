@@ -164,6 +164,13 @@ class NodeQueries:
     ORDER BY a.id, toInteger(r.number)
     """
 
+    GET_ARTICLES_BY_ACTS = """
+    MATCH (act:Act)-[:CONTAINS*]->(art:Article)
+    WHERE act.id IN $acts
+    RETURN art.id AS id, art.title AS title, art.text AS text, act.id AS act
+    ORDER BY act.id, art.id
+    """
+
     GET_GENERAL_PROVISIONS_BY_ACTS = """
     MATCH (act:Act)-[:CONTAINS*]->(art:Article)
     WHERE act.id IN $acts

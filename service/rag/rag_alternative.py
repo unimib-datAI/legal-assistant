@@ -1,5 +1,6 @@
 import logging
 import re
+from collections import defaultdict
 from typing import List, Any, Optional
 
 import numpy as np
@@ -22,10 +23,11 @@ _CELEX_TO_ACT_NAME = {
 }
 
 _DISPLAY_NUM_RE = re.compile(r"^\((\d+)\)\s*")
+# Matches '\nid: <value>' in page_content produced by from_existing_graph
+_PC_ID_RE = re.compile(r"\nid:\s*([^\n]+)")
 
 
 def _recital_header(celex: str, recital_text: str) -> str:
-    """Build a '[Act, Recital N]' prefix using the display label parsed from the recital text."""
     act_name = _CELEX_TO_ACT_NAME.get(celex, celex)
     m = _DISPLAY_NUM_RE.match(recital_text)
     if m:
@@ -33,37 +35,79 @@ def _recital_header(celex: str, recital_text: str) -> str:
     return f"[{act_name}, Recital]"
 
 
-class ArticleTraversalRetriever(BaseRetriever):
-    """Retriever that fetches recitals via BM25 and re-ranks them with a cross-encoder."""
+def _doc_id(doc: Document) -> str:
+    """Return the article id from metadata (sparse docs) or parsed from page_content (dense docs)."""
+    mid = doc.metadata.get("id")
+    if mid:
+        return mid
+    m = _PC_ID_RE.search(doc.page_content)
+    return m.group(1).strip() if m else doc.page_content[:80]
+
+
+class HybridRetriever(BaseRetriever):
+    """Hybrid retriever: dense (vector) + sparse (BM25) article search fused with RRF.
+
+    Recitals are retrieved separately via BM25 and appended as additional context.
+    """
 
     graph: Any
-    k: int = 10
-    top_k_recitals: int = 20
-    cross_encoder: Any = CrossEncoder("BAAI/bge-reranker-v2-m3")
+    article_vector_store: Any
     classifier: Any = None
+    top_k_dense: int = 10
+    top_k_sparse: int = 10
+    top_k_final: int = 5
+    top_k_recitals: int = 3
+    rrf_k: int = 60
+    use_reranker: bool = True
+    cross_encoder: Any = CrossEncoder("BAAI/bge-reranker-v2-m3")
+    _article_cache: Optional[dict] = None
     _recital_cache: Optional[dict] = None
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    def _load_recitals(self, acts: List[str]) -> dict:
-        """Fetch all recitals for the given acts and build a BM25 index. Results are cached."""
+    def _load_articles(self, acts: List[str]) -> dict:
+        """Fetch all articles for the given acts and build a BM25 index + id lookup. Cached."""
         cache_key = tuple(sorted(acts))
+        if self._article_cache is not None and cache_key in self._article_cache:
+            return self._article_cache[cache_key]
 
+        rows = self.graph.query(NodeQueries.GET_ARTICLES_BY_ACTS, params={"acts": acts})
+        if not rows:
+            data: dict = {"bm25": None, "by_id": {}}
+        else:
+            docs = [
+                Document(
+                    page_content=r["text"],
+                    metadata={"id": r["id"], "title": r["title"], "act": r["act"], "type": "article"},
+                )
+                for r in rows
+            ]
+            bm25 = BM25Retriever.from_documents(docs)
+            data = {"bm25": bm25, "by_id": {d.metadata["id"]: d for d in docs}}
+            logger.info(
+                "[Article Cache] Loaded %d articles + built BM25 index for acts %s",
+                len(docs), acts,
+            )
+
+        if self._article_cache is None:
+            self._article_cache = {}
+        self._article_cache[cache_key] = data
+        return data
+
+    def _load_recitals(self, acts: List[str]) -> dict:
+        """Fetch all recitals for the given acts and build a BM25 index. Cached."""
+        cache_key = tuple(sorted(acts))
         if self._recital_cache is not None and cache_key in self._recital_cache:
             return self._recital_cache[cache_key]
 
-        results = self.graph.query(
-            NodeQueries.GET_RECITALS_BY_ACTS,
-            params={"acts": acts}
-        )
-
+        results = self.graph.query(NodeQueries.GET_RECITALS_BY_ACTS, params={"acts": acts})
         if not results:
             data = {"bm25": None}
         else:
             recital_docs = [
                 Document(
                     page_content=r["text"],
-                    metadata={"id": r["recital_id"], "celex": r["celex"]},
+                    metadata={"id": r["recital_id"], "celex": r["celex"], "type": "recital"},
                 )
                 for r in results
             ]
@@ -79,50 +123,25 @@ class ArticleTraversalRetriever(BaseRetriever):
         self._recital_cache[cache_key] = data
         return data
 
-    def _match_user_query_to_recitals(
-        self, user_query: str, target_acts: List[str]
+    @staticmethod
+    def _rrf_fusion(
+        dense: List[Document],
+        sparse: List[Document],
+        k: int = 60,
     ) -> List[Document]:
-        """Return top-k recitals by BM25 lexical match against the user query."""
-        data = self._load_recitals(target_acts)
-        bm25 = data.get("bm25")
-        if bm25 is None:
-            return []
-
-        bm25.k = self.top_k_recitals
-        results = bm25.invoke(user_query)
-        if results:
-            logger.info(
-                "[Recital Match] BM25 top recitals: %s",
-                ", ".join(r.metadata["id"] for r in results),
-            )
-        return results
-
-    def _rerank_and_decorate(
-        self,
-        user_query: str,
-        recital_docs: List[Document],
-    ) -> List[Document]:
-        logger.info("[Retriever] Reranking %d recital candidates", len(recital_docs))
-
-        pairs = [[user_query, doc.page_content] for doc in recital_docs]
-        ce_scores = self.cross_encoder.predict(pairs)
-
-        top_indices = np.argsort(ce_scores)[::-1][:self.k]
-        ranked_docs = [recital_docs[i] for i in top_indices]
-
-        logger.info(
-            "[Retriever] Final top-%d: %s",
-            self.k,
-            [f"{d.metadata.get('id')}({float(ce_scores[i]):.2f})"
-             for d, i in zip(ranked_docs, top_indices)],
-        )
-
-        for doc in ranked_docs:
-            header = _recital_header(doc.metadata["celex"], doc.page_content)
-            body = _DISPLAY_NUM_RE.sub("", doc.page_content)
-            doc.page_content = f"{header}\n{body}"
-
-        return ranked_docs
+        """Merge two ranked lists using Reciprocal Rank Fusion."""
+        scores: dict = defaultdict(float)
+        all_docs: dict = {}
+        for rank, doc in enumerate(dense):
+            key = _doc_id(doc)
+            scores[key] += 1.0 / (k + rank + 1)
+            all_docs[key] = doc
+        for rank, doc in enumerate(sparse):
+            key = _doc_id(doc)
+            scores[key] += 1.0 / (k + rank + 1)
+            # sparse docs carry full metadata (id, act, title) — prefer them for the same id
+            all_docs[key] = doc
+        return [all_docs[key] for key in sorted(scores, key=lambda x: -scores[x])]
 
     def _get_relevant_documents(
         self, user_query: str, *, run_manager: CallbackManagerForRetrieverRun = None  # noqa: ARG002
@@ -130,17 +149,78 @@ class ArticleTraversalRetriever(BaseRetriever):
         classification = self.classifier.classify(user_query) if self.classifier else None
         target_acts = classification.acts if classification else []
         logger.info(
-            "[Retriever] target_acts=%s intent=%s",
+            "[HybridRetriever] target_acts=%s intent=%s",
             target_acts,
             classification.intent if classification else None,
         )
 
         if not target_acts:
-            logger.warning("[Retriever] No target acts classified — returning empty.")
+            logger.warning("[HybridRetriever] No target acts classified — returning empty.")
             return []
 
-        recital_docs = self._match_user_query_to_recitals(user_query, target_acts)
-        if not recital_docs:
-            return []
+        # Dense path: vector similarity search, then filter to target acts only
+        raw_dense = self.article_vector_store.similarity_search(user_query, k=self.top_k_dense)
+        dense_docs = [
+            doc for doc in raw_dense
+            if any(_doc_id(doc).startswith(act) for act in target_acts)
+        ]
+        logger.info("[HybridRetriever] Dense: %d article(s) (%d before act filter)", len(dense_docs), len(raw_dense))
 
-        return self._rerank_and_decorate(user_query, recital_docs)
+        # Sparse path: BM25 over articles filtered by target acts
+        article_data = self._load_articles(target_acts)
+        bm25 = article_data.get("bm25")
+        sparse_docs: List[Document] = []
+        if bm25 is not None:
+            bm25.k = self.top_k_sparse
+            sparse_docs = bm25.invoke(user_query)
+        logger.info("[HybridRetriever] Sparse: %d article(s)", len(sparse_docs))
+
+        # RRF fusion
+        fused = self._rrf_fusion(dense_docs, sparse_docs, k=self.rrf_k)
+        candidates = fused[: self.top_k_final * 2]
+
+        # Ensure all candidates have `id` in metadata; enrich from sparse corpus when possible
+        by_id = article_data.get("by_id", {})
+        for doc in candidates:
+            if not doc.metadata.get("id"):
+                doc.metadata["id"] = _doc_id(doc)
+            if not doc.metadata.get("act") and doc.metadata["id"] in by_id:
+                doc.metadata.update(by_id[doc.metadata["id"]].metadata)
+
+        # Cross-encoder re-rank on fused candidates
+        if self.use_reranker and candidates:
+            pairs = [[user_query, doc.page_content] for doc in candidates]
+            ce_scores = self.cross_encoder.predict(pairs)
+            top_indices = np.argsort(ce_scores)[::-1][: self.top_k_final]
+            article_docs = [candidates[i] for i in top_indices]
+            logger.info(
+                "[HybridRetriever] After reranking: %s",
+                [f"{doc.metadata.get('id')}({float(ce_scores[i]):.2f})"
+                 for doc, i in zip(article_docs, top_indices)],
+            )
+        else:
+            article_docs = candidates[: self.top_k_final]
+
+        # Decorate article docs with act + title header
+        for doc in article_docs:
+            act_name = _CELEX_TO_ACT_NAME.get(
+                doc.metadata.get("act", ""), doc.metadata.get("act", "")
+            )
+            title = doc.metadata.get("title", "")
+            doc.page_content = f"[{act_name}, {title}]\n{doc.page_content}"
+
+        # Recital enrichment: BM25 retrieval, separate from article ranking
+        recital_data = self._load_recitals(target_acts)
+        bm25_r = recital_data.get("bm25")
+        recital_docs: List[Document] = []
+        if bm25_r is not None:
+            bm25_r.k = self.top_k_recitals
+            raw = bm25_r.invoke(user_query)
+            for doc in raw:
+                header = _recital_header(doc.metadata["celex"], doc.page_content)
+                body = _DISPLAY_NUM_RE.sub("", doc.page_content)
+                doc.page_content = f"{header}\n{body}"
+            recital_docs = raw
+        logger.info("[HybridRetriever] Recitals: %d", len(recital_docs))
+
+        return article_docs + recital_docs

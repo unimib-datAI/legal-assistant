@@ -176,7 +176,7 @@ evals = RagasEvaluatorUtils()
 
 # Set to True to test retrieval only: skips LLM answer synthesis and metric
 # computation (both require LLM calls). Flip back to False for full evaluation.
-RETRIEVAL_ONLY = True
+RETRIEVAL_ONLY = False
 
 
 @experiment()

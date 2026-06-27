@@ -69,8 +69,14 @@ if st.button("Run Graph Initialization", type="primary"):
                 embedding_dim=1024,
                 node_name="Recital",
             )
+            article_dimension = graph.generate_text_embeddings(
+                embed_fn=bge_embeddings.embed_documents,
+                embedding_dim=1024,
+                node_name="Article",
+            )
             graph.create_vector_index("Paragraph", "Paragraph", paragraph_dimension)
             graph.create_vector_index("Recital", "Recital", rec_dimension)
+            graph.create_vector_index("Article", "Article", article_dimension)
             graph.close()
 
         st.success(f"Graph initialized — {len(celex_ids)} document(s) loaded.")
