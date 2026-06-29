@@ -7,13 +7,33 @@ import numpy as np
 from langchain_community.retrievers import BM25Retriever
 from langchain_core.callbacks import CallbackManagerForRetrieverRun
 from langchain_core.documents import Document
+from langchain_core.prompts import PromptTemplate
 from langchain_core.retrievers import BaseRetriever
 from pydantic import ConfigDict
 from sentence_transformers.cross_encoder import CrossEncoder
 
 from service.graph.query import NodeQueries
+from service.rag.prompt import HYDE_PROMPT
 
 logger = logging.getLogger(__name__)
+
+
+class HyDEGenerator:
+    """Generates act-grounded hypothetical legal passages for dense retrieval.
+
+    With `iterations > 1` it samples multiple hypothetical documents (the LLM must
+    use temperature > 0 for them to differ); the retriever averages their embeddings
+    to reduce the variance of any single generated passage (Gao et al., 2022).
+    """
+
+    def __init__(self, llm: Any, iterations: int = 1):
+        self.llm = llm
+        self.iterations = iterations
+        self._prompt = PromptTemplate.from_template(HYDE_PROMPT)
+
+    def generate(self, query: str, acts_context: str) -> List[str]:
+        text = self._prompt.format(query=query, acts=acts_context)
+        return [self.llm.invoke(text).content.strip() for _ in range(self.iterations)]
 
 _CELEX_TO_ACT_NAME = {
     "32022R0868": "Data Governance Act",
@@ -55,6 +75,8 @@ class HybridRetriever(BaseRetriever):
     graph: Any
     article_vector_store: Any
     classifier: Any = None
+    hyde_generator: Any = None
+    use_hyde: bool = True
     top_k_dense: int = 10
     top_k_sparse: int = 10
     top_k_final: int = 5
@@ -161,8 +183,23 @@ class HybridRetriever(BaseRetriever):
             logger.warning("[HybridRetriever] No target acts classified — returning empty.")
             return []
 
-        # Dense path: vector similarity search, then filter to target acts only
-        raw_dense = self.article_vector_store.similarity_search(user_query, k=self.top_k_dense)
+        # Dense path: optionally expand the query into one or more hypothetical legal
+        # passages (HyDE), average their embeddings, and search by that mean vector;
+        # then filter to target acts only
+        if self.use_hyde and self.hyde_generator is not None:
+            acts_context = ", ".join(_CELEX_TO_ACT_NAME.get(a, a) for a in target_acts)
+            hyde_docs = self.hyde_generator.generate(user_query, acts_context)
+            logger.info(
+                "[HybridRetriever] HyDE: %d hypothetical doc(s); first: %s…",
+                len(hyde_docs), hyde_docs[0][:120].replace("\n", " "),
+            )
+            doc_vectors = self.article_vector_store.embedding.embed_documents(hyde_docs)
+            mean_vector = np.mean(np.asarray(doc_vectors), axis=0).tolist()
+            raw_dense = self.article_vector_store.similarity_search_by_vector(
+                mean_vector, k=self.top_k_dense, query=user_query
+            )
+        else:
+            raw_dense = self.article_vector_store.similarity_search(user_query, k=self.top_k_dense)
         dense_docs = [
             doc for doc in raw_dense
             if any(_doc_id(doc).startswith(act) for act in target_acts)

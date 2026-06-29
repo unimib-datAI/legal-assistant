@@ -15,7 +15,7 @@ from service.rag.prompt import (
     ANSWER_FILTER_PROMPT,
     registry as prompt_registry,
 )
-from service.rag.rag_alternative import HybridRetriever
+from service.rag.rag_alternative import HybridRetriever, HyDEGenerator
 
 logging.basicConfig(
     level=logging.INFO,
@@ -32,7 +32,7 @@ QA_PROMPT = PromptTemplate(
 
 class RAGPipeline:
 
-    def __init__(self, use_answer_filter: bool = False):
+    def __init__(self, use_answer_filter: bool = False, hyde_iterations: int = 3):
         self.use_answer_filter = use_answer_filter
         logger.info("[Prompts] active versions: %s", prompt_registry.active_versions())
         graph = Neo4jGraph(
@@ -63,10 +63,22 @@ class RAGPipeline:
         )
         self.classifier = QueryClassifier(graph=graph, llm=classifier_llm)
 
+        # Temperature > 0 only when sampling multiple HyDE docs, so they diverge;
+        # a single doc stays deterministic.
+        hyde_llm = ChatOpenAI(
+            model="gpt-4o-mini",
+            temperature=0.7 if hyde_iterations > 1 else 0,
+            api_key=config.OPENAI_API_KEY,
+            base_url=config.OPENAI_BASE_URL,
+        )
+        self.hyde_generator = HyDEGenerator(llm=hyde_llm, iterations=hyde_iterations)
+
         self.retriever = HybridRetriever(
             graph=graph,
             article_vector_store=article_vector_store,
             classifier=self.classifier,
+            hyde_generator=self.hyde_generator,
+            use_hyde=True,
         )
 
         self.synthesis_llm = ChatOpenAI(

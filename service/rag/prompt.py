@@ -751,12 +751,22 @@ Summarize the following CJEU judgment. Focus on:
 - The specific articles or regulations interpreted
 - The core legal question
 
-The summary must be concise, maximum {char_length} 
-characters long, and optimized for providing context 
+The summary must be concise, maximum {char_length}
+characters long, and optimized for providing context
 to smaller text chunks. Output only the summary text.
 
 Document: {document_content}
 """
+
+HYDE_V1 = """You are an expert in EU digital regulation. Write a short, factual passage in the style of an article or 
+recital of the relevant EU act that directly answers the question below. Write as if quoting the legislation itself2: 
+precise, normative, self-contained. Do not add disclaimers or meta-commentary.
+
+Relevant act(s): {acts}
+
+Question: {query}
+
+Hypothetical legal passage:"""
 
 # ---------------------------------------------------------------------------
 # Prompt registry
@@ -893,6 +903,13 @@ registry.register(PromptVersion(
     body=CASE_LAW_ENTIRE_DOC_SUMMARY_USER_V1, active=True,
 ))
 
+registry.register(PromptVersion(
+    name="hyde", version="v1", created=date(2026, 6, 27),
+    notes="Initial HyDE prompt. Generates an act-grounded hypothetical legal "
+          "passage used as the dense-search query.",
+    body=HYDE_V1, active=True,
+))
+
 # ---------------------------------------------------------------------------
 # Backwards-compatible exports — resolve to the active version's body.
 # ---------------------------------------------------------------------------
@@ -911,3 +928,4 @@ CASE_LAW_ENTITY_SUMMARY_SYSTEM_PROMPT = registry.active("case_law_entity_summary
 CASE_LAW_ENTITY_SUMMARY_USER_PROMPT = registry.active("case_law_entity_summary_user").body
 CASE_LAW_ENTIRE_DOC_SUMMARY_SYSTEM_PROMPT = registry.active("case_law_entire_doc_summary_system").body
 CASE_LAW_ENTIRE_DOC_SUMMARY_USER_PROMPT = registry.active("case_law_entire_doc_summary_user").body
+HYDE_PROMPT = registry.active("hyde").body
