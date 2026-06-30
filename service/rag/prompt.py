@@ -369,7 +369,7 @@ CONVENTIONS — follow each one:
 - Every sentence must be a self-contained, independently verifiable claim tied to one cited provision. If a sentence does not assert a rule that the retrieved content supports for THIS question, delete it. Length discipline: prefer the shortest phrasing that still carries the rule; never pad to seem thorough.
 """
 
-ANSWER_FILTER_V1 = """You are filtering a draft legal answer to keep only the sentences that directly answer the user's question.
+ANSWER_FILTER_V1 ="""You are filtering a draft legal answer to keep only the sentences that directly answer the user's question.
 
 === QUESTION ===
 {question}

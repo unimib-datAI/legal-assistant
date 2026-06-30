@@ -2,20 +2,15 @@ import json
 import logging
 import pathlib
 
-from langchain_community.vectorstores import Neo4jVector
 from langchain_core.prompts import PromptTemplate
-from langchain_neo4j import Neo4jGraph
-from langchain_huggingface import HuggingFaceEmbeddings
-from langchain_openai import ChatOpenAI
 
-import config
-from service.rag.intent_classifier import QueryClassifier
+from service.rag.methods.context import RagContext
+from service.rag.methods.hybrid_method import HybridRagMethod
 from service.rag.prompt import (
     ANSWER_SYNTHESIS_PROMPT,
     ANSWER_FILTER_PROMPT,
     registry as prompt_registry,
 )
-from service.rag.rag_alternative import HybridRetriever, HyDEGenerator
 
 logging.basicConfig(
     level=logging.INFO,
@@ -35,67 +30,18 @@ class RAGPipeline:
     def __init__(self, use_answer_filter: bool = False, hyde_iterations: int = 3):
         self.use_answer_filter = use_answer_filter
         logger.info("[Prompts] active versions: %s", prompt_registry.active_versions())
-        graph = Neo4jGraph(
-            url=config.NEO4J_URI,
-            username=config.NEO4J_USERNAME,
-            password=config.NEO4J_PASSWORD
-        )
 
-        article_vector_store = Neo4jVector.from_existing_graph(
-            embedding=HuggingFaceEmbeddings(
-                model_name="BAAI/bge-large-en-v1.5",
-                encode_kwargs={"normalize_embeddings": True},
-            ),
-            url=config.NEO4J_URI,
-            username=config.NEO4J_USERNAME,
-            password=config.NEO4J_PASSWORD,
-            index_name="Article",
-            node_label="Article",
-            text_node_properties=["text", "id", "title"],
-            embedding_node_property="textEmbedding",
-        )
+        # Shared resources (graph, vector store, classifier, LLMs) come from the
+        # same RagContext the chat frontend uses — single source of truth.
+        ctx = RagContext()
+        self.classifier = ctx.classifier
+        self.synthesis_llm = ctx.synthesis_llm
+        self.filter_llm = ctx.filter_llm if use_answer_filter else None
 
-        classifier_llm = ChatOpenAI(
-            model="gpt-4o-mini",
-            temperature=0,
-            api_key=config.OPENAI_API_KEY,
-            base_url=config.OPENAI_BASE_URL,
-        )
-        self.classifier = QueryClassifier(graph=graph, llm=classifier_llm)
-
-        # Temperature > 0 only when sampling multiple HyDE docs, so they diverge;
-        # a single doc stays deterministic.
-        hyde_llm = ChatOpenAI(
-            model="gpt-4o-mini",
-            temperature=0.7 if hyde_iterations > 1 else 0,
-            api_key=config.OPENAI_API_KEY,
-            base_url=config.OPENAI_BASE_URL,
-        )
-        self.hyde_generator = HyDEGenerator(llm=hyde_llm, iterations=hyde_iterations)
-
-        self.retriever = HybridRetriever(
-            graph=graph,
-            article_vector_store=article_vector_store,
-            classifier=self.classifier,
-            hyde_generator=self.hyde_generator,
-            use_hyde=True,
-        )
-
-        self.synthesis_llm = ChatOpenAI(
-            temperature=0,
-            api_key=config.OPENAI_API_KEY,
-            base_url=config.OPENAI_BASE_URL,
-        )
-
-        self.filter_llm = (
-            ChatOpenAI(
-                temperature=0,
-                api_key=config.OPENAI_API_KEY,
-                base_url=config.OPENAI_BASE_URL,
-            )
-            if self.use_answer_filter
-            else None
-        )
+        method = HybridRagMethod()
+        config = method.default_config()
+        config["hyde_iterations"] = hyde_iterations
+        self.retriever = method.build_retriever(ctx, config)
 
     def retrieve(self, question: str) -> dict:
         """Run only the retrieval step, without any LLM answer synthesis."""
