@@ -5,7 +5,7 @@ import pathlib
 from langchain_core.prompts import PromptTemplate
 
 from service.rag.methods.context import RagContext
-from service.rag.methods.hybrid_method import HybridRagMethod
+from service.rag.methods.registry import get_method
 from service.rag.prompt import (
     ANSWER_SYNTHESIS_PROMPT,
     ANSWER_FILTER_PROMPT,
@@ -27,7 +27,12 @@ QA_PROMPT = PromptTemplate(
 
 class RAGPipeline:
 
-    def __init__(self, use_answer_filter: bool = False, hyde_iterations: int = 3):
+    def __init__(
+        self,
+        method_id: str = "hybrid",
+        use_answer_filter: bool = False,
+        hyde_iterations: int = 3,
+    ):
         self.use_answer_filter = use_answer_filter
         logger.info("[Prompts] active versions: %s", prompt_registry.active_versions())
 
@@ -38,10 +43,12 @@ class RAGPipeline:
         self.synthesis_llm = ctx.synthesis_llm
         self.filter_llm = ctx.filter_llm if use_answer_filter else None
 
-        method = HybridRagMethod()
+        method = get_method(method_id)
         config = method.default_config()
-        config["hyde_iterations"] = hyde_iterations
+        if "hyde_iterations" in config:  # only the hybrid method consumes this
+            config["hyde_iterations"] = hyde_iterations
         self.retriever = method.build_retriever(ctx, config)
+        logger.info("[RAGPipeline] method=%s config=%s", method_id, config)
 
     def retrieve(self, question: str) -> dict:
         """Run only the retrieval step, without any LLM answer synthesis."""

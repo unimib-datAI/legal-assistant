@@ -1,3 +1,4 @@
+import argparse
 import asyncio
 import csv
 import logging
@@ -40,8 +41,8 @@ class RagasMetricsEvaluator:
     - context_recall      (reference fully supported by retrieved contexts)
     """
 
-    def __init__(self):
-        self.rag = RAGPipeline()
+    def __init__(self, method_id: str = "hybrid"):
+        self.rag = RAGPipeline(method_id=method_id)
         self.client = AsyncOpenAI(api_key=config.OPENAI_API_KEY, base_url=config.OPENAI_BASE_URL or None)
         self.llm = llm_factory("gpt-4o-mini", client=self.client, max_tokens=16000)
         self.embeddings = OpenAIEmbeddings(client=self.client, model="text-embedding-3-small")
@@ -103,7 +104,9 @@ class RagasMetricsEvaluator:
         return scores
 
 
-evals = RagasMetricsEvaluator()
+# Built in main() once the RAG method is chosen, so the heavy RagContext is not
+# constructed at import time. base_rag_experiment resolves it as a global at call time.
+evals: RagasMetricsEvaluator = None
 
 
 @experiment()
@@ -186,14 +189,33 @@ def setup_run_logging() -> pathlib.Path:
     return log_path
 
 
-if __name__ == "__main__":
+def main() -> None:
+    global evals
+
+    parser = argparse.ArgumentParser(description="Run the RAGAS evaluation experiment.")
+    parser.add_argument(
+        "--method", default="hybrid",
+        help="RAG method id to evaluate (e.g. 'hybrid' or 'topics'). Default: hybrid.",
+    )
+    parser.add_argument(
+        "--dataset", default="subset_retrieval_scarso",
+        help="Dataset name to load from the evals root dir.",
+    )
+    args = parser.parse_args()
+
     log_path = setup_run_logging()
     logger.info("Saving full run log to: %s", log_path)
+    logger.info("RAG method: %s | dataset: %s", args.method, args.dataset)
+    evals = RagasMetricsEvaluator(method_id=args.method)
     try:
         asyncio.run(base_rag_experiment(
-            dataset_name="subset_retrieval_scarso",
+            dataset_name=args.dataset,
             root_dir=str(config.EVALS_DIR),
             output_path=str(config.EVALS_DIR / "evaluations" / f"rag_eval_ragas_{uuid.uuid4()}.csv"),
         ))
     finally:
         logger.info("Full run log saved to: %s", log_path.resolve())
+
+
+if __name__ == "__main__":
+    main()
