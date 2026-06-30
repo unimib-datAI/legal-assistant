@@ -768,6 +768,29 @@ Question: {query}
 
 Hypothetical legal passage:"""
 
+ATTRIBUTION_V1 = """You attribute each sentence of an already-written legal answer to the retrieved sources that support it. The answer has already been split into numbered sentences; you only return marker assignments — you never rewrite, merge, reorder, or correct the sentences.
+
+=== SENTENCES ===
+
+{sentences}
+
+=== SOURCES ===
+
+Each source has a marker (S1, S2, …), a reference header, and its passage text:
+
+{sources}
+
+=== TASK ===
+
+For EACH numbered sentence, list the markers of the sources whose passage CONTENT supports that sentence's legal claim. Return exactly one assignment per sentence index.
+
+=== STRICT RULES ===
+
+1. Match on substance — the rule the sentence states — not merely on a shared article number or surface keyword. A source supports a sentence only if its passage text actually states the rule the sentence asserts.
+2. A sentence may have zero, one, or several markers. Use an empty list when no source supports it (e.g. a purely connective, introductory, or summarising sentence).
+3. Use ONLY markers that appear in the SOURCES list above. Never invent a marker or cite a source that is not listed.
+4. Return an assignment for every sentence index from 0 to the last, in order."""
+
 # ---------------------------------------------------------------------------
 # Prompt registry
 #
@@ -910,6 +933,14 @@ registry.register(PromptVersion(
     body=HYDE_V1, active=True,
 ))
 
+registry.register(PromptVersion(
+    name="attribution", version="v1", created=date(2026, 6, 30),
+    notes="Initial post-synthesis attribution prompt. Splits a finished answer "
+          "into sentences and tags each with the [Sn] markers of the sources that "
+          "support it, without altering the answer text.",
+    body=ATTRIBUTION_V1, active=True,
+))
+
 # ---------------------------------------------------------------------------
 # Backwards-compatible exports — resolve to the active version's body.
 # ---------------------------------------------------------------------------
@@ -918,6 +949,7 @@ QUERY_CLASSIFICATION_PROMPT = registry.active("query_classification").body
 TOPIC_SELECTION_PROMPT = registry.active("topic_selection").body
 ANSWER_SYNTHESIS_PROMPT = registry.active("answer_synthesis").body
 ANSWER_FILTER_PROMPT = registry.active("answer_filter").body
+ATTRIBUTION_PROMPT = registry.active("attribution").body
 ARTICLE_SUMMARY_SYSTEM_PROMPT = registry.active("article_summary_system").body
 ARTICLE_SUMMARY_USER_PROMPT = registry.active("article_summary_user").body
 CHAPTER_SUMMARY_SYSTEM_PROMPT = registry.active("chapter_summary_system").body
