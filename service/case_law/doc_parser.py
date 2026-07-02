@@ -2,6 +2,7 @@ import re
 import logging
 from collections import Counter
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import NamedTuple
 
 logger = logging.getLogger(__name__)
@@ -120,6 +121,60 @@ def extract_sample(pdf_path: str, body_snippet: int = 300) -> list[dict]:
     return items
 
 
+def _format_items(items: list[dict]) -> str:
+    """Render docling items as aligned, human-readable lines for the structure log."""
+    lines = []
+    for i, item in enumerate(items, 1):
+        text = item.get("text", "")
+        if len(text) > 500:
+            text = text[:500] + "…"
+        label = item.get("label", "")
+        level = item.get("docling_level", "?")
+        lines.append(f"[{i:>4}] level={level} label={label:<15} | {text}")
+    return "\n".join(lines)
+
+
+def _write_structure_log(
+    pdf_path: str,
+    parsing_rules: dict,
+    effective_rules: list[dict],
+    raw_items: list[dict],
+    final_items: list[dict],
+) -> Path:
+    """Dump the docling structure (raw + post-processed) and the inferred rules to a log file.
+
+    Written to ``logs/docling_structure.log`` (overwritten each parse) so the extracted
+    structure can be inspected on disk when needed. Not surfaced in the UI.
+    """
+    rule_lines = ["=== INFERRED PARSING RULES ===", f"source: {pdf_path}"]
+    rule_lines.append(f"domain: {parsing_rules.get('domain', '—')}")
+    if parsing_rules.get("notes"):
+        rule_lines.append(f"notes: {parsing_rules['notes']}")
+    rule_lines.append("")
+    rule_lines.append("LLM-inferred rules:")
+    for rule in parsing_rules.get("rules", []):
+        rule_lines.append(
+            f"  - pattern={rule.get('pattern')!r} type={rule.get('type', 'prefix')} depth={rule.get('depth')}"
+        )
+    rule_lines.append("")
+    rule_lines.append("Effective rules (mandatory case-law rules prepended):")
+    for rule in effective_rules:
+        rule_lines.append(
+            f"  - pattern={rule.get('pattern')!r} type={rule.get('type', 'prefix')} depth={rule.get('depth')}"
+        )
+
+    sections = [
+        "\n".join(rule_lines),
+        f"=== DOCLING RAW STRUCTURE ({len(raw_items)} items) ===\n" + _format_items(raw_items),
+        f"=== AFTER MERGE + PREAMBLE RECONSTRUCTION ({len(final_items)} items) ===\n" + _format_items(final_items),
+    ]
+
+    log_path = Path("logs") / "docling_structure.log"
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    log_path.write_text("\n\n".join(sections), encoding="utf-8")
+    return log_path
+
+
 def build_tree(pdf_path: str, parsing_rules: dict) -> list[Node]:
     """Parse a PDF into a Node tree using LLM-inferred structural rules:
     1. Convert the PDF into a flat list of text elements -> item.label = DocItemLabel.SECTION_HEADER  item.text = "Reports of Cases"
@@ -155,6 +210,10 @@ def build_tree(pdf_path: str, parsing_rules: dict) -> list[Node]:
     domain = parsing_rules.get("domain", "").lower()
     if "case law" in domain:
         rules = _EU_CASE_LAW_MANDATORY_RULES + rules
+
+    log_path = _write_structure_log(pdf_path, parsing_rules, rules, raw_docling_items, final_items)
+    logger.info("Docling structure log written to %s", log_path)
+
     roots: list[Node] = []
     stack: list[_StackEntry] = []
     current_node: Node | None = None

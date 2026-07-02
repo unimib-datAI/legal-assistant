@@ -53,7 +53,7 @@ class RagContext:
         )
 
         classifier_llm = ChatOpenAI(
-            model="gpt-4o-mini",
+            model=config.RAG_LLM_MODEL,
             temperature=0,
             api_key=config.OPENAI_API_KEY,
             base_url=config.OPENAI_BASE_URL,
@@ -61,12 +61,14 @@ class RagContext:
         self.classifier = QueryClassifier(graph=self.graph, llm=classifier_llm)
 
         self.synthesis_llm = ChatOpenAI(
+            model=config.RAG_LLM_MODEL,
             temperature=0,
             api_key=config.OPENAI_API_KEY,
             base_url=config.OPENAI_BASE_URL,
         )
 
         self.filter_llm = ChatOpenAI(
+            model=config.RAG_LLM_MODEL,
             temperature=0,
             api_key=config.OPENAI_API_KEY,
             base_url=config.OPENAI_BASE_URL,

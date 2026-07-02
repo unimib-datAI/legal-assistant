@@ -1,7 +1,7 @@
 import logging
 import re
 from collections import defaultdict
-from typing import List, Any, Optional
+from typing import List, Any, Optional, Tuple
 
 import numpy as np
 from langchain_community.retrievers import BM25Retriever
@@ -12,6 +12,7 @@ from langchain_core.retrievers import BaseRetriever
 from pydantic import ConfigDict
 from sentence_transformers.cross_encoder import CrossEncoder
 
+import config
 from service.graph.query import NodeQueries
 from service.rag.prompt import HYDE_PROMPT
 
@@ -84,7 +85,12 @@ class HybridRetriever(BaseRetriever):
     recital_score_threshold: float = 0.3
     rrf_k: int = 60
     use_reranker: bool = True
-    cross_encoder: Any = CrossEncoder("BAAI/bge-reranker-v2-m3")
+    cross_encoder: Any = CrossEncoder(
+        config.RERANK_MODEL,
+        device="cuda",
+        trust_remote_code=config.RERANK_TRUST_REMOTE_CODE,
+        model_kwargs={"dtype": config.RERANK_DTYPE},
+    )
     _article_cache: Optional[dict] = None
     _recital_cache: Optional[dict] = None
 
@@ -168,6 +174,34 @@ class HybridRetriever(BaseRetriever):
             all_docs[key] = doc
         return [all_docs[key] for key in sorted(scores, key=lambda x: -scores[x])]
 
+    def _rerank_articles(
+        self, user_query: str, article_candidates: List[Document]
+    ) -> List[Tuple[Document, float]]:
+        """Score each candidate article (whole text) against the query with the cross-encoder."""
+        if not article_candidates:
+            return []
+        if not self.use_reranker:
+            # Preserve RRF order: descending pseudo-scores by position.
+            n = len(article_candidates)
+            return [(doc, float(n - i)) for i, doc in enumerate(article_candidates)]
+
+        pairs = [[user_query, doc.page_content] for doc in article_candidates]
+        ce_scores = self.cross_encoder.predict(pairs)
+        return [(doc, float(s)) for doc, s in zip(article_candidates, ce_scores)]
+
+    def _rerank_recitals(
+        self, user_query: str, recital_candidates: List[Document]
+    ) -> List[Tuple[Document, float]]:
+        """Score recitals whole against the query (short, single-paragraph — no dilution)."""
+        if not recital_candidates:
+            return []
+        if not self.use_reranker:
+            n = len(recital_candidates)
+            return [(doc, float(n - i)) for i, doc in enumerate(recital_candidates)]
+        pairs = [[user_query, doc.page_content] for doc in recital_candidates]
+        ce_scores = self.cross_encoder.predict(pairs)
+        return [(doc, float(score)) for doc, score in zip(recital_candidates, ce_scores)]
+
     def _get_relevant_documents(
         self, user_query: str, *, run_manager: CallbackManagerForRetrieverRun = None  # noqa: ARG002
     ) -> List[Document]:
@@ -236,21 +270,13 @@ class HybridRetriever(BaseRetriever):
             bm25_r.k = self.top_k_recitals * 2
             recital_candidates = bm25_r.invoke(user_query)
 
-        candidates = article_candidates + recital_candidates
-        if not candidates:
+        if not article_candidates and not recital_candidates:
             return []
 
-        # Single cross-encoder pass over articles + recitals → comparable scores
-        if self.use_reranker:
-            pairs = [[user_query, doc.page_content] for doc in candidates]
-            ce_scores = self.cross_encoder.predict(pairs)
-        else:
-            # Preserve RRF/BM25 order: descending pseudo-scores by position
-            ce_scores = np.arange(len(candidates), 0, -1, dtype=float)
-
-        scored = list(zip(candidates, (float(s) for s in ce_scores)))
-        article_scored = [(d, s) for d, s in scored if d.metadata.get("type") != "recital"]
-        recital_scored = [(d, s) for d, s in scored if d.metadata.get("type") == "recital"]
+        # Articles and recitals are reranked (whole text) and ranked/selected independently —
+        # recitals never competed with articles for the guaranteed article slots.
+        article_scored = self._rerank_articles(user_query, article_candidates)
+        recital_scored = self._rerank_recitals(user_query, recital_candidates)
 
         # Articles: guaranteed slots, top_k_final by score
         article_scored.sort(key=lambda x: -x[1])

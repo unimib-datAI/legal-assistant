@@ -5,7 +5,6 @@ Uploads a case law PDF, infers its hierarchical structure via LLM,
 and renders the parsed document tree.
 """
 import json
-import logging
 import tempfile
 import re as _re
 import config
@@ -14,7 +13,6 @@ import streamlit as st
 from dotenv import load_dotenv
 
 from service.graph.graph import Neo4jGraph
-from utils.streamlit_log_handler import StreamlitLogHandler
 from service.case_law.llm_orchestrator import parse_document, create_case_law_kg
 from service.case_law.doc_parser import flatten
 
@@ -95,19 +93,12 @@ if st.session_state.get("cl_file_key") != file_key:
 pdf_path = st.session_state["cl_tmp_path"]
 
 if st.button("Parse Document", type="primary"):
-    log_area = st.empty()
-    handler = StreamlitLogHandler(log_area)
-    root_logger = logging.getLogger()
-    root_logger.addHandler(handler)
-
     try:
         with st.spinner("Inferring document structure..."):
             parsing_rules, roots = parse_document(pdf_path)
             st.session_state["cl_result"] = (parsing_rules, roots, flatten(roots))
     except Exception as exc:
         st.error(f"Error: {exc}")
-    finally:
-        root_logger.removeHandler(handler)
 
 # -- results ------------------------------------------------------------------
 

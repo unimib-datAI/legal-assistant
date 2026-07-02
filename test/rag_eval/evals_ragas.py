@@ -13,9 +13,11 @@ from ragas import Dataset, experiment, DataTable
 from ragas.embeddings import OpenAIEmbeddings
 from ragas.llms import llm_factory
 from ragas.metrics.collections import (
+    AnswerCorrectness,
     AnswerRelevancy,
     ContextPrecision,
     ContextRecall,
+    FactualCorrectness,
     Faithfulness,
 )
 
@@ -39,6 +41,8 @@ class RagasMetricsEvaluator:
     - answer_relevancy    (answer relevant to the question)
     - context_precision   (retrieved contexts relevant, ranked correctly)
     - context_recall      (reference fully supported by retrieved contexts)
+    - answer_correctness  (answer factually and semantically matches the reference)
+    - factual_correctness (claim-level F1 between answer and reference, LLM-only)
     """
 
     def __init__(self, method_id: str = "hybrid"):
@@ -51,6 +55,8 @@ class RagasMetricsEvaluator:
         self.answer_relevancy = AnswerRelevancy(llm=self.llm, embeddings=self.embeddings)
         self.context_precision = ContextPrecision(llm=self.llm)
         self.context_recall = ContextRecall(llm=self.llm)
+        self.answer_correctness = AnswerCorrectness(llm=self.llm, embeddings=self.embeddings)
+        self.factual_correctness = FactualCorrectness(llm=self.llm)
 
     def load_dataset_from_csv(self, name: str, root_dir: str) -> DataTable[Any]:
         return Dataset.load(name=name, backend="local/csv", root_dir=root_dir)
@@ -71,7 +77,14 @@ class RagasMetricsEvaluator:
         answer: str,
         ground_truth: str,
     ) -> dict:
-        faithfulness, answer_relevancy, context_precision, context_recall = await asyncio.gather(
+        (
+            faithfulness,
+            answer_relevancy,
+            context_precision,
+            context_recall,
+            answer_correctness,
+            factual_correctness,
+        ) = await asyncio.gather(
             self.faithfulness.ascore(
                 user_input=question,
                 response=answer,
@@ -91,6 +104,15 @@ class RagasMetricsEvaluator:
                 retrieved_contexts=retrieved_contexts,
                 reference=ground_truth,
             ),
+            self.answer_correctness.ascore(
+                user_input=question,
+                response=answer,
+                reference=ground_truth,
+            ),
+            self.factual_correctness.ascore(
+                response=answer,
+                reference=ground_truth,
+            ),
         )
 
         scores = {
@@ -98,6 +120,8 @@ class RagasMetricsEvaluator:
             "answer_relevancy": answer_relevancy.value,
             "context_precision": context_precision.value,
             "context_recall": context_recall.value,
+            "answer_correctness": answer_correctness.value,
+            "factual_correctness": factual_correctness.value,
         }
         logger.info("Scores: %s", scores)
 
@@ -139,7 +163,14 @@ async def base_rag_experiment(dataset_name: str, root_dir: str, output_path: str
     return report
 
 
-METRIC_KEYS = ("faithfulness", "answer_relevancy", "context_precision", "context_recall")
+METRIC_KEYS = (
+    "faithfulness",
+    "answer_relevancy",
+    "context_precision",
+    "context_recall",
+    "answer_correctness",
+    "factual_correctness",
+)
 
 
 def log_metric_averages(report: list[dict]) -> None:
@@ -198,7 +229,7 @@ def main() -> None:
         help="RAG method id to evaluate (e.g. 'hybrid' or 'topics'). Default: hybrid.",
     )
     parser.add_argument(
-        "--dataset", default="subset_retrieval_scarso",
+        "--dataset", default="golden_dataset",
         help="Dataset name to load from the evals root dir.",
     )
     args = parser.parse_args()
