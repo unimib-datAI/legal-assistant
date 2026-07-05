@@ -83,7 +83,7 @@ class HybridRetriever(BaseRetriever):
     top_k_final: int = 5
     top_k_recitals: int = 3
     recital_score_threshold: float = 0.3
-    rrf_k: int = 60
+    rrf_k: int = 0
     use_reranker: bool = True
     cross_encoder: Any = CrossEncoder(
         config.RERANK_MODEL,
@@ -109,7 +109,11 @@ class HybridRetriever(BaseRetriever):
             docs = [
                 Document(
                     page_content=r["text"],
-                    metadata={"id": r["id"], "title": r["title"], "act": r["act"], "type": "article"},
+                    metadata={
+                        "id": r["id"], "title": r["title"], "act": r["act"], "type": "article",
+                        "chapter_number": r.get("chapter_number"),
+                        "chapter_title": r.get("chapter_title"),
+                    },
                 )
                 for r in rows
             ]
@@ -295,13 +299,21 @@ class HybridRetriever(BaseRetriever):
             [f"{d.metadata.get('id')}({s:.2f})" for d, s in recital_scored],
         )
 
-        # Decorate articles with act + title header
+        # Decorate articles with act + chapter + title header. The chapter lets the
+        # synthesis LLM resolve questions scoped to a specific Chapter (e.g. "the
+        # personal scope of Chapter II") to the right provision.
         for doc in article_docs:
             act_name = _CELEX_TO_ACT_NAME.get(
                 doc.metadata.get("act", ""), doc.metadata.get("act", "")
             )
             title = doc.metadata.get("title", "")
-            doc.page_content = f"[{act_name}, {title}]\n{doc.page_content}"
+            chapter = doc.metadata.get("chapter_number")
+            if chapter:
+                chapter_title = doc.metadata.get("chapter_title") or ""
+                header = f"[{act_name}, Chapter {chapter} — {chapter_title}, {title}]"
+            else:
+                header = f"[{act_name}, {title}]"
+            doc.page_content = f"{header}\n{doc.page_content}"
 
         # Decorate surviving recitals with their header
         recital_docs: List[Document] = []

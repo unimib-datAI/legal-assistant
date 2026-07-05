@@ -64,6 +64,11 @@ def _render_answer(answer: AttributedAnswer) -> None:
 st.title("💬 Legal Assistant Chat")
 st.caption("Ask a question about the GDPR, AI Act, Data Act or Data Governance Act.")
 
+# Build (or fetch cached) engine at the top level, before any layout block or log
+# handler exists. st.cache_resource replays element calls recorded during the first
+# run on later cache hits, so the cached call must not touch foreign layout blocks.
+engine = get_engine()
+
 methods = list_methods()
 
 # ── sidebar: method + hyperparameters ─────────────────────────────────────────
@@ -106,7 +111,6 @@ if question := st.chat_input("Ask a legal question…"):
         root_logger.addHandler(handler)
         try:
             with st.spinner("Retrieving and synthesising…"):
-                engine = get_engine()
                 answer = engine.answer(method.id, question, config)
         except Exception as exc:  # surface the failure in the chat instead of crashing the page
             logger.exception("Chat query failed")

@@ -13,7 +13,6 @@ from ragas import Dataset, experiment, DataTable
 from ragas.embeddings import OpenAIEmbeddings
 from ragas.llms import llm_factory
 from ragas.metrics.collections import (
-    AnswerCorrectness,
     AnswerRelevancy,
     ContextPrecision,
     ContextRecall,
@@ -41,8 +40,8 @@ class RagasMetricsEvaluator:
     - answer_relevancy    (answer relevant to the question)
     - context_precision   (retrieved contexts relevant, ranked correctly)
     - context_recall      (reference fully supported by retrieved contexts)
-    - answer_correctness  (answer factually and semantically matches the reference)
-    - factual_correctness (claim-level F1 between answer and reference, LLM-only)
+    - factual_precision   (fraction of answer claims supported by the reference, LLM-only)
+    - factual_recall      (fraction of reference claims covered by the answer, LLM-only)
     """
 
     def __init__(self, method_id: str = "hybrid"):
@@ -55,8 +54,12 @@ class RagasMetricsEvaluator:
         self.answer_relevancy = AnswerRelevancy(llm=self.llm, embeddings=self.embeddings)
         self.context_precision = ContextPrecision(llm=self.llm)
         self.context_recall = ContextRecall(llm=self.llm)
-        self.answer_correctness = AnswerCorrectness(llm=self.llm, embeddings=self.embeddings)
-        self.factual_correctness = FactualCorrectness(llm=self.llm)
+        # Precision and recall are logged separately instead of a single F1:
+        # with the (untouchable) encyclopedic ground truths, F1 conflates two
+        # very different signals — reference claims the corpus cannot support
+        # (recall ceiling) and extra grounded claims in the answer (precision).
+        self.factual_precision = FactualCorrectness(llm=self.llm, mode="precision", name="factual_precision")
+        self.factual_recall = FactualCorrectness(llm=self.llm, mode="recall", name="factual_recall")
 
     def load_dataset_from_csv(self, name: str, root_dir: str) -> DataTable[Any]:
         return Dataset.load(name=name, backend="local/csv", root_dir=root_dir)
@@ -82,8 +85,8 @@ class RagasMetricsEvaluator:
             answer_relevancy,
             context_precision,
             context_recall,
-            answer_correctness,
-            factual_correctness,
+            factual_precision,
+            factual_recall,
         ) = await asyncio.gather(
             self.faithfulness.ascore(
                 user_input=question,
@@ -104,12 +107,11 @@ class RagasMetricsEvaluator:
                 retrieved_contexts=retrieved_contexts,
                 reference=ground_truth,
             ),
-            self.answer_correctness.ascore(
-                user_input=question,
+            self.factual_precision.ascore(
                 response=answer,
                 reference=ground_truth,
             ),
-            self.factual_correctness.ascore(
+            self.factual_recall.ascore(
                 response=answer,
                 reference=ground_truth,
             ),
@@ -120,8 +122,8 @@ class RagasMetricsEvaluator:
             "answer_relevancy": answer_relevancy.value,
             "context_precision": context_precision.value,
             "context_recall": context_recall.value,
-            "answer_correctness": answer_correctness.value,
-            "factual_correctness": factual_correctness.value,
+            "factual_precision": factual_precision.value,
+            "factual_recall": factual_recall.value,
         }
         logger.info("Scores: %s", scores)
 
@@ -168,8 +170,8 @@ METRIC_KEYS = (
     "answer_relevancy",
     "context_precision",
     "context_recall",
-    "answer_correctness",
-    "factual_correctness",
+    "factual_precision",
+    "factual_recall",
 )
 
 
@@ -229,7 +231,7 @@ def main() -> None:
         help="RAG method id to evaluate (e.g. 'hybrid' or 'topics'). Default: hybrid.",
     )
     parser.add_argument(
-        "--dataset", default="golden_dataset",
+        "--dataset", default="subset_retrieval_scarso",
         help="Dataset name to load from the evals root dir.",
     )
     args = parser.parse_args()

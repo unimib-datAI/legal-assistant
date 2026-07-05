@@ -167,7 +167,9 @@ class NodeQueries:
     GET_ARTICLES_BY_ACTS = """
     MATCH (act:Act)-[:CONTAINS*]->(art:Article)
     WHERE act.id IN $acts
-    RETURN art.id AS id, art.title AS title, art.text AS text, act.id AS act
+    OPTIONAL MATCH (act)-[:CONTAINS]->(ch:Chapter)-[:CONTAINS*]->(art)
+    RETURN art.id AS id, art.title AS title, art.text AS text, act.id AS act,
+           ch.number AS chapter_number, ch.title AS chapter_title
     ORDER BY act.id, art.id
     """
 
