@@ -36,6 +36,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[2]))
 
 import config
 from rag_pipeline import RAGPipeline
+from service.rag.acts import act_to_celex
 
 logging.basicConfig(
     level=logging.INFO,
@@ -44,18 +45,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Dataset ``act`` label -> CELEX. Keyword match tolerates label variants
-# ("Data Governance Act 2022/868", "GDPR", "Data Act 2023/2854").
-_ACT_KEYWORDS = (
-    ("governance", "32022R0868"),
-    ("2022/868", "32022R0868"),
-    ("gdpr", "32016R0679"),
-    ("2016/679", "32016R0679"),
-    ("data act", "32023R2854"),
-    ("2023/2854", "32023R2854"),
-    ("ai act", "32024R1689"),
-    ("2024/1689", "32024R1689"),
-)
+# Dataset ``act`` label -> CELEX is handled by ``act_to_celex`` (service/rag/acts.py),
+# which tolerates label variants ("Data Governance Act 2022/868", "GDPR", "Data Act 2023/2854").
 
 # References to provisions of the TARGET act. Cross-references to other instruments
 # ("Article 4, point (1), of Regulation (EU) 2016/679") are dropped: the tell is a
@@ -63,14 +54,6 @@ _ACT_KEYWORDS = (
 _ART_RE = re.compile(r"\bArticles?\s+(\d+)", re.IGNORECASE)
 _RCT_RE = re.compile(r"\bRecitals?\s+(\d+)", re.IGNORECASE)
 _CROSSREF_RE = re.compile(r"\bof\s+(that\s+|the\s+)?(Directive|Regulation\s*(\(E[UC]\)|No|\d))", re.IGNORECASE)
-
-
-def act_to_celex(act_label: str) -> Optional[str]:
-    label = act_label.lower()
-    for keyword, celex in _ACT_KEYWORDS:
-        if keyword in label:
-            return celex
-    return None
 
 
 def _numbered_refs(text: str, pattern: re.Pattern) -> set:

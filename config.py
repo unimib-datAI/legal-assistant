@@ -26,6 +26,11 @@ OPENAI_ENDPOINT = f"{OPENAI_BASE_URL}/embeddings" if OPENAI_BASE_URL else None
 # Overridable via env so synthesis can be bumped (e.g. to gpt-4o) without a code change.
 RAG_LLM_MODEL = os.getenv("RAG_LLM_MODEL", "gpt-4o-mini")
 
+# Minimum per-act relevance (0-1) the query classifier must assign for an act to become a
+# retrieval target. Lower selects more acts (higher recall, more off-topic context); higher
+# is stricter. Tunable via env for threshold sweeps. See service/rag/intent_classifier.py.
+ACT_SCORE_THRESHOLD = float(os.getenv("ACT_SCORE_THRESHOLD", "0.4"))
+
 # Cross-encoder reranker (sentence-transformers CrossEncoder id). Overridable via env to
 # A/B alternative rerankers with retrieval_eval.py, e.g. RERANK_MODEL=zeroentropy/zerank-2 - BAAI/bge-reranker-v2-m3.
 RERANK_MODEL = os.getenv("RERANK_MODEL", "zeroentropy/zerank-2")

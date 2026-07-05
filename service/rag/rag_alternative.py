@@ -14,6 +14,7 @@ from sentence_transformers.cross_encoder import CrossEncoder
 
 import config
 from service.graph.query import NodeQueries
+from service.rag.acts import CELEX_TO_ACT_NAME as _CELEX_TO_ACT_NAME
 from service.rag.prompt import HYDE_PROMPT
 
 logger = logging.getLogger(__name__)
@@ -35,13 +36,6 @@ class HyDEGenerator:
     def generate(self, query: str, acts_context: str) -> List[str]:
         text = self._prompt.format(query=query, acts=acts_context)
         return [self.llm.invoke(text).content.strip() for _ in range(self.iterations)]
-
-_CELEX_TO_ACT_NAME = {
-    "32022R0868": "Data Governance Act",
-    "32023R2854": "Data Act",
-    "32024R1689": "AI Act",
-    "32016R0679": "GDPR",
-}
 
 _DISPLAY_NUM_RE = re.compile(r"^\((\d+)\)\s*")
 # Matches '\nid: <value>' in page_content produced by from_existing_graph
@@ -212,9 +206,10 @@ class HybridRetriever(BaseRetriever):
         classification = self.classifier.classify(user_query) if self.classifier else None
         target_acts = classification.acts if classification else []
         logger.info(
-            "[HybridRetriever] target_acts=%s intent=%s",
+            "[HybridRetriever] target_acts=%s intent=%s act_scores=%s",
             target_acts,
             classification.intent if classification else None,
+            classification.act_scores if classification else None,
         )
 
         if not target_acts:

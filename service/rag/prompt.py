@@ -227,6 +227,82 @@ Query: "How has the CJEU interpreted the right to erasure in the context of sear
 {query}
 """
 
+QUERY_CLASSIFICATION_V4 = """You are an expert in EU digital legislation. Classify the user query to guide retrieval.
+
+You are given the list of AVAILABLE ACTS below. Produce two things: an intent, and a
+relevance score for EVERY act in that list.
+
+=== 1. intent ===
+   - DEFINITIONAL: asks what a provision says, what a term means, what the rules are. Answerable from articles/recitals alone.
+   - INTERPRETIVE: asks how a provision has been applied, interpreted by courts, or how it should be construed in a borderline case. Requires CJEU case law.
+
+=== 2. act_relevances ===
+Score EVERY act in AVAILABLE ACTS with a relevance from 0.0 to 1.0 for how central THAT
+act's core subject matter is to the query. Return exactly one entry per available act —
+never omit an act, even to score it 0.0.
+
+   - Score by CORE SUBJECT MATTER, not by isolated shared vocabulary. Several acts share
+     surface terms (data sharing, data holder, obligations, public sector bodies); a shared
+     term alone is a LOW score for every act it does not truly govern.
+   - Article numbers alone (e.g. "Article 13") never identify an act — resolve from the topic.
+   - Give a HIGH score (>= 0.7) to an act only when the query's subject matter is genuinely
+     governed by it. Give a clearly LOW score (<= 0.2) to acts that merely share vocabulary.
+   - MOST queries concern a single act: exactly one high score, the rest low. Score two (or
+     at most three) acts high ONLY when the query genuinely spans them.
+   - If the query is unrelated to every available act, score them ALL low.
+
+=== DISAMBIGUATION HINTS ===
+
+- Connected products, related services, product data, IoT/device data, users accessing or sharing the data their device generates, data holder vs data recipient (B2B), unfair contractual terms on data access, compensation for making data available, data requests by public sector bodies in exceptional need, switching between data processing (cloud/edge) services, smart contracts → Data Act.
+- Re-use of protected data held by public sector bodies, data intermediation services, data altruism (organisations, consent form, registration), European Data Innovation Board → Data Governance Act.
+- Personal data processing: controller, processor, data subject rights, consent, lawful bases, DPIA, breach notification, international transfers → GDPR.
+- AI systems: high-risk classification, providers/deployers of AI systems, prohibited AI practices, general-purpose AI models, conformity assessment of AI → AI Act.
+- "Chapter N" without an act name usually refers to the Data Governance Act in this corpus, BUT check the subject matter first: chapters about connected products or data processing services belong to the Data Act.
+
+=== AVAILABLE ACTS ===
+{acts}
+
+=== OUTPUT FORMAT ===
+
+Return the intent and one relevance entry per available act. Example shape (scores illustrative):
+{{"intent": "DEFINITIONAL", "act_relevances": [{{"celex": "32022R0868", "relevance": 0.9}}, {{"celex": "32023R2854", "relevance": 0.1}}, {{"celex": "32016R0679", "relevance": 0.0}}, {{"celex": "32024R1689", "relevance": 0.0}}]}}
+
+=== FEW-SHOT EXAMPLES ===
+
+Query: "What entities fall under the personal scope of Chapter II?"
+{{"intent": "DEFINITIONAL", "act_relevances": [{{"celex": "32022R0868", "relevance": 0.9}}, {{"celex": "32023R2854", "relevance": 0.15}}, {{"celex": "32016R0679", "relevance": 0.05}}, {{"celex": "32024R1689", "relevance": 0.0}}]}}
+
+Query: "What does 'data intermediation service' mean under the Data Governance Act?"
+{{"intent": "DEFINITIONAL", "act_relevances": [{{"celex": "32022R0868", "relevance": 0.97}}, {{"celex": "32023R2854", "relevance": 0.1}}, {{"celex": "32016R0679", "relevance": 0.0}}, {{"celex": "32024R1689", "relevance": 0.0}}]}}
+
+Query: "How should connected products and related services be designed and manufactured/provided?"
+{{"intent": "DEFINITIONAL", "act_relevances": [{{"celex": "32023R2854", "relevance": 0.95}}, {{"celex": "32022R0868", "relevance": 0.1}}, {{"celex": "32016R0679", "relevance": 0.0}}, {{"celex": "32024R1689", "relevance": 0.05}}]}}
+
+Query: "What obstacles must providers of data processing services remove for customers who want to switch provider?"
+{{"intent": "DEFINITIONAL", "act_relevances": [{{"celex": "32023R2854", "relevance": 0.92}}, {{"celex": "32022R0868", "relevance": 0.1}}, {{"celex": "32016R0679", "relevance": 0.0}}, {{"celex": "32024R1689", "relevance": 0.0}}]}}
+
+Query: "What is the definition of 'personal data' under the GDPR?"
+{{"intent": "DEFINITIONAL", "act_relevances": [{{"celex": "32016R0679", "relevance": 0.97}}, {{"celex": "32022R0868", "relevance": 0.05}}, {{"celex": "32023R2854", "relevance": 0.05}}, {{"celex": "32024R1689", "relevance": 0.0}}]}}
+
+Query: "What is a 'high-risk AI system' under the AI Act?"
+{{"intent": "DEFINITIONAL", "act_relevances": [{{"celex": "32024R1689", "relevance": 0.97}}, {{"celex": "32016R0679", "relevance": 0.05}}, {{"celex": "32022R0868", "relevance": 0.0}}, {{"celex": "32023R2854", "relevance": 0.0}}]}}
+
+Query: "What transparency obligations apply when data is shared with third parties?"
+{{"intent": "DEFINITIONAL", "act_relevances": [{{"celex": "32023R2854", "relevance": 0.7}}, {{"celex": "32022R0868", "relevance": 0.6}}, {{"celex": "32016R0679", "relevance": 0.25}}, {{"celex": "32024R1689", "relevance": 0.05}}]}}
+
+Query: "What must a provider consider about data protection when training a high-risk AI system on personal data?"
+{{"intent": "DEFINITIONAL", "act_relevances": [{{"celex": "32024R1689", "relevance": 0.8}}, {{"celex": "32016R0679", "relevance": 0.72}}, {{"celex": "32022R0868", "relevance": 0.1}}, {{"celex": "32023R2854", "relevance": 0.1}}]}}
+
+Query: "How has the CJEU interpreted the right to erasure in the context of search engines?"
+{{"intent": "INTERPRETIVE", "act_relevances": [{{"celex": "32016R0679", "relevance": 0.95}}, {{"celex": "32022R0868", "relevance": 0.0}}, {{"celex": "32023R2854", "relevance": 0.0}}, {{"celex": "32024R1689", "relevance": 0.0}}]}}
+
+Query: "What is the capital of France?"
+{{"intent": "DEFINITIONAL", "act_relevances": [{{"celex": "32022R0868", "relevance": 0.0}}, {{"celex": "32023R2854", "relevance": 0.0}}, {{"celex": "32016R0679", "relevance": 0.0}}, {{"celex": "32024R1689", "relevance": 0.0}}]}}
+
+=== QUERY ===
+{query}
+"""
+
 TOPIC_SELECTION_V1 = """Act as an expert analyst in EU legal
 documents (GDPR, AI Act, Data Act, Data Governance Act), specialising 
 in topic classification and legal concept mapping.
@@ -995,8 +1071,19 @@ registry.register(PromptVersion(
     notes="Fixes the v2 misrouting regression: restores and extends the Data "
           "Act few-shots, adds per-act disambiguation hints (decide by core "
           "subject matter, never by article number alone), and allows "
-          "returning up to 3 candidate acts when the query is ambiguous.",
-    body=QUERY_CLASSIFICATION_V3, active=True,
+          "returning up to 3 candidate acts when the query is ambiguous. "
+          "Superseded by v4.",
+    body=QUERY_CLASSIFICATION_V3, active=False,
+))
+
+registry.register(PromptVersion(
+    name="query_classification", version="v4", created=date(2026, 7, 5),
+    notes="Discriminative act detection: instead of NAMING the acts (generative, "
+          "collapses toward a single act), the LLM scores EVERY available act 0-1 and "
+          "the classifier thresholds to select 0/1/N acts. Keeps v3's disambiguation "
+          "hints; adds constructed two-act and out-of-scope few-shots. Output schema is "
+          "RawClassification (intent + act_relevances) in intent_classifier.py.",
+    body=QUERY_CLASSIFICATION_V4, active=True,
 ))
 
 registry.register(PromptVersion(

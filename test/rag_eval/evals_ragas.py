@@ -231,7 +231,7 @@ def main() -> None:
         help="RAG method id to evaluate (e.g. 'hybrid' or 'topics'). Default: hybrid.",
     )
     parser.add_argument(
-        "--dataset", default="subset_retrieval_scarso",
+        "--dataset", default="golden_dataset_light",
         help="Dataset name to load from the evals root dir.",
     )
     args = parser.parse_args()
