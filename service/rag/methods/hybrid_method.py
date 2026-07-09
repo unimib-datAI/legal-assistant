@@ -30,7 +30,7 @@ class HybridRagMethod(RagMethod):
                       help="Number of hypothetical passages to sample and average."),
             ParamSpec("top_k_dense", "Top-k dense", "int", 10, min=1, max=30, step=1),
             ParamSpec("top_k_sparse", "Top-k sparse (BM25)", "int", 10, min=1, max=30, step=1),
-            ParamSpec("top_k_final", "Top-k final articles", "int", 3, min=1, max=15, step=1),
+            ParamSpec("top_k_final", "Top-k final articles", "int", 5, min=1, max=15, step=1),
             ParamSpec("top_k_recitals", "Top-k recitals", "int", 2, min=0, max=10, step=1),
             ParamSpec("recital_score_threshold", "Recital score threshold", "float", 0.3,
                       min=0.0, max=1.0, step=0.05,

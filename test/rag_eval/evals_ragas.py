@@ -240,15 +240,15 @@ def main() -> None:
         help="RAG method id to evaluate (e.g. 'hybrid' or 'topics'). Default: hybrid.",
     )
     parser.add_argument(
-        "--dataset", default="golden_dataset_light",
+        "--dataset", default="golden_dataset",
         help="Dataset name to load from the evals root dir.",
     )
     parser.add_argument(
-        "--curate", action=argparse.BooleanOptionalAction, default=False,
+        "--curate", action=argparse.BooleanOptionalAction, default=True,
         help="Enable/disable the pre-synthesis context-curation stage (default: on; use --no-curate to disable).",
     )
     parser.add_argument(
-        "--decompose", action="store_true",
+        "--decompose", action="store_true", default=False,
         help="Enable query decomposition (sub-questions + HyDE per sub-question) in the retriever.",
     )
     args = parser.parse_args()

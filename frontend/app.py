@@ -19,7 +19,7 @@ st.set_page_config(
 pages = st.navigation(
     {
         "Assistant": [
-            st.Page("chat/chat.py", title="Chat", icon="💬"),
+            st.Page("chat/chat.py", title="Evaluation", icon="📊"),
         ],
         "Graph Construction": [
             st.Page("kg/graph_init.py", title="Graph Initialization", icon="🗄️"),
