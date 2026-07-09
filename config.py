@@ -26,6 +26,13 @@ OPENAI_ENDPOINT = f"{OPENAI_BASE_URL}/embeddings" if OPENAI_BASE_URL else None
 # Overridable via env so synthesis can be bumped (e.g. to gpt-4o) without a code change.
 RAG_LLM_MODEL = os.getenv("RAG_LLM_MODEL", "gpt-4o-mini")
 
+# Embedding model used both at graph-build time (to embed Paragraph/Recital/Article nodes) and
+# at query time (to embed the user question against the Neo4j vector index). These two MUST use
+# the same model, so keep it centralized here. EMBEDDING_DIM must match the model's output size
+# (text-embedding-3-small → 1536) and drives the Neo4j vector index dimensionality.
+EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "text-embedding-3-small")
+EMBEDDING_DIM = int(os.getenv("EMBEDDING_DIM", "1536"))
+
 # Minimum per-act relevance (0-1) the query classifier must assign for an act to become a
 # retrieval target. Lower selects more acts (higher recall, more off-topic context); higher
 # is stricter. Tunable via env for threshold sweeps. See service/rag/intent_classifier.py.

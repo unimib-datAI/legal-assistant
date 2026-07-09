@@ -44,8 +44,17 @@ class RagasMetricsEvaluator:
     - factual_recall      (fraction of reference claims covered by the answer, LLM-only)
     """
 
-    def __init__(self, method_id: str = "hybrid"):
-        self.rag = RAGPipeline(method_id=method_id)
+    def __init__(
+        self,
+        method_id: str = "hybrid",
+        use_context_curation: bool = False,
+        use_query_decomposition: bool = False,
+    ):
+        self.rag = RAGPipeline(
+            method_id=method_id,
+            use_context_curation=use_context_curation,
+            use_query_decomposition=use_query_decomposition,
+        )
         self.client = AsyncOpenAI(api_key=config.OPENAI_API_KEY, base_url=config.OPENAI_BASE_URL or None)
         self.llm = llm_factory("gpt-4o-mini", client=self.client, max_tokens=16000)
         self.embeddings = OpenAIEmbeddings(client=self.client, model="text-embedding-3-small")
@@ -234,12 +243,27 @@ def main() -> None:
         "--dataset", default="golden_dataset_light",
         help="Dataset name to load from the evals root dir.",
     )
+    parser.add_argument(
+        "--curate", action=argparse.BooleanOptionalAction, default=False,
+        help="Enable/disable the pre-synthesis context-curation stage (default: on; use --no-curate to disable).",
+    )
+    parser.add_argument(
+        "--decompose", action="store_true",
+        help="Enable query decomposition (sub-questions + HyDE per sub-question) in the retriever.",
+    )
     args = parser.parse_args()
 
     log_path = setup_run_logging()
     logger.info("Saving full run log to: %s", log_path)
-    logger.info("RAG method: %s | dataset: %s", args.method, args.dataset)
-    evals = RagasMetricsEvaluator(method_id=args.method)
+    logger.info(
+        "RAG method: %s | dataset: %s | curate: %s | decompose: %s",
+        args.method, args.dataset, args.curate, args.decompose,
+    )
+    evals = RagasMetricsEvaluator(
+        method_id=args.method,
+        use_context_curation=args.curate,
+        use_query_decomposition=args.decompose,
+    )
     try:
         asyncio.run(base_rag_experiment(
             dataset_name=args.dataset,

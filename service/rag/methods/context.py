@@ -1,7 +1,7 @@
 """Shared, expensive RAG resources built once and reused across methods.
 
-Constructing the Neo4j connection, the vector stores (which load a 1024-dim BGE
-embedding model), the cross-encoders, and the LLM clients is costly, so a single
+Constructing the Neo4j connection, the vector stores (which use the OpenAI
+`text-embedding-3-small` embedding model), the cross-encoders, and the LLM clients is costly, so a single
 :class:`RagContext` is built once (cached by the frontend) and handed to every
 :class:`~service.rag.methods.base.RagMethod`.
 """
@@ -11,17 +11,14 @@ import logging
 from functools import cached_property
 
 from langchain_community.vectorstores import Neo4jVector
-from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_neo4j import Neo4jGraph
-from langchain_openai import ChatOpenAI
+from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 
 import config
 from service.rag.intent_classifier import QueryClassifier
 from service.rag.rag_alternative import HyDEGenerator
 
 logger = logging.getLogger(__name__)
-
-_EMBEDDING_MODEL = "BAAI/bge-large-en-v1.5"
 
 
 class RagContext:
@@ -35,10 +32,14 @@ class RagContext:
             password=config.NEO4J_PASSWORD,
         )
 
-        # One embedding instance shared by both vector stores.
-        self.embeddings = HuggingFaceEmbeddings(
-            model_name=_EMBEDDING_MODEL,
-            encode_kwargs={"normalize_embeddings": True},
+        # One embedding instance shared by both vector stores. Must match the model used at
+        # graph-build time (see frontend/kg/graph_init.py); both read config.EMBEDDING_MODEL.
+        self.embeddings = OpenAIEmbeddings(
+            model=config.EMBEDDING_MODEL,
+            api_key=config.OPENAI_API_KEY,
+            # Empty string would be passed to the OpenAI client verbatim (it only falls back on
+            # None, not falsy) and break the URL, so normalize "" → None to hit the default endpoint.
+            base_url=config.OPENAI_BASE_URL or None,
         )
 
         self.article_vector_store = Neo4jVector.from_existing_graph(
@@ -68,6 +69,14 @@ class RagContext:
         )
 
         self.filter_llm = ChatOpenAI(
+            model=config.RAG_LLM_MODEL,
+            temperature=0,
+            api_key=config.OPENAI_API_KEY,
+            base_url=config.OPENAI_BASE_URL,
+        )
+
+        # Cheap LLM for the optional pre-synthesis context-curation stage.
+        self.curator_llm = ChatOpenAI(
             model=config.RAG_LLM_MODEL,
             temperature=0,
             api_key=config.OPENAI_API_KEY,

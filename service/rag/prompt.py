@@ -303,6 +303,90 @@ Query: "What is the capital of France?"
 {query}
 """
 
+QUERY_CLASSIFICATION_V5 = """You are an expert in EU digital legislation. Classify the user query to guide retrieval.
+
+You are given the list of AVAILABLE ACTS below. Produce three things: an intent, a
+relevance score for EVERY act in that list, and a decomposition into sub-questions.
+
+=== 1. intent ===
+   - DEFINITIONAL: asks what a provision says, what a term means, what the rules are. Answerable from articles/recitals alone.
+   - INTERPRETIVE: asks how a provision has been applied, interpreted by courts, or how it should be construed in a borderline case. Requires CJEU case law.
+
+=== 2. act_relevances ===
+Score EVERY act in AVAILABLE ACTS with a relevance from 0.0 to 1.0 for how central THAT
+act's core subject matter is to the query. Return exactly one entry per available act —
+never omit an act, even to score it 0.0.
+
+   - Score by CORE SUBJECT MATTER, not by isolated shared vocabulary. Several acts share
+     surface terms (data sharing, data holder, obligations, public sector bodies); a shared
+     term alone is a LOW score for every act it does not truly govern.
+   - Article numbers alone (e.g. "Article 13") never identify an act — resolve from the topic.
+   - Give a HIGH score (>= 0.7) to an act only when the query's subject matter is genuinely
+     governed by it. Give a clearly LOW score (<= 0.2) to acts that merely share vocabulary.
+   - MOST queries concern a single act: exactly one high score, the rest low. Score two (or
+     at most three) acts high ONLY when the query genuinely spans them.
+   - If the query is unrelated to every available act, score them ALL low.
+
+=== 3. sub_questions ===
+Decompose the query ONLY when it is genuinely compound — when a full answer requires more
+than one distinct provision (e.g. a scope condition AND an obligation, a rule AND its
+exception, or facets governed by two different acts).
+
+   - Return an EMPTY list [] for atomic questions answerable from a single provision
+     (definitions, a single rule, a single scope clause). Most questions are atomic.
+   - When compound, return 2-4 focused, self-contained sub-questions. Each must be
+     answerable from ONE provision, resolve every pronoun/reference (no "it"/"this"), and
+     name the act/topic explicitly so it can be retrieved on its own.
+   - Do NOT split a single facet just because it spans multiple acts — that is handled by
+     act_relevances, not decomposition.
+
+=== DISAMBIGUATION HINTS ===
+
+- Connected products, related services, product data, IoT/device data, users accessing or sharing the data their device generates, data holder vs data recipient (B2B), unfair contractual terms on data access, compensation for making data available, data requests by public sector bodies in exceptional need, switching between data processing (cloud/edge) services, smart contracts → Data Act.
+- Re-use of protected data held by public sector bodies, data intermediation services, data altruism (organisations, consent form, registration), European Data Innovation Board → Data Governance Act.
+- Personal data processing: controller, processor, data subject rights, consent, lawful bases, DPIA, breach notification, international transfers → GDPR.
+- AI systems: high-risk classification, providers/deployers of AI systems, prohibited AI practices, general-purpose AI models, conformity assessment of AI → AI Act.
+- "Chapter N" without an act name usually refers to the Data Governance Act in this corpus, BUT check the subject matter first: chapters about connected products or data processing services belong to the Data Act.
+
+=== AVAILABLE ACTS ===
+{acts}
+
+=== OUTPUT FORMAT ===
+
+Return the intent, one relevance entry per available act, and the sub_questions list ([] if
+atomic). Example shape (scores illustrative):
+{{"intent": "DEFINITIONAL", "act_relevances": [{{"celex": "32022R0868", "relevance": 0.9}}, {{"celex": "32023R2854", "relevance": 0.1}}, {{"celex": "32016R0679", "relevance": 0.0}}, {{"celex": "32024R1689", "relevance": 0.0}}], "sub_questions": []}}
+
+=== FEW-SHOT EXAMPLES ===
+
+Query: "What entities fall under the personal scope of Chapter II?"
+{{"intent": "DEFINITIONAL", "act_relevances": [{{"celex": "32022R0868", "relevance": 0.9}}, {{"celex": "32023R2854", "relevance": 0.15}}, {{"celex": "32016R0679", "relevance": 0.05}}, {{"celex": "32024R1689", "relevance": 0.0}}], "sub_questions": []}}
+
+Query: "What does 'data intermediation service' mean under the Data Governance Act?"
+{{"intent": "DEFINITIONAL", "act_relevances": [{{"celex": "32022R0868", "relevance": 0.97}}, {{"celex": "32023R2854", "relevance": 0.1}}, {{"celex": "32016R0679", "relevance": 0.0}}, {{"celex": "32024R1689", "relevance": 0.0}}], "sub_questions": []}}
+
+Query: "Can a public sector body conclude an exclusive agreement regarding the re-use of protected data covered under Chapter II?"
+{{"intent": "DEFINITIONAL", "act_relevances": [{{"celex": "32022R0868", "relevance": 0.92}}, {{"celex": "32023R2854", "relevance": 0.1}}, {{"celex": "32016R0679", "relevance": 0.05}}, {{"celex": "32024R1689", "relevance": 0.0}}], "sub_questions": ["Does the Data Governance Act permit exclusive arrangements for the re-use of protected data held by public sector bodies?", "What conditions or exceptions allow an exclusive right for the re-use of protected data under Chapter II of the Data Governance Act?"]}}
+
+Query: "What is the definition of 'personal data' under the GDPR?"
+{{"intent": "DEFINITIONAL", "act_relevances": [{{"celex": "32016R0679", "relevance": 0.97}}, {{"celex": "32022R0868", "relevance": 0.05}}, {{"celex": "32023R2854", "relevance": 0.05}}, {{"celex": "32024R1689", "relevance": 0.0}}], "sub_questions": []}}
+
+Query: "What is a 'high-risk AI system' under the AI Act?"
+{{"intent": "DEFINITIONAL", "act_relevances": [{{"celex": "32024R1689", "relevance": 0.97}}, {{"celex": "32016R0679", "relevance": 0.05}}, {{"celex": "32022R0868", "relevance": 0.0}}, {{"celex": "32023R2854", "relevance": 0.0}}], "sub_questions": []}}
+
+Query: "What must a provider consider about data protection when training a high-risk AI system on personal data?"
+{{"intent": "DEFINITIONAL", "act_relevances": [{{"celex": "32024R1689", "relevance": 0.8}}, {{"celex": "32016R0679", "relevance": 0.72}}, {{"celex": "32022R0868", "relevance": 0.1}}, {{"celex": "32023R2854", "relevance": 0.1}}], "sub_questions": ["What data governance and training-data obligations does the AI Act impose on providers of high-risk AI systems?", "What requirements does the GDPR set for processing personal data when training an AI system?"]}}
+
+Query: "How has the CJEU interpreted the right to erasure in the context of search engines?"
+{{"intent": "INTERPRETIVE", "act_relevances": [{{"celex": "32016R0679", "relevance": 0.95}}, {{"celex": "32022R0868", "relevance": 0.0}}, {{"celex": "32023R2854", "relevance": 0.0}}, {{"celex": "32024R1689", "relevance": 0.0}}], "sub_questions": []}}
+
+Query: "What is the capital of France?"
+{{"intent": "DEFINITIONAL", "act_relevances": [{{"celex": "32022R0868", "relevance": 0.0}}, {{"celex": "32023R2854", "relevance": 0.0}}, {{"celex": "32016R0679", "relevance": 0.0}}, {{"celex": "32024R1689", "relevance": 0.0}}], "sub_questions": []}}
+
+=== QUERY ===
+{query}
+"""
+
 TOPIC_SELECTION_V1 = """Act as an expert analyst in EU legal
 documents (GDPR, AI Act, Data Act, Data Governance Act), specialising 
 in topic classification and legal concept mapping.
@@ -616,6 +700,99 @@ CONVENTIONS — follow each one:
 - Every sentence must be a self-contained, independently verifiable claim tied to one cited provision. If a sentence does not assert a rule that the governing provision supports for THIS question, delete it. Length discipline: prefer the shortest phrasing that still carries the rule; never pad to seem thorough.
 """
 
+ANSWER_SYNTHESIS_V6 = """You are an EU data law expert.
+
+Each retrieved passage is prefixed with its source:
+[Regulation, Chapter N — Chapter title, Article title]
+
+=== ANSWER GUIDANCE ===
+{guidance}
+
+=== RETRIEVED CONTENT ===
+{context}
+
+=== QUESTION ===
+{question}
+
+=== STEP 1 — LOCATE THE GOVERNING PROVISION (do this silently, before writing) ===
+Identify the passage(s) whose subject matter IS what the question asks about — not a
+passage that merely shares vocabulary with it.
+- If the question names a Chapter, the governing provision MUST come from that Chapter
+  (each passage's source prefix shows its Chapter). Passages from other Chapters are
+  support at most, however well they match the wording.
+- If the question asks who or what falls within the scope of a Chapter, the governing
+  provision is that Chapter's scope/applicability provision — NOT the definitions article,
+  even if the definitions article contains related terms.
+- If the question asks for conditions, obligations, or a procedure, the governing
+  provision is the one that imposes them — not one that merely mentions the same actors.
+- Use the remaining passages as SUPPORT only where the governing provision cross-references
+  them, or where they state an exception or qualification to it. Never import a rule from a
+  support passage that the governing provision does not call for — that substitutes the
+  topic of the answer.
+- If NO retrieved passage actually governs the question, say so explicitly instead of
+  answering from the closest-sounding passage.
+
+=== STEP 2 — WRITE THE ANSWER ===
+1. Base the answer exclusively on the retrieved content. Introduce nothing the passages do
+   not state; do not fill gaps from memory. Copy every article/recital reference EXACTLY
+   from the source prefix — never infer or recall a number from memory. If the content is
+   insufficient to answer fully, state the gap explicitly rather than filling it.
+2. Answer only what is asked. Cover every distinct rule, condition, or measure that the
+   governing provision (and its cross-references) supplies for THIS question — and stop
+   there. Do not add adjacent rules from support passages to seem thorough.
+3. For a yes/no question, open with the direct yes/no, anchored to the governing provision,
+   before any qualification.
+4. State the general rule first; introduce any derogation, exception, or exclusion
+   afterwards, marked as such (e.g. "However, …").
+
+=== RESPONSE FORMAT ===
+Write connected legal prose: continuous sentences and paragraphs, the register of a legal
+commentary — dense, flowing, every sentence carrying a substantive rule. No section headers,
+no bullet points, no vertically numbered or lettered lists.
+
+CALIBRATION — your answer should read like, and be roughly the same length as, these
+reference answers. Do not exceed their density of citation or their economy of words.
+
+REFERENCE 1 (subject-matter, lettered enumeration folded into prose):
+"As per Article 1(1), the Data Governance Act establishes: (a) conditions for the re-use,
+within the Union, of certain categories of data held by public sector bodies; (b) a
+notification and supervisory framework for the provision of data intermediation services;
+(c) a framework for voluntary registration of entities which collect and process data made
+available for altruistic purposes; (d) a framework for the establishment of a European Data
+Innovation Board."
+
+REFERENCE 2 (yes/no, rule then derogation):
+"No, as according to Article 1(2), the Data Governance Act does not create any obligation on
+public sector bodies to allow the re-use of data, nor does it release them from their
+confidentiality obligations under Union or national law. However, a derogation to this
+general prohibition can be granted upon fulfilling the requirements enshrined in Article
+4(2)-(5)."
+
+REFERENCE 3 (recital-based, single dense sentence chain):
+"As per Recital 24, the information obligation could be fulfilled by maintaining a stable
+uniform resource locator (URL) on the web, distributed as a web link or QR code, pointing to
+the relevant information; it is, in any case, necessary that the user is able to store the
+information in a way that allows the unchanged reproduction of the information stored."
+
+CONVENTIONS:
+- Anchor every rule to its provision inline, at the START of the sentence that asserts it:
+  "As per Article 1(1), …" / "According to Article 1(2), …" / "Under Article 5(1)(d), …".
+  Never place the citation at the end, and never collect citations into a trailing list.
+- When a provision enumerates lettered items, fold that enumeration inline into ONE sentence
+  using the statute's own lettering: "… establishes: (a) …; (b) …; (c) ….".
+- BANNED:
+  * Preamble announcing what you will say ("To fulfil this obligation, the provider must…",
+    "This information includes:", "The following requirements apply:"). State the rule
+    directly with its citation.
+  * Restating the question, or naming the act/article the question already names.
+  * Generic glue not grounded in a passage ("non-discriminatory, proportionate and
+    objective") unless a passage states exactly that for this question.
+  * Closing or summarising lines ("In conclusion", "None", "Overall…", "Thus…").
+- Every sentence must be a self-contained, independently verifiable claim tied to one cited
+  provision. If a sentence does not assert a rule the governing provision supports for THIS
+  question, delete it. Prefer the shortest phrasing that still carries the rule; never pad.
+"""
+
 ANSWER_FILTER_V1 ="""You are filtering a draft legal answer to keep only the sentences that directly answer the user's question.
 
 === QUESTION ===
@@ -640,6 +817,40 @@ ANSWER_FILTER_V1 ="""You are filtering a draft legal answer to keep only the sen
 6. If a sentence partially answers the question, keep only the responsive clause and drop the rest.
 
 === FILTERED ANSWER ===
+"""
+
+CONTEXT_CURATION_V1 = """You are curating retrieved legal passages for relevance to a question, BEFORE an answer is written.
+
+=== QUESTION ===
+{question}
+
+=== PASSAGES (each prefixed with its index and its source header) ===
+{numbered_passages}
+
+=== TASK ===
+
+Return the indices of the passages that are NECESSARY to answer the question: the
+provision(s) that DIRECTLY govern it (whose subject matter IS what the question asks
+about), plus any passage they cross-reference or that states an exception or
+qualification to them. Drop passages that merely share vocabulary with the question but
+do not govern it.
+
+Also return, as a subset of the kept indices, the passage(s) that DIRECTLY govern the
+question (the governing provision), as opposed to the ones kept only as support.
+
+=== RULES ===
+
+1. Select whole passages by index. Do NOT rewrite, summarise, merge, or quote them — you
+   only return indices. The exact statutory text and article numbers must be preserved.
+2. When unsure whether a passage is needed, KEEP it. Under-selecting is worse than
+   over-selecting: dropping the one provision that answers the question is unrecoverable.
+3. If NO passage clearly governs the question, return ALL indices in "keep" and leave
+   "governing" empty — let the answer stage report the gap.
+
+=== OUTPUT ===
+
+Return ONLY a JSON object, no prose, no code fences:
+{{"keep": [<indices to keep>], "governing": [<subset of keep that directly governs>]}}
 """
 
 ARTICLE_SUMMARY_SYSTEM_V1 = """You are an expert in EU digital legislation (GDPR, AI Act, Data Act, Data Governance Act).
@@ -1083,7 +1294,16 @@ registry.register(PromptVersion(
           "the classifier thresholds to select 0/1/N acts. Keeps v3's disambiguation "
           "hints; adds constructed two-act and out-of-scope few-shots. Output schema is "
           "RawClassification (intent + act_relevances) in intent_classifier.py.",
-    body=QUERY_CLASSIFICATION_V4, active=True,
+    body=QUERY_CLASSIFICATION_V4, active=False,
+))
+
+registry.register(PromptVersion(
+    name="query_classification", version="v5", created=date(2026, 7, 5),
+    notes="Adds query decomposition: same intent + act_relevances as v4, plus a "
+          "sub_questions list ([] for atomic queries; 2-4 self-contained sub-questions "
+          "for compound ones). Consumed by decomposition-aware retrievers (HyDE per "
+          "sub-question). Output schema RawClassification.sub_questions.",
+    body=QUERY_CLASSIFICATION_V5, active=True,
 ))
 
 registry.register(PromptVersion(
@@ -1128,7 +1348,17 @@ registry.register(PromptVersion(
           "(scope questions -> scope provision, not the definitions article), "
           "treat the rest as support, and refuse rather than answer from the "
           "closest-sounding passage. Style/calibration unchanged from v4.",
-    body=ANSWER_SYNTHESIS_V5, active=True,
+    body=ANSWER_SYNTHESIS_V5, active=False,
+))
+
+registry.register(PromptVersion(
+    name="answer_synthesis", version="v6", created=date(2026, 7, 2),
+    notes="Adds an explicit governing-provision step before writing: locate "
+          "the passage whose subject matter IS what the question asks about "
+          "(scope questions -> scope provision, not the definitions article), "
+          "treat the rest as support, and refuse rather than answer from the "
+          "closest-sounding passage. Style/calibration unchanged from v4.",
+    body=ANSWER_SYNTHESIS_V6, active=True,
 ))
 
 registry.register(PromptVersion(
@@ -1136,6 +1366,14 @@ registry.register(PromptVersion(
     notes="Initial tracked version. Optional post-synthesis filter "
           "(enabled via RAGPipeline use_answer_filter).",
     body=ANSWER_FILTER_V1, active=True,
+))
+
+registry.register(PromptVersion(
+    name="context_curation", version="v1", created=date(2026, 7, 5),
+    notes="Initial tracked version. Optional pre-synthesis stage that selects the "
+          "retrieved passages needed to answer the question (enabled via "
+          "RAGPipeline use_context_curation). Filters by index; fail-open.",
+    body=CONTEXT_CURATION_V1, active=True,
 ))
 
 registry.register(PromptVersion(
@@ -1232,6 +1470,7 @@ QUERY_CLASSIFICATION_PROMPT = registry.active("query_classification").body
 TOPIC_SELECTION_PROMPT = registry.active("topic_selection").body
 ANSWER_SYNTHESIS_PROMPT = registry.active("answer_synthesis").body
 ANSWER_FILTER_PROMPT = registry.active("answer_filter").body
+CONTEXT_CURATION_PROMPT = registry.active("context_curation").body
 ATTRIBUTION_PROMPT = registry.active("attribution").body
 ARTICLE_SUMMARY_SYSTEM_PROMPT = registry.active("article_summary_system").body
 ARTICLE_SUMMARY_USER_PROMPT = registry.active("article_summary_user").body

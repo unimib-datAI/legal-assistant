@@ -40,6 +40,12 @@ class RawClassification(BaseModel):
         default_factory=list,
         description="One entry per available act, each scored 0-1 for relevance to the query."
     )
+    sub_questions: List[str] = Field(
+        default_factory=list,
+        description="[] for atomic/single-provision questions; otherwise 2-4 focused, "
+                    "self-contained sub-questions, each answerable from one provision, "
+                    "with pronouns resolved."
+    )
 
 
 class QueryClassification(BaseModel):
@@ -53,6 +59,11 @@ class QueryClassification(BaseModel):
     act_scores: Dict[str, float] = Field(
         default_factory=dict,
         description="Raw per-act relevance scores behind the selection, for logging/diagnostics."
+    )
+    sub_questions: List[str] = Field(
+        default_factory=list,
+        description="Decomposition of a compound query into focused sub-questions; empty "
+                    "for atomic queries. Used by decomposition-aware retrievers."
     )
 
 
@@ -104,11 +115,14 @@ class QueryClassifier:
         prompt = self._prompt.format(query=query, acts=self._format_acts())
         raw: RawClassification = self._structured_llm.invoke(prompt)
         acts, scores = self._select_acts(raw, query)
-        result = QueryClassification(intent=raw.intent, acts=acts, act_scores=scores)
+        result = QueryClassification(
+            intent=raw.intent, acts=acts, act_scores=scores, sub_questions=raw.sub_questions,
+        )
         logger.info(
-            "[Classifier] intent=%s acts=%s scores=%s",
+            "[Classifier] intent=%s acts=%s scores=%s sub_questions=%d",
             result.intent, result.acts,
             {celex: round(score, 2) for celex, score in sorted(scores.items(), key=lambda kv: -kv[1])},
+            len(result.sub_questions),
         )
         self.last_classification = result
         return result

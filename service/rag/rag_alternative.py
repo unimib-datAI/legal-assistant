@@ -64,7 +64,8 @@ class HybridRetriever(BaseRetriever):
 
     Recitals are retrieved via BM25 and judged by the same cross-encoder pass as the
     articles, then kept only if they clear `recital_score_threshold` — so irrelevant
-    recitals are dropped instead of always padding the context.
+    recitals are dropped instead of always padding the context. Set `use_recitals=False`
+    to skip the recital branch entirely and return articles only.
     """
 
     graph: Any
@@ -74,10 +75,13 @@ class HybridRetriever(BaseRetriever):
     use_hyde: bool = True
     top_k_dense: int = 10
     top_k_sparse: int = 10
-    top_k_final: int = 5
-    top_k_recitals: int = 3
+    top_k_final: int = 3
+    top_k_recitals: int = 2
     recital_score_threshold: float = 0.3
-    rrf_k: int = 0
+    use_recitals: bool = True
+    use_query_decomposition: bool = False
+    max_sub_questions: int = 3
+    rrf_k: int = 60
     use_reranker: bool = True
     cross_encoder: Any = CrossEncoder(
         config.RERANK_MODEL,
@@ -153,23 +157,20 @@ class HybridRetriever(BaseRetriever):
         return data
 
     @staticmethod
-    def _rrf_fusion(
-        dense: List[Document],
-        sparse: List[Document],
-        k: int = 60,
-    ) -> List[Document]:
-        """Merge two ranked lists using Reciprocal Rank Fusion."""
+    def _rrf_fusion(*ranked_lists: List[Document], k: int = 60) -> List[Document]:
+        """Merge N ranked lists using Reciprocal Rank Fusion.
+
+        Lists are accumulated in order, so a later list wins the doc-object tie for the
+        same id: callers pass sparse lists LAST because those docs carry full metadata
+        (id, act, title) that dense docs lack.
+        """
         scores: dict = defaultdict(float)
         all_docs: dict = {}
-        for rank, doc in enumerate(dense):
-            key = _doc_id(doc)
-            scores[key] += 1.0 / (k + rank + 1)
-            all_docs[key] = doc
-        for rank, doc in enumerate(sparse):
-            key = _doc_id(doc)
-            scores[key] += 1.0 / (k + rank + 1)
-            # sparse docs carry full metadata (id, act, title) — prefer them for the same id
-            all_docs[key] = doc
+        for ranked in ranked_lists:
+            for rank, doc in enumerate(ranked):
+                key = _doc_id(doc)
+                scores[key] += 1.0 / (k + rank + 1)
+                all_docs[key] = doc
         return [all_docs[key] for key in sorted(scores, key=lambda x: -scores[x])]
 
     def _rerank_articles(
@@ -200,6 +201,27 @@ class HybridRetriever(BaseRetriever):
         ce_scores = self.cross_encoder.predict(pairs)
         return [(doc, float(score)) for doc, score in zip(recital_candidates, ce_scores)]
 
+    def _dense_search(self, query_text: str, target_acts: List[str]) -> List[Document]:
+        """Dense article search for one query, HyDE-expanded when enabled, act-filtered.
+
+        HyDE passages are averaged into a single mean vector *within* this query; fusion
+        across queries happens at the ranked-list level (RRF), not by averaging vectors.
+        """
+        if self.use_hyde and self.hyde_generator is not None:
+            acts_context = ", ".join(_CELEX_TO_ACT_NAME.get(a, a) for a in target_acts)
+            hyde_docs = self.hyde_generator.generate(query_text, acts_context)
+            doc_vectors = self.article_vector_store.embedding.embed_documents(hyde_docs)
+            mean_vector = np.mean(np.asarray(doc_vectors), axis=0).tolist()
+            raw_dense = self.article_vector_store.similarity_search_by_vector(
+                mean_vector, k=self.top_k_dense, query=query_text
+            )
+        else:
+            raw_dense = self.article_vector_store.similarity_search(query_text, k=self.top_k_dense)
+        return [
+            doc for doc in raw_dense
+            if any(_doc_id(doc).startswith(act) for act in target_acts)
+        ]
+
     def _get_relevant_documents(
         self, user_query: str, *, run_manager: CallbackManagerForRetrieverRun = None  # noqa: ARG002
     ) -> List[Document]:
@@ -216,41 +238,45 @@ class HybridRetriever(BaseRetriever):
             logger.warning("[HybridRetriever] No target acts classified — returning empty.")
             return []
 
-        # Dense path: optionally expand the query into one or more hypothetical legal
-        # passages (HyDE), average their embeddings, and search by that mean vector;
-        # then filter to target acts only
-        if self.use_hyde and self.hyde_generator is not None:
-            acts_context = ", ".join(_CELEX_TO_ACT_NAME.get(a, a) for a in target_acts)
-            hyde_docs = self.hyde_generator.generate(user_query, acts_context)
+        # Search queries: the original question, plus decomposed sub-questions when
+        # decomposition is enabled and the classifier produced any. Each is retrieved
+        # independently (dense HyDE + sparse BM25); all lists are RRF-fused so every
+        # facet's provisions get a chance in the candidate pool.
+        search_queries = [user_query]
+        if self.use_query_decomposition and classification and classification.sub_questions:
+            seen = {user_query.strip().lower()}
+            for sq in classification.sub_questions[: self.max_sub_questions]:
+                key = sq.strip().lower()
+                if key and key not in seen:
+                    seen.add(key)
+                    search_queries.append(sq)
             logger.info(
-                "[HybridRetriever] HyDE: %d hypothetical doc(s); first: %s…",
-                len(hyde_docs), hyde_docs[0][:120].replace("\n", " "),
+                "[HybridRetriever] Decomposition: %d sub-question(s): %s",
+                len(search_queries) - 1, search_queries[1:],
             )
-            doc_vectors = self.article_vector_store.embedding.embed_documents(hyde_docs)
-            mean_vector = np.mean(np.asarray(doc_vectors), axis=0).tolist()
-            raw_dense = self.article_vector_store.similarity_search_by_vector(
-                mean_vector, k=self.top_k_dense, query=user_query
-            )
-        else:
-            raw_dense = self.article_vector_store.similarity_search(user_query, k=self.top_k_dense)
-        dense_docs = [
-            doc for doc in raw_dense
-            if any(_doc_id(doc).startswith(act) for act in target_acts)
-        ]
-        logger.info("[HybridRetriever] Dense: %d article(s) (%d before act filter)", len(dense_docs), len(raw_dense))
 
-        # Sparse path: BM25 over articles filtered by target acts
         article_data = self._load_articles(target_acts)
         bm25 = article_data.get("bm25")
-        sparse_docs: List[Document] = []
         if bm25 is not None:
             bm25.k = self.top_k_sparse
-            sparse_docs = bm25.invoke(user_query)
-        logger.info("[HybridRetriever] Sparse: %d article(s)", len(sparse_docs))
 
-        # RRF fusion → article candidates
-        fused = self._rrf_fusion(dense_docs, sparse_docs, k=self.rrf_k)
-        article_candidates = fused[: self.top_k_final * 2]
+        dense_lists: List[List[Document]] = []
+        sparse_lists: List[List[Document]] = []
+        for q in search_queries:
+            dense_docs = self._dense_search(q, target_acts)
+            dense_lists.append(dense_docs)
+            sparse_docs = bm25.invoke(q) if bm25 is not None else []
+            sparse_lists.append(sparse_docs)
+            logger.info(
+                "[HybridRetriever] Query %r → dense %d, sparse %d",
+                q[:60], len(dense_docs), len(sparse_docs),
+            )
+
+        # Sparse lists LAST so their fuller metadata wins the RRF doc-object tie.
+        fused = self._rrf_fusion(*dense_lists, *sparse_lists, k=self.rrf_k)
+        # Widen the pre-rerank pool with the number of search queries so sub-question
+        # provisions are not cut before the cross-encoder scores them.
+        article_candidates = fused[: self.top_k_final * 2 * len(search_queries)]
 
         # Ensure all article candidates have `id` in metadata; enrich from sparse corpus
         by_id = article_data.get("by_id", {})
@@ -261,13 +287,15 @@ class HybridRetriever(BaseRetriever):
             if not doc.metadata.get("act") and doc.metadata["id"] in by_id:
                 doc.metadata.update(by_id[doc.metadata["id"]].metadata)
 
-        # Recital candidates: a wider BM25 pool to give the threshold room to choose
-        recital_data = self._load_recitals(target_acts)
-        bm25_r = recital_data.get("bm25")
+        # Recital candidates: a wider BM25 pool to give the threshold room to choose.
+        # Skipped entirely when recital search is disabled.
         recital_candidates: List[Document] = []
-        if bm25_r is not None:
-            bm25_r.k = self.top_k_recitals * 2
-            recital_candidates = bm25_r.invoke(user_query)
+        if self.use_recitals:
+            recital_data = self._load_recitals(target_acts)
+            bm25_r = recital_data.get("bm25")
+            if bm25_r is not None:
+                bm25_r.k = self.top_k_recitals * 2
+                recital_candidates = bm25_r.invoke(user_query)
 
         if not article_candidates and not recital_candidates:
             return []
