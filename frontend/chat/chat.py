@@ -11,17 +11,32 @@ Generate a fresh full (53-question) run with, e.g.::
 
     python -m test.rag_eval.evals_ragas --dataset golden_dataset
 """
+import json
 import logging
+import re
 from pathlib import Path
 
 import pandas as pd
 import streamlit as st
 
 import config
+from service.rag.acts import CELEX_TO_ACT_NAME
 
 logger = logging.getLogger(__name__)
 
 EVALUATIONS_DIR = config.EVALS_DIR / "evaluations"
+
+# Article/recital ids: a CELEX id, a kind marker, then the number.
+#   '32022R0868art_1' -> Article 1 | '32022R0868rct_46' -> Recital 46
+_SOURCE_ID_RE = re.compile(r"^(?P<celex>\d{5}[A-Z]\d{4})(?P<kind>art|rct)_(?P<number>.+)$")
+
+# Paragraph ids emitted by the topics retriever: zero-padded article, then paragraph.
+#   '32016R0679_005.001' -> Article 5(1) | '32016R0679_004.0' -> Article 4
+_PARAGRAPH_ID_RE = re.compile(
+    r"^(?P<celex>\d{5}[A-Z]\d{4})_(?P<article>\d+)\.(?P<paragraph>\d+)$"
+)
+
+_KIND_LABEL = {"art": "Article", "rct": "Recital"}
 
 # Columns a CSV must have to be usable as a RAG-vs-GT comparison.
 REQUIRED_COLUMNS = ("question", "ground_truth", "answer")
@@ -54,6 +69,44 @@ def _comparison_csvs() -> list[Path]:
         return []
     candidates = [p for p in EVALUATIONS_DIR.glob("*.csv") if _has_required_columns(p)]
     return sorted(candidates, key=lambda p: p.stat().st_mtime, reverse=True)
+
+
+def _format_source_id(source_id: str) -> str:
+    """'32022R0868art_1' -> 'Data Governance Act — Article 1'. Unparsable ids pass through."""
+    if match := _SOURCE_ID_RE.match(source_id):
+        act = CELEX_TO_ACT_NAME.get(match["celex"], match["celex"])
+        return f"{act} — {_KIND_LABEL[match['kind']]} {match['number']}"
+
+    if match := _PARAGRAPH_ID_RE.match(source_id):
+        act = CELEX_TO_ACT_NAME.get(match["celex"], match["celex"])
+        article = int(match["article"])
+        paragraph = int(match["paragraph"])
+        # Paragraph 0 means the id points at the article as a whole.
+        suffix = f"({paragraph})" if paragraph else ""
+        return f"{act} — Article {article}{suffix}"
+
+    return source_id
+
+
+def _load_json_column(value: object) -> list[dict]:
+    """Parse a JSON cell written by backfill_attribution; [] when absent or malformed."""
+    if pd.isna(value) or not str(value).strip():
+        return []
+    try:
+        parsed = json.loads(str(value))
+    except json.JSONDecodeError:
+        logger.warning("Unparsable JSON cell; ignoring attribution for this row.")
+        return []
+    return parsed if isinstance(parsed, list) else []
+
+
+def _render_attributed_answer(segments: list[dict]) -> None:
+    """Render the answer sentence by sentence, each followed by its [Sn] badges."""
+    parts = []
+    for segment in segments:
+        badges = " ".join(f":blue-badge[{m}]" for m in segment.get("markers", []))
+        parts.append(f"{segment.get('text', '')} {badges}".strip())
+    st.markdown(" ".join(parts))
 
 
 def _split_pipe(value: object) -> list[str]:
@@ -137,28 +190,46 @@ left, right = st.columns(2)
 
 with left:
     st.subheader("🤖 Risposta RAG")
-    st.markdown(str(row["answer"]))
+
+    segments = _load_json_column(row["segments"]) if "segments" in view.columns else []
+    if segments:
+        _render_attributed_answer(segments)
+    else:
+        st.markdown(str(row["answer"]))
 
     st.markdown("#### 📎 Fonti a supporto")
-    if "sources" in view.columns:
-        sources = _split_pipe(row["sources"])
-        if sources:
-            for src in sources:
-                st.markdown(f"- `{src}`")
+    if "sources" not in view.columns:
+        st.caption("Fonti non disponibili in questo CSV.")
+    else:
+        retrieved = _split_pipe(row["sources"])
+        # `contexts` is positionally aligned with `sources`, so a passage can be
+        # looked up by the id of the source that carries it.
+        contexts = str(row["contexts"]).split("|") if "contexts" in view.columns else []
+        context_by_id = dict(zip(retrieved, contexts))
+        cited = _load_json_column(row["cited_sources"]) if "cited_sources" in view.columns else []
+
+        if cited:
+            # The passages the answer cites: the [Sn] badges in the text point here.
+            for ref in cited:
+                label = f"{ref['marker']} · {_format_source_id(ref['id'])}"
+                with st.expander(label):
+                    st.markdown(context_by_id.get(ref["id"], "_Chunk non disponibile._"))
+
+            # Retrieval is high-recall, so some passages reach the synthesis prompt
+            # without ever being cited. Listing them makes that noise visible.
+            cited_ids = {ref["id"] for ref in cited}
+            uncited = [src for src in retrieved if src not in cited_ids]
+            if uncited:
+                st.markdown(f"#### 🗑️ Fonti recuperate ma non utilizzate ({len(uncited)}/{len(retrieved)})")
+                for src in uncited:
+                    with st.expander(_format_source_id(src)):
+                        st.markdown(context_by_id.get(src, "_Chunk non disponibile._"))
+        elif retrieved:
+            for src in retrieved:
+                with st.expander(_format_source_id(src)):
+                    st.markdown(context_by_id.get(src, "_Chunk non disponibile._"))
         else:
             st.caption("Nessuna fonte registrata per questa risposta.")
-    else:
-        st.caption("Fonti non disponibili in questo CSV.")
-
-    if "contexts" in view.columns:
-        contexts = _split_pipe(row["contexts"])
-        with st.expander(f"Contesti recuperati ({len(contexts)})"):
-            if contexts:
-                for i, ctx in enumerate(contexts, 1):
-                    st.markdown(f"**[{i}]** {ctx}")
-                    st.divider()
-            else:
-                st.caption("Nessun contesto registrato.")
 
 with right:
     st.subheader("✅ Ground Truth")
