@@ -59,6 +59,44 @@ def _doc_id(doc: Document) -> str:
     return m.group(1).strip() if m else doc.page_content[:80]
 
 
+def _copy_doc(doc: Document) -> Document:
+    """Detach a Document from the corpus cache so downstream stages can enrich it freely.
+
+    BM25 hands back the very objects held by `_article_cache`/`_recital_cache`; without
+    this copy, per-query enrichment would write straight into the shared corpus.
+    """
+    return Document(page_content=doc.page_content, metadata=dict(doc.metadata))
+
+
+def _decorate_article(doc: Document) -> Document:
+    """Return a copy of `doc` with an act + chapter + title header prepended.
+
+    The chapter lets the synthesis LLM resolve questions scoped to a specific Chapter
+    (e.g. "the personal scope of Chapter II") to the right provision.
+    """
+    act_name = _CELEX_TO_ACT_NAME.get(
+        doc.metadata.get("act", ""), doc.metadata.get("act", "")
+    )
+    title = doc.metadata.get("title", "")
+    chapter = doc.metadata.get("chapter_number")
+    if chapter:
+        chapter_title = doc.metadata.get("chapter_title") or ""
+        header = f"[{act_name}, Chapter {chapter} — {chapter_title}, {title}]"
+    else:
+        header = f"[{act_name}, {title}]"
+    return Document(page_content=f"{header}\n{doc.page_content}", metadata=dict(doc.metadata))
+
+
+def _decorate_recital(doc: Document) -> Document:
+    """Return a copy of `doc` with its recital header prepended, display number folded in.
+
+    Reads the display number off the pristine text, so it must run on an undecorated doc.
+    """
+    header = _recital_header(doc.metadata["celex"], doc.page_content)
+    body = _DISPLAY_NUM_RE.sub("", doc.page_content)
+    return Document(page_content=f"{header}\n{body}", metadata=dict(doc.metadata))
+
+
 class HybridRetriever(BaseRetriever):
     """Hybrid retriever: dense (vector) + sparse (BM25) article search fused with RRF.
 
@@ -265,7 +303,7 @@ class HybridRetriever(BaseRetriever):
         for q in search_queries:
             dense_docs = self._dense_search(q, target_acts)
             dense_lists.append(dense_docs)
-            sparse_docs = bm25.invoke(q) if bm25 is not None else []
+            sparse_docs = [_copy_doc(d) for d in bm25.invoke(q)] if bm25 is not None else []
             sparse_lists.append(sparse_docs)
             logger.info(
                 "[HybridRetriever] Query %r → dense %d, sparse %d",
@@ -295,7 +333,7 @@ class HybridRetriever(BaseRetriever):
             bm25_r = recital_data.get("bm25")
             if bm25_r is not None:
                 bm25_r.k = self.top_k_recitals * 2
-                recital_candidates = bm25_r.invoke(user_query)
+                recital_candidates = [_copy_doc(d) for d in bm25_r.invoke(user_query)]
 
         if not article_candidates and not recital_candidates:
             return []
@@ -322,29 +360,8 @@ class HybridRetriever(BaseRetriever):
             [f"{d.metadata.get('id')}({s:.2f})" for d, s in recital_scored],
         )
 
-        # Decorate articles with act + chapter + title header. The chapter lets the
-        # synthesis LLM resolve questions scoped to a specific Chapter (e.g. "the
-        # personal scope of Chapter II") to the right provision.
-        for doc in article_docs:
-            act_name = _CELEX_TO_ACT_NAME.get(
-                doc.metadata.get("act", ""), doc.metadata.get("act", "")
-            )
-            title = doc.metadata.get("title", "")
-            chapter = doc.metadata.get("chapter_number")
-            if chapter:
-                chapter_title = doc.metadata.get("chapter_title") or ""
-                header = f"[{act_name}, Chapter {chapter} — {chapter_title}, {title}]"
-            else:
-                header = f"[{act_name}, {title}]"
-            doc.page_content = f"{header}\n{doc.page_content}"
-
-        # Decorate surviving recitals with their header
-        recital_docs: List[Document] = []
-        for doc, _ in surviving:
-            header = _recital_header(doc.metadata["celex"], doc.page_content)
-            body = _DISPLAY_NUM_RE.sub("", doc.page_content)
-            doc.page_content = f"{header}\n{body}"
-            recital_docs.append(doc)
+        article_docs = [_decorate_article(doc) for doc in article_docs]
+        recital_docs = [_decorate_recital(doc) for doc, _ in surviving]
 
         final_docs = article_docs + recital_docs
         logger.info(
