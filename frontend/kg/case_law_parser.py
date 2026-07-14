@@ -1,12 +1,10 @@
 """
 Case Law Parser page.
 
-Uploads a case law PDF, infers its hierarchical structure via LLM,
-and renders the parsed document tree.
+Fetches a CJEU judgment from EUR-Lex by CELEX id, reads its hierarchy straight
+from the published XHTML markup, and renders the parsed document tree.
 """
 import json
-import tempfile
-import re as _re
 import config
 
 import streamlit as st
@@ -14,14 +12,14 @@ from dotenv import load_dotenv
 
 from service.graph.graph import Neo4jGraph
 from service.case_law.llm_orchestrator import parse_document, create_case_law_kg
-from service.case_law.doc_parser import flatten
+from service.case_law.tree import flatten
 
 load_dotenv()
 
 st.title("Case Law Parser")
 st.caption(
-    "Upload an EU case law PDF. The parser infers the document structure using an LLM "
-    "and renders the full hierarchical tree."
+    "Enter the CELEX id of a CJEU judgment. Its structure is read from the EUR-Lex "
+    "XHTML markup — no PDF, no inference."
 )
 
 
@@ -73,56 +71,41 @@ def _build_dot(roots: list) -> str:
     return "\n".join(lines)
 
 
-# -- upload -------------------------------------------------------------------
+# -- input --------------------------------------------------------------------
 
-uploaded = st.file_uploader("Upload case law PDF", type="pdf")
+celex = st.text_input("CELEX id", placeholder="e.g. 62012CJ0293").strip().upper()
 
-if uploaded is None:
-    st.info("Upload a PDF to get started.")
-    st.stop()
-
-file_key = f"{uploaded.name}_{uploaded.size}"
-if st.session_state.get("cl_file_key") != file_key:
-    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
-    tmp.write(uploaded.read())
-    tmp.flush()
-    st.session_state["cl_tmp_path"] = tmp.name
-    st.session_state["cl_file_key"] = file_key
-    st.session_state.pop("cl_result", None)
-
-pdf_path = st.session_state["cl_tmp_path"]
-
-if st.button("Parse Document", type="primary"):
+if st.button("Parse Document", type="primary", disabled=not celex):
+    st.session_state.pop("cl_summaries", None)
     try:
-        with st.spinner("Inferring document structure..."):
-            parsing_rules, roots = parse_document(pdf_path)
-            st.session_state["cl_result"] = (parsing_rules, roots, flatten(roots))
+        with st.spinner(f"Fetching and parsing {celex}…"):
+            roots = parse_document(celex)
+            st.session_state["cl_result"] = (celex, roots, flatten(roots))
     except Exception as exc:
+        st.session_state.pop("cl_result", None)
         st.error(f"Error: {exc}")
 
 # -- results ------------------------------------------------------------------
 
 if "cl_result" not in st.session_state:
+    st.info("Enter a CELEX id to get started.")
     st.stop()
 
-parsing_rules, roots, flat = st.session_state["cl_result"]
+celex, roots, flat = st.session_state["cl_result"]
 
 col_info, col_main = st.columns([1, 3])
 
 with col_info:
     st.subheader("Document info")
-    st.markdown(f"**Domain:** {parsing_rules.get('domain', '-')}")
-    if parsing_rules.get("notes"):
-        st.markdown(f"**Notes:** {parsing_rules['notes']}")
-    st.divider()
-    st.subheader("Inferred rules")
-    for rule in parsing_rules.get("rules", []):
-        st.markdown(f"- `{rule['pattern']}` ({rule['type']}, depth {rule['depth']})")
+    st.markdown(f"**CELEX:** `{celex}`")
+    st.markdown(f"**Sections:** {len(flat)}")
+    st.markdown(f"**Paragraphs:** {sum(len(s['body']) for s in flat)}")
+    st.markdown(f"**Max depth:** {max(s['depth'] for s in flat)}")
     st.divider()
     st.download_button(
         label="Download JSON",
         data=json.dumps(flat, indent=2, ensure_ascii=False),
-        file_name=f"{uploaded.name.removesuffix('.pdf')}_parsed.json",
+        file_name=f"{celex}_parsed.json",
         mime="application/json",
     )
 
@@ -139,7 +122,7 @@ with col_info:
             if result is not None:
                 summaries.append(result)
         progress_bar.progress(1.0, text="Summarising full document…")
-        doc_summary = summarize_document(pdf_path)
+        doc_summary = summarize_document(roots)
         summaries.insert(0, {"heading": "Document Summary", "summary": doc_summary})
         progress_bar.progress(1.0, text="Done.")
         st.session_state["cl_summaries"] = summaries
@@ -148,32 +131,26 @@ with col_info:
         st.download_button(
             label="Download Summaries JSON",
             data=json.dumps(st.session_state["cl_summaries"], indent=2, ensure_ascii=False),
-            file_name=f"{uploaded.name.removesuffix('.pdf')}_summaries.json",
+            file_name=f"{celex}_summaries.json",
             mime="application/json",
         )
 
         st.divider()
-        _match = _re.search(r"CELEX_(\w+)_", uploaded.name, _re.IGNORECASE)
-        _default_celex = _match.group(1) if _match else ""
-        celex_input = st.text_input("CELEX ID", value=_default_celex, placeholder="e.g. 62019CJ0645")
         if st.button("Create Case Law KG", type="primary"):
-            if not celex_input.strip():
-                st.error("Enter a CELEX ID.")
-            else:
-                try:
-                    with st.spinner(f"Writing {celex_input.strip()} to Neo4j…"):
-                        graph = Neo4jGraph(config.NEO4J_URI, config.NEO4J_USERNAME, config.NEO4J_PASSWORD)
-                        graph.verify_connection()
-                        create_case_law_kg(
-                            celex=celex_input.strip(),
-                            flat=flat,
-                            summaries=st.session_state["cl_summaries"],
-                            graph=graph,
-                        )
-                        graph.close()
-                    st.success(f"KG created for {celex_input.strip()}.")
-                except Exception as exc:
-                    st.error(f"Error: {exc}")
+            try:
+                with st.spinner(f"Writing {celex} to Neo4j…"):
+                    graph = Neo4jGraph(config.NEO4J_URI, config.NEO4J_USERNAME, config.NEO4J_PASSWORD)
+                    graph.verify_connection()
+                    create_case_law_kg(
+                        celex=celex,
+                        flat=flat,
+                        summaries=st.session_state["cl_summaries"],
+                        graph=graph,
+                    )
+                    graph.close()
+                st.success(f"KG created for {celex}.")
+            except Exception as exc:
+                st.error(f"Error: {exc}")
 
 with col_main:
     tab_tree, tab_diagram = st.tabs(["Document Tree", "Tree Diagram"])

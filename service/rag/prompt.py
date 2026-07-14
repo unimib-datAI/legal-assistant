@@ -1094,87 +1094,6 @@ Articles:
 OUTPUT
 """
 
-# Prompt to extract case law document hierarchy rules from structural elements
-
-CASE_LAW_DOCUMENT_PARSING_SYSTEM_V1 = """You are an expert document analyst.
-Given structural elements extracted from a PDF, infer the document's hierarchical rules.
-Consider the domain (legal, academic, technical, corporate, etc.) and its conventions
-when assigning depth levels.
-"""
-
-CASE_LAW_DOCUMENT_PARSING_USER_V1 = """Analyze these structural elements from a PDF document:
-
-{sample}
-
-Infer the hierarchy rules. Output ONLY a valid JSON object with this structure:
-{{
-  "domain": "brief description of domain and document type",
-  "rules": [
-    {{"pattern": "...", "type": "prefix|regex", "depth": 0}},
-    ...
-  ],
-  "notes": "any important observations"
-}}
-
-Rules for the "type" field — use ONLY these two values, nothing else:
-- "prefix"  → case-insensitive prefix match (e.g. pattern "chapter" matches "Chapter 3")
-- "regex"   → full Python regex, re.IGNORECASE applied (e.g. "^\\d+(\\d+)*\\s")
-
-Rules for the "depth" field:
-- depth 0 = top-level heading (e.g. part, chapter, top-level section)
-- depth increases by 1 for each nesting level
-- for numeric dot notation derive depth from the number of dots: "1" → 0, "1.1" → 1, "1.1.1" → 2
-- every rule must have the correct depth; a subsection must never have the same depth as its parent
-
-Rules for coverage and noise:
-- include the document title (if present) as depth 0
-- include every structural heading level observed in the sample
-- after writing your rules, mentally check: does every element with label=section_header
-  in the sample match at least one rule? if not, add the missing rules
-- EXCLUDE elements that are not content headings: page headers/footers, author lines,
-  conference/journal metadata, citation reference headers, copyright notices, boilerplate
-
-Ordering:
-- order rules from most specific to least specific (exact patterns before general regex)
-
-Domain conventions to follow when applicable:
-    EU legislation  → CHAPTER > Section > Article > paragraph
-    EU case law (Judgment) → depth 0: top sections (Judgment, Legal context, The dispute in the main proceedings,
-                               Consideration of the questions referred, Costs, Signatures)
-                      depth 1: subsections of Legal context — any "[Country/adjective] law" heading
-                               (e.g. "European Union law", "Spanish law", "French law", "National law")
-                               AND question sub-sections (match with regex "^(Question|The .+ [Qq]uestion)")
-                      depth 2: numbered paragraphs (^\\d+\\.?\\s)
-    EU case law (Advocate General Opinion, CELEX type CC) → depth 0: Roman-numeral sections
-                               (e.g. "I. The facts…", "II. My assessment", "III. Conclusion")
-                      depth 1: lettered sub-sections nested under their Roman-numeral parent
-                               (e.g. "A. The first and second questions", "B. …", "C. …")
-                      depth 2: numbered paragraphs (^\\d+\\.?\\s)
-                      Rules to generate for this document type:
-                        {{"pattern": "^[IVX]+\\.\\s", "type": "regex", "depth": 0}}
-                        {{"pattern": "^[A-Z]\\.\\s", "type": "regex", "depth": 1}}
-                        {{"pattern": "^\\d+\\.?\\s", "type": "regex", "depth": 2}}
-    Academic        → numeric dot notation (1 > 1.1 > 1.1.1)
-    Technical doc   → Part > Chapter > Section > Subsection
-- also use docling_level as a signal when it varies meaningfully across elements
-
-CRITICAL for EU case law — these rules are MANDATORY and must always appear in your output:
-  {{"pattern": "European Union law", "type": "prefix", "depth": 1}}
-  {{"pattern": "^[A-Z][a-z]+(\\s+[A-Za-z]+)*\\s+law$", "type": "regex", "depth": 1}}
-  {{"pattern": "^(Question|The.+[Qq]uestions?)$", "type": "regex", "depth": 1}}
-  {{"pattern": "^\\d+\\.?\\s", "type": "regex", "depth": 2}}
-  Reason: docling assigns legal-context subsections docling_level=1 (same as their parent),
-  so without explicit depth-1 rules they end up at depth 0 instead of nested inside Legal context.
-  The "[Country] law" regex covers all national-law variants: "Spanish law", "French law", etc.
-  The question regex uses $ to avoid matching headings like "The dispute in the main proceedings
-  and the question referred for a preliminary ruling" which contain "question" mid-string.
-
-NEVER include EU case law running page headers as rules. These are repeated headers that appear on
-every page in the format "JUDGMENT OF [date] — CASE [identifier] [party names]".
-They are NOT content sections — exclude them completely even if they appear as section_header in the sample.
-Example of what to NEVER add as a rule: "JUDGMENT OF 13. 5. 2014 — CASE C-131/12 GOOGLE SPAIN AND GOOGLE"
-"""
-
 CASE_LAW_ENTITY_SUMMARY_SYSTEM_V1 = """
 You are an AI assistant that helps a human analyst to perform general information discovery. Information
 discovery is the process of identifying and assessing relevant information associated with certain
@@ -1406,20 +1325,6 @@ registry.register(PromptVersion(
 ))
 
 registry.register(PromptVersion(
-    name="case_law_document_parsing_system", version="v1", created=date(2026, 6, 20),
-    notes="Initial tracked version. System prompt for inferring case-law "
-          "document hierarchy rules.",
-    body=CASE_LAW_DOCUMENT_PARSING_SYSTEM_V1, active=True,
-))
-
-registry.register(PromptVersion(
-    name="case_law_document_parsing_user", version="v1", created=date(2026, 6, 20),
-    notes="Initial tracked version. User prompt that infers hierarchy rules "
-          "from sampled PDF structural elements.",
-    body=CASE_LAW_DOCUMENT_PARSING_USER_V1, active=True,
-))
-
-registry.register(PromptVersion(
     name="case_law_entity_summary_system", version="v1", created=date(2026, 6, 20),
     notes="Initial tracked version. System prompt for section-level entity "
           "summaries.",
@@ -1476,8 +1381,6 @@ ARTICLE_SUMMARY_SYSTEM_PROMPT = registry.active("article_summary_system").body
 ARTICLE_SUMMARY_USER_PROMPT = registry.active("article_summary_user").body
 CHAPTER_SUMMARY_SYSTEM_PROMPT = registry.active("chapter_summary_system").body
 CHAPTER_SUMMARY_USER_PROMPT = registry.active("chapter_summary_user").body
-CASE_LAW_DOCUMENT_PARSING_SYSTEM_PROMPT = registry.active("case_law_document_parsing_system").body
-CASE_LAW_DOCUMENT_PARSING_USER_PROMPT = registry.active("case_law_document_parsing_user").body
 CASE_LAW_ENTITY_SUMMARY_SYSTEM_PROMPT = registry.active("case_law_entity_summary_system").body
 CASE_LAW_ENTITY_SUMMARY_USER_PROMPT = registry.active("case_law_entity_summary_user").body
 CASE_LAW_ENTIRE_DOC_SUMMARY_SYSTEM_PROMPT = registry.active("case_law_entire_doc_summary_system").body

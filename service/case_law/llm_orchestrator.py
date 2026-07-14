@@ -3,11 +3,9 @@ import logging
 import re
 
 import config
-from docling.document_converter import DocumentConverter, PdfFormatOption
-from docling.datamodel.pipeline_options import PdfPipelineOptions
-from service.case_law.doc_parser import extract_sample, build_tree, Node
-from service.rag.prompt import (CASE_LAW_DOCUMENT_PARSING_SYSTEM_PROMPT, CASE_LAW_DOCUMENT_PARSING_USER_PROMPT,
-                                CASE_LAW_ENTITY_SUMMARY_SYSTEM_PROMPT, CASE_LAW_ENTITY_SUMMARY_USER_PROMPT,
+from service.case_law.html_parser import parse_celex
+from service.case_law.tree import Node, flatten
+from service.rag.prompt import (CASE_LAW_ENTITY_SUMMARY_SYSTEM_PROMPT, CASE_LAW_ENTITY_SUMMARY_USER_PROMPT,
                                 CASE_LAW_ENTIRE_DOC_SUMMARY_SYSTEM_PROMPT, CASE_LAW_ENTIRE_DOC_SUMMARY_USER_PROMPT)
 
 logging.basicConfig(
@@ -34,29 +32,25 @@ def _call_llm(user_prompt: str, system_prompt: str) -> str:
     )
     return resp.choices[0].message.content.strip()
 
-def parse_document(pdf_path: str) -> tuple[dict, list[Node]]:
-    """Full pipeline: infer rules then build the document tree. Returns (parsing_rules, roots)."""
-    parsing_rules = _infer_config(pdf_path)
-    roots = build_tree(pdf_path, parsing_rules)
-    return parsing_rules, roots
+def parse_document(celex: str) -> list[Node]:
+    """Parse the judgment identified by *celex* into a section tree.
 
-def summarize_document(pdf_path: str, char_length: int = 150) -> str:
-    """Produce a high-level summary of the entire document from the raw PDF text."""
-    opts = PdfPipelineOptions()
-    opts.do_ocr = False
-    opts.do_table_structure = False
-    converter = DocumentConverter(format_options={"pdf": PdfFormatOption(pipeline_options=opts)})
-    doc = converter.convert(pdf_path).document
+    Structure comes from the EUR-Lex XHTML markup, not from an LLM — see
+    ``service/case_law/html_parser.py``.
+    """
+    return parse_celex(celex)
+
+def summarize_document(roots: list[Node], char_length: int = 150) -> str:
+    """Produce a high-level summary of the entire document from the parsed tree."""
     document_content = "\n".join(
-        item.text.strip().replace("\n", " ")
-        for item, _ in doc.iterate_items()
-        if getattr(item, "text", None)
+        "\n".join([section["heading"], *section["body"]])
+        for section in flatten(roots)
     )
     user_prompt = CASE_LAW_ENTIRE_DOC_SUMMARY_USER_PROMPT.format(
         char_length=char_length,
         document_content=document_content,
     )
-    logger.info("Summarising full document from raw PDF: %s", pdf_path)
+    logger.info("Summarising full document (%d chars)", len(document_content))
     return _call_llm(user_prompt=user_prompt, system_prompt=CASE_LAW_ENTIRE_DOC_SUMMARY_SYSTEM_PROMPT)
 
 def summarize_section(section: dict) -> dict | None:
@@ -151,23 +145,3 @@ def _parse_json(raw: str) -> dict:
     except json.JSONDecodeError:
         fixed = re.sub(r'\\(?!["\\/bfnrtu])', r'\\\\', raw)
         return json.loads(fixed)
-
-
-def _infer_config(pdf_path: str) -> dict:
-    """Extract a structural sample from *pdf_path* and ask the LLM to infer parsing rules:
-    1. Extract a sample of text elements with their labels and docling levels which allow the LLM to understand the document's structure.
-    2. Format this sample into a prompt and call the LLM to infer structural rules in JSON format.
-    """
-    logger.info("Extracting structural sample from %s", pdf_path)
-
-    sample = extract_sample(pdf_path)
-    sample_text = "\n".join(
-        f"[{i+1}] label={s['label']}, docling_level={s['docling_level']}, text=\"{s['text']}\""
-        for i, s in enumerate(sample)
-    )
-    user_prompt = CASE_LAW_DOCUMENT_PARSING_USER_PROMPT.replace("{sample}", sample_text)
-    logger.info("Calling LLM for rule inference (%d elements in sample)", len(sample))
-    llm_raw_response = _call_llm(user_prompt=user_prompt, system_prompt=CASE_LAW_DOCUMENT_PARSING_SYSTEM_PROMPT)
-    parsing_rules = _parse_json(llm_raw_response)
-    logger.info("Domain inferred: %s", parsing_rules.get("domain", "—"))
-    return parsing_rules
