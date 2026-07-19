@@ -15,9 +15,13 @@ class NodeQueries:
     RETURN count(n) > 0 AS exists
     """
 
+    # `SET n +=` merges the given properties instead of replacing the whole map. A full
+    # replace would let one ingest path silently strip another's properties: `_load_case_law`
+    # upserts (:CaseLaw {id}) with nothing but an id, so re-running the act loader after the
+    # case law ingest would wipe `celex` and `summary` off every judgment.
     CREATE_NODE = """
     MERGE (n:{node_name} {{id: $node_properties.id}})
-    SET n = $node_properties
+    SET n += $node_properties
     RETURN n.id as node_id
     """
     GET_NODE_WITHOUT_EMBEDDING = """
@@ -200,13 +204,63 @@ class NodeQueries:
     ORDER BY art.id, p.id
     """
 
+class CaseLawQueries:
+    """Queries over the CJEU case law subgraph.
+
+    The only edge joining case law to the legislation is the document-level
+    (:CaseLaw)-[:INTERPRETS]->(:Article|:Paragraph|:Chapter), scraped from the EUR-Lex
+    "Interpreted by" metadata. Every query here reaches the acts through it.
+    """
+
+    # Drops the parsed content so an ingest can be re-run from scratch. The (:CaseLaw) nodes
+    # themselves are deliberately kept: they carry the INTERPRETS edges written by the act
+    # loader, which this pipeline cannot reconstruct.
+    DELETE_CASE_LAW_CONTENT = """
+    MATCH (n)
+    WHERE n:CaseLawSection OR n:CaseLawParagraph OR n:CaseLawTopic
+    DETACH DELETE n
+    """
+
+    GET_CASE_LAW_BY_ACTS = """
+    MATCH (cl:CaseLaw)-[:INTERPRETS]->(target)
+    MATCH (act:Act)-[:CONTAINS*]->(target)
+    WHERE act.id IN $acts
+    RETURN DISTINCT cl.id AS celex
+    ORDER BY celex
+    """
+
+    GET_CASE_LAW_PARAGRAPHS_BY_ACTS = """
+    MATCH (cl:CaseLaw)-[:INTERPRETS]->(target)
+    MATCH (act:Act)-[:CONTAINS*]->(target)
+    WHERE act.id IN $acts
+    MATCH (cl)-[:HAS_SECTION|CONTAINS*]->(:CaseLawSection)-[:HAS_PARAGRAPH]->(p:CaseLawParagraph)
+    RETURN DISTINCT p.id              AS id,
+                    p.text            AS text,
+                    p.number          AS number,
+                    p.is_operative    AS is_operative,
+                    p.section_heading AS section_heading,
+                    cl.id             AS celex,
+                    cl.case_number    AS case_number
+    ORDER BY celex, number
+    """
+
+    # NOTE: there is deliberately no "articles interpreted by these judgments" query here.
+    # That bridge existed and was removed: INTERPRETS is document-level, so ranking its targets
+    # by how many retrieved judgments share them surfaces whatever every judgment happens to
+    # touch (corpus-wide: Articles 6, 82, 4, 5) instead of what the retrieved passage is about
+    # — on a question about Article 55(3) it injected Articles 6, 5 and 16, and never 55.
+    # The bridge is now read from the citations in the passage text; see service/rag/citations.py.
+    # INTERPRETS remains as the corpus scope filter above.
+
+
 class RelationQueries:
     """Queries for relation operations"""
 
+    # MERGE, not CREATE: ingests are re-run routinely and CREATE duplicates every edge.
     CREATE_RELATIONSHIP = """
     MATCH (ln:{left_node_name} {{id: $left_id}})
     MATCH (rn:{right_node_name} {{id: $right_id}})
-    CREATE (ln)-[:{relationship}]->(rn)
+    MERGE (ln)-[:{relationship}]->(rn)
     RETURN ln.id as left_id, rn.id as right_id
     """
     

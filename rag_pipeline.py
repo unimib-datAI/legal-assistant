@@ -41,7 +41,11 @@ class RAGPipeline:
         use_context_curation: bool = False,
         use_query_decomposition: bool = True,
         hyde_iterations: int = 3,
+        overrides: dict | None = None,
     ):
+        """`overrides` sets any of the method's own params (see `method.param_specs()`),
+        so an eval can A/B a single knob — e.g. `{"use_case_law": False}` — without a
+        constructor argument per knob."""
         self.use_answer_filter = use_answer_filter
         self.use_context_curation = use_context_curation
         logger.info("[Prompts] active versions: %s", prompt_registry.active_versions())
@@ -60,6 +64,10 @@ class RAGPipeline:
             config["hyde_iterations"] = hyde_iterations
         if "use_query_decomposition" in config:
             config["use_query_decomposition"] = use_query_decomposition
+        for key, value in (overrides or {}).items():
+            if key not in config:
+                raise ValueError(f"{method_id!r} has no parameter {key!r}; known: {sorted(config)}")
+            config[key] = value
         self.retriever = method.build_retriever(ctx, config)
         logger.info("[RAGPipeline] method=%s config=%s", method_id, config)
 

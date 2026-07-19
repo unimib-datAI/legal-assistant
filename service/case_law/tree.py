@@ -2,7 +2,7 @@
 
 Kept dependency-free (no docling, no network) so both the HTML parser and the
 legacy PDF parser can build the same ``Node`` contract that ``flatten()`` and
-``create_case_law_kg()`` consume.
+``kg_builder.create_case_law_kg()`` consume.
 """
 from dataclasses import dataclass, field
 from typing import NamedTuple
@@ -62,7 +62,7 @@ class TreeBuilder:
 
 
 def flatten(roots: list[Node]) -> list[dict]:
-    """Pre-order flattening. `depth` is what create_case_law_kg re-parents on."""
+    """Pre-order flattening. `depth` is what the KG builder re-parents on."""
     out: list[dict] = []
 
     def _walk(nodes: list[Node]) -> None:

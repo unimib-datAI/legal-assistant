@@ -1,6 +1,6 @@
 import logging
 import re
-from collections import defaultdict
+from collections import Counter, defaultdict
 from typing import List, Any, Optional, Tuple
 
 import numpy as np
@@ -13,11 +13,36 @@ from pydantic import ConfigDict
 from sentence_transformers.cross_encoder import CrossEncoder
 
 import config
-from service.graph.query import NodeQueries
+from service.graph.query import CaseLawQueries, NodeQueries
 from service.rag.acts import CELEX_TO_ACT_NAME as _CELEX_TO_ACT_NAME
+from service.rag.acts import celex_instrument_and_numbers
+from service.rag.citations import cited_articles
 from service.rag.prompt import HYDE_PROMPT
 
 logger = logging.getLogger(__name__)
+
+# Judgment paragraph ids are sequential by construction ("62018CJ0311_par_199"), so a
+# passage's neighbours are reachable by arithmetic — no query, and the whole act-scoped
+# corpus is already resident in the branch's `by_id` map.
+_CASE_LAW_PAR_ID_RE = re.compile(r"^(?P<prefix>.+)_par_(?P<number>\d+)$")
+
+
+def _neighbour_ids(doc_id: str, window: int) -> List[str]:
+    """Ids of the paragraphs reading around `doc_id`: one before, `window` after.
+
+    Asymmetric because a judgment is a sequential argument whose conclusion follows its
+    reasoning. Operative parts ("_op_N") are returned nothing: they are a list of holdings,
+    not a reading order, so their neighbours carry no argumentative continuity.
+    """
+    m = _CASE_LAW_PAR_ID_RE.match(doc_id)
+    if not m or window < 1:
+        return []
+    prefix, number = m.group("prefix"), int(m.group("number"))
+    return [
+        f"{prefix}_par_{i}"
+        for i in range(number - 1, number + window + 1)
+        if i >= 1 and i != number
+    ]
 
 
 class HyDEGenerator:
@@ -97,6 +122,24 @@ def _decorate_recital(doc: Document) -> Document:
     return Document(page_content=f"{header}\n{body}", metadata=dict(doc.metadata))
 
 
+def _decorate_case_law(doc: Document) -> Document:
+    """Return a copy of `doc` headed with the case number, section and paragraph.
+
+    The header is what tells the synthesis LLM this passage is a *ruling about* a provision
+    rather than the provision itself — e.g. ``[C-645/19, The first question, para. 71]``.
+    """
+    meta = doc.metadata
+    case = meta.get("case_number") or meta.get("celex", "")
+    section = meta.get("section_heading") or ""
+    if meta.get("is_operative"):
+        locator = f"operative ruling {meta['number']}" if meta.get("number") else "operative part"
+    else:
+        locator = f"para. {meta['number']}" if meta.get("number") else "judgment"
+
+    header = f"[{case}, {section}, {locator}]" if section else f"[{case}, {locator}]"
+    return Document(page_content=f"{header}\n{doc.page_content}", metadata=dict(meta))
+
+
 class HybridRetriever(BaseRetriever):
     """Hybrid retriever: dense (vector) + sparse (BM25) article search fused with RRF.
 
@@ -104,10 +147,23 @@ class HybridRetriever(BaseRetriever):
     articles, then kept only if they clear `recital_score_threshold` — so irrelevant
     recitals are dropped instead of always padding the context. Set `use_recitals=False`
     to skip the recital branch entirely and return articles only.
+
+    On an INTERPRETIVE query (see `intent_classifier`) a second branch searches CJEU
+    judgment paragraphs, restricted to judgments that INTERPRETS one of the target acts.
+    It feeds the answer twice:
+
+    * the surviving paragraphs are appended to the context in their own slots, and
+    * the provisions those paragraphs *cite in their own text* are fused back into the
+      article RRF as an extra ranked list — a *graph boost* on the act branch.
+
+    The act branch is never made to depend on the case law branch: articles keep their
+    `top_k_final` guaranteed slots, and a query that retrieves no case law behaves exactly
+    as it does today. There is therefore no "no match" fallback path.
     """
 
     graph: Any
     article_vector_store: Any
+    case_law_vector_store: Any = None
     classifier: Any = None
     hyde_generator: Any = None
     use_hyde: bool = True
@@ -117,6 +173,12 @@ class HybridRetriever(BaseRetriever):
     top_k_recitals: int = 2
     recital_score_threshold: float = 0.3
     use_recitals: bool = True
+    use_case_law: bool = True
+    top_k_case_law: int = 5
+    case_law_score_threshold: float = 0.3
+    case_law_neighbours: int = 2
+    guarantee_operative: bool = True
+    top_k_bridge: int = 3
     use_query_decomposition: bool = False
     max_sub_questions: int = 3
     rrf_k: int = 60
@@ -129,6 +191,7 @@ class HybridRetriever(BaseRetriever):
     )
     _article_cache: Optional[dict] = None
     _recital_cache: Optional[dict] = None
+    _case_law_cache: Optional[dict] = None
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
@@ -193,6 +256,221 @@ class HybridRetriever(BaseRetriever):
             self._recital_cache = {}
         self._recital_cache[cache_key] = data
         return data
+
+    def _load_case_law_paragraphs(self, acts: List[str]) -> dict:
+        """Fetch judgment paragraphs for the given acts and build a BM25 index + id lookup. Cached."""
+        cache_key = tuple(sorted(acts))
+        if self._case_law_cache is not None and cache_key in self._case_law_cache:
+            return self._case_law_cache[cache_key]
+
+        rows = self.graph.query(CaseLawQueries.GET_CASE_LAW_PARAGRAPHS_BY_ACTS, params={"acts": acts})
+        if not rows:
+            data: dict = {"bm25": None, "by_id": {}}
+        else:
+            docs = [
+                Document(
+                    page_content=r["text"],
+                    metadata={
+                        "id": r["id"], "celex": r["celex"], "case_number": r["case_number"],
+                        "number": r["number"], "is_operative": r["is_operative"],
+                        "section_heading": r["section_heading"], "type": "case_law",
+                    },
+                )
+                for r in rows
+            ]
+            data = {
+                "bm25": BM25Retriever.from_documents(docs),
+                "by_id": {d.metadata["id"]: d for d in docs},
+            }
+            logger.info(
+                "[Case Law Cache] Loaded %d judgment paragraphs + built BM25 index for acts %s",
+                len(docs), acts,
+            )
+
+        if self._case_law_cache is None:
+            self._case_law_cache = {}
+        self._case_law_cache[cache_key] = data
+        return data
+
+    def _case_law_search(self, user_query: str, data: dict) -> List[Document]:
+        """Dense + BM25 search over judgment paragraphs, RRF-fused.
+
+        No HyDE here: the hypothetical passage is generated in the register of the
+        legislation, which is not how a judgment reads.
+        """
+        by_id = data.get("by_id", {})
+        dense: List[Document] = []
+        if self.case_law_vector_store is not None:
+            raw = self.case_law_vector_store.similarity_search(user_query, k=self.top_k_dense)
+            # Dense hits carry no usable metadata; re-attach it from the sparse corpus and
+            # drop anything outside the act-scoped candidate set.
+            dense = [by_id[_doc_id(d)] for d in raw if _doc_id(d) in by_id]
+
+        bm25 = data.get("bm25")
+        sparse: List[Document] = []
+        if bm25 is not None:
+            bm25.k = self.top_k_sparse
+            sparse = bm25.invoke(user_query)
+
+        fused = self._rrf_fusion(dense, sparse, k=self.rrf_k)
+        logger.info(
+            "[HybridRetriever] Case law: dense %d, sparse %d → %d candidates",
+            len(dense), len(sparse), len(fused),
+        )
+        return [_copy_doc(d) for d in fused[: self.top_k_case_law * 3]]
+
+    def _expand_neighbours(
+        self, seeds: List[Document], by_id: dict, already_scored: set
+    ) -> List[Document]:
+        """Paragraphs reading around the seeds, not already in the candidate pool.
+
+        Search matches a judgment's *topic*, which is argued at length in the run-up, and
+        misses its *holding*, which is a terse sentence with almost no lexical surface
+        ("It follows that … is therefore invalid.") sitting immediately after. Reading a
+        short window around each hit recovers the conclusion the argument was building to.
+        """
+        found: List[Document] = []
+        seen = set(already_scored)
+        for doc in seeds:
+            for neighbour_id in _neighbour_ids(_doc_id(doc), self.case_law_neighbours):
+                if neighbour_id in by_id and neighbour_id not in seen:
+                    seen.add(neighbour_id)
+                    found.append(_copy_doc(by_id[neighbour_id]))
+        return found
+
+    def _ensure_operative(
+        self, user_query: str, kept: List[Tuple[Document, float]], by_id: dict
+    ) -> List[Tuple[Document, float]]:
+        """Guarantee the operative part of the top judgment a slot, if it earns one.
+
+        The operative part *is* the holding — the paragraphs the Court hands down as its
+        answer — so on a question about what a judgment decided it is the highest-value
+        passage by construction. It is fetched rather than searched because it can lose the
+        candidate stage outright: it opens with a formal recitation of the instrument under
+        review, which matches a question about the ruling poorly.
+
+        Additive: this is a slot beyond `top_k_case_law`, and it is skipped when the kept set
+        already holds an operative passage or when none clears the threshold.
+        """
+        if not kept or any(doc.metadata.get("is_operative") for doc, _ in kept):
+            return kept
+
+        top_celex = kept[0][0].metadata.get("celex")
+        kept_ids = {_doc_id(doc) for doc, _ in kept}
+        operative = [
+            _copy_doc(doc) for doc in by_id.values()
+            if doc.metadata.get("is_operative")
+            and doc.metadata.get("celex") == top_celex
+            and doc.metadata["id"] not in kept_ids
+        ]
+        if not operative:
+            return kept
+
+        best_doc, best_score = max(
+            self._rerank_case_law(user_query, operative), key=lambda pair: pair[1]
+        )
+        if best_score < self.case_law_score_threshold:
+            return kept
+        logger.info(
+            "[HybridRetriever] Operative slot: %s(%.2f)", _doc_id(best_doc), best_score,
+        )
+        return kept + [(best_doc, best_score)]
+
+    def _select_case_law(
+        self, user_query: str, acts: List[str]
+    ) -> List[Tuple[Document, float]]:
+        """The case law branch end to end: search, read around the hits, rank, threshold, cap."""
+        data = self._load_case_law_paragraphs(acts)
+        by_id = data.get("by_id", {})
+        if not by_id:
+            return []
+
+        candidates = self._case_law_search(user_query, data)
+        if not candidates:
+            return []
+
+        scored = self._rerank_case_law(user_query, candidates)
+        scored.sort(key=lambda pair: -pair[1])
+
+        # Expand around the hits that would survive on their own, then let the reranker judge
+        # the neighbours on the same footing — a neighbour is kept only if it outscores what
+        # it displaces, so expansion cannot dilute a good result.
+        seeds = [
+            doc for doc, score in scored[: self.top_k_case_law]
+            if score >= self.case_law_score_threshold
+        ]
+        neighbours = self._expand_neighbours(seeds, by_id, {_doc_id(d) for d, _ in scored})
+        if neighbours:
+            scored.extend(self._rerank_case_law(user_query, neighbours))
+            scored.sort(key=lambda pair: -pair[1])
+
+        kept = [
+            (doc, score) for doc, score in scored
+            if score >= self.case_law_score_threshold
+        ][: self.top_k_case_law]
+
+        if self.guarantee_operative:
+            kept = self._ensure_operative(user_query, kept, by_id)
+
+        logger.info(
+            "[HybridRetriever] Case law kept %d/%d (+%d neighbour(s), threshold=%.2f): %s",
+            len(kept), len(scored), len(neighbours), self.case_law_score_threshold,
+            [f"{_doc_id(d)}({s:.2f})" for d, s in scored[:8]],
+        )
+        return kept
+
+    def _bridge_articles(
+        self, kept_case_law: List[Tuple[Document, float]], acts: List[str], by_id: dict
+    ) -> List[Document]:
+        """Articles the retrieved judgment passages cite in their own text.
+
+        Ranked by the rerank score of the passage that cites them — never by how often an
+        article is cited. Frequency is what the INTERPRETS bridge used and it simply
+        resurfaced the corpus's most-litigated provisions; here the article inherits the
+        relevance of the passage that called for it.
+        """
+        if not kept_case_law or not by_id:
+            return []
+
+        # "of that regulation" is only unambiguous while one act of its instrument type is in
+        # play. With a Regulation and a Directive targeted it still resolves; with two
+        # Regulations it would resolve against both, so it is switched off per act.
+        instruments = Counter(
+            parsed[0] for parsed in (celex_instrument_and_numbers(a) for a in acts)
+            if parsed is not None
+        )
+
+        best: dict = {}
+        for doc, score in kept_case_law:
+            for celex in acts:
+                parsed = celex_instrument_and_numbers(celex)
+                resolve_anaphora = parsed is not None and instruments[parsed[0]] == 1
+                for article_id in cited_articles(
+                    doc.page_content, celex, resolve_anaphora=resolve_anaphora
+                ):
+                    if article_id in by_id and score > best.get(article_id, float("-inf")):
+                        best[article_id] = score
+
+        ranked = sorted(best, key=lambda article_id: -best[article_id])[: self.top_k_bridge]
+        logger.info(
+            "[HybridRetriever] Bridge: %d passage(s) cite %d article(s) → %s",
+            len(kept_case_law), len(best),
+            [f"{article_id}({best[article_id]:.2f})" for article_id in ranked],
+        )
+        return [_copy_doc(by_id[article_id]) for article_id in ranked]
+
+    def _rerank_case_law(
+        self, user_query: str, candidates: List[Document]
+    ) -> List[Tuple[Document, float]]:
+        """Score judgment paragraphs against the query (single paragraphs — no dilution)."""
+        if not candidates:
+            return []
+        if not self.use_reranker:
+            n = len(candidates)
+            return [(doc, float(n - i)) for i, doc in enumerate(candidates)]
+        pairs = [[user_query, doc.page_content] for doc in candidates]
+        ce_scores = self.cross_encoder.predict(pairs)
+        return [(doc, float(score)) for doc, score in zip(candidates, ce_scores)]
 
     @staticmethod
     def _rrf_fusion(*ranked_lists: List[Document], k: int = 60) -> List[Document]:
@@ -298,6 +576,19 @@ class HybridRetriever(BaseRetriever):
         if bm25 is not None:
             bm25.k = self.top_k_sparse
 
+        # Case law branch: only on INTERPRETIVE queries, and always alongside the act branch
+        # rather than in place of it. It runs to completion first — including its rerank —
+        # because the bridge ranks each cited article by the score of the passage citing it,
+        # and that score does not exist until the case law has been judged.
+        is_interpretive = classification is not None and classification.intent == "INTERPRETIVE"
+        kept_case_law: List[Tuple[Document, float]] = []
+        bridge_list: List[Document] = []
+        if is_interpretive and self.use_case_law:
+            kept_case_law = self._select_case_law(user_query, target_acts)
+            bridge_list = self._bridge_articles(
+                kept_case_law, target_acts, article_data.get("by_id", {})
+            )
+
         dense_lists: List[List[Document]] = []
         sparse_lists: List[List[Document]] = []
         for q in search_queries:
@@ -310,8 +601,10 @@ class HybridRetriever(BaseRetriever):
                 q[:60], len(dense_docs), len(sparse_docs),
             )
 
-        # Sparse lists LAST so their fuller metadata wins the RRF doc-object tie.
-        fused = self._rrf_fusion(*dense_lists, *sparse_lists, k=self.rrf_k)
+        # Sparse lists LAST so their fuller metadata wins the RRF doc-object tie. The bridge is
+        # just one more ranked list: when it is empty (no case law, or none retrieved) the
+        # fusion is bit-for-bit what it was before the case law branch existed.
+        fused = self._rrf_fusion(*dense_lists, bridge_list, *sparse_lists, k=self.rrf_k)
         # Widen the pre-rerank pool with the number of search queries so sub-question
         # provisions are not cut before the cross-encoder scores them.
         article_candidates = fused[: self.top_k_final * 2 * len(search_queries)]
@@ -335,11 +628,11 @@ class HybridRetriever(BaseRetriever):
                 bm25_r.k = self.top_k_recitals * 2
                 recital_candidates = [_copy_doc(d) for d in bm25_r.invoke(user_query)]
 
-        if not article_candidates and not recital_candidates:
+        if not article_candidates and not recital_candidates and not kept_case_law:
             return []
 
-        # Articles and recitals are reranked (whole text) and ranked/selected independently —
-        # recitals never competed with articles for the guaranteed article slots.
+        # Articles and recitals are reranked (whole text) and selected independently — neither
+        # recitals nor judgments ever compete with articles for the guaranteed article slots.
         article_scored = self._rerank_articles(user_query, article_candidates)
         recital_scored = self._rerank_recitals(user_query, recital_candidates)
 
@@ -362,8 +655,9 @@ class HybridRetriever(BaseRetriever):
 
         article_docs = [_decorate_article(doc) for doc in article_docs]
         recital_docs = [_decorate_recital(doc) for doc, _ in surviving]
+        case_law_docs = [_decorate_case_law(doc) for doc, _ in kept_case_law]
 
-        final_docs = article_docs + recital_docs
+        final_docs = article_docs + recital_docs + case_law_docs
         logger.info(
             "[HybridRetriever] Final top-%d: %s",
             len(final_docs),

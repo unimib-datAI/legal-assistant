@@ -37,6 +37,23 @@ class HybridRagMethod(RagMethod):
                       help="Minimum cross-encoder score for a recital to be kept."),
             ParamSpec("use_recitals", "Search recitals", "bool", True,
                       help="Retrieve and rerank recitals alongside articles; when off, only articles are returned."),
+            ParamSpec("use_case_law", "Search case law (INTERPRETIVE)", "bool", True,
+                      help="On INTERPRETIVE queries, search CJEU judgment paragraphs and boost the "
+                           "articles those judgments interpret. No effect on DEFINITIONAL queries."),
+            ParamSpec("top_k_case_law", "Top-k case law paragraphs", "int", 5, min=0, max=10, step=1),
+            ParamSpec("case_law_score_threshold", "Case law score threshold", "float", 0.3,
+                      min=0.0, max=1.0, step=0.05,
+                      help="Minimum cross-encoder score for a judgment paragraph to be kept."),
+            ParamSpec("case_law_neighbours", "Case law neighbour window", "int", 2, min=0, max=5, step=1,
+                      help="Paragraphs read after each judgment hit (and one before) to recover the "
+                           "holding, which follows the reasoning and is too terse to match on its "
+                           "own. 0 disables the expansion."),
+            ParamSpec("guarantee_operative", "Guarantee the operative part", "bool", True,
+                      help="Give the operative part of the top-ranked judgment a slot of its own "
+                           "when it clears the threshold and no operative passage was retrieved."),
+            ParamSpec("top_k_bridge", "Top-k bridged articles", "int", 3, min=0, max=10, step=1,
+                      help="Articles cited in the text of the retrieved judgment passages, fused "
+                           "into the article ranking. 0 disables the graph boost."),
             ParamSpec("use_query_decomposition", "Decompose into sub-questions", "bool", False,
                       help="Split compound questions into sub-questions and retrieve (HyDE+BM25) per sub-question."),
             ParamSpec("max_sub_questions", "Max sub-questions", "int", 3, min=1, max=6, step=1,
@@ -51,9 +68,14 @@ class HybridRagMethod(RagMethod):
         use_hyde = cfg.get("use_hyde", True)
         iterations = cfg.pop(_HYDE_ITERATIONS, 3)
         hyde_generator = ctx.make_hyde_generator(iterations) if use_hyde else None
+        # The case law store is a cached_property: touching it here builds it, so only reach
+        # for it when the branch is actually enabled.
+        case_law_store = ctx.case_law_vector_store if cfg.get("use_case_law", True) else None
+
         return HybridRetriever(
             graph=ctx.graph,
             article_vector_store=ctx.article_vector_store,
+            case_law_vector_store=case_law_store,
             classifier=ctx.classifier,
             hyde_generator=hyde_generator,
             **cfg,

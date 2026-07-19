@@ -7,7 +7,21 @@ Consumers:
   user names explicitly is force-included regardless of the LLM's relevance score.
 - ``test/rag_eval/retrieval_eval.py`` — ``act_to_celex`` maps a dataset act label to CELEX.
 """
-from typing import List, Optional
+import re
+from typing import List, Optional, Tuple
+
+# CELEX is structured: sector, year, instrument letter, number — 32016R0679 is sector 3,
+# year 2016, Regulation, number 679. Everything an act is cited BY inside a judgment is
+# therefore derivable from its id, so a new act needs no entry anywhere below.
+_CELEX_RE = re.compile(r"^(?P<sector>\d)(?P<year>\d{4})(?P<instrument>[A-Z]+)(?P<number>\d+)$")
+
+# Keyed by the CELEX instrument letter, not by any act: every Regulation added to the graph
+# gets "Regulation" for free.
+_INSTRUMENT_WORD = {
+    "R": "Regulation",
+    "L": "Directive",
+    "D": "Decision",
+}
 
 CELEX_TO_ACT_NAME = {
     "32022R0868": "Data Governance Act",
@@ -33,6 +47,29 @@ ACT_NAME_KEYWORDS = (
     ("ai act", "32024R1689"),
     ("2024/1689", "32024R1689"),
 )
+
+
+def celex_instrument_and_numbers(celex: str) -> Optional[Tuple[str, List[str]]]:
+    """The instrument word and the number form(s) a judgment cites ``celex`` by.
+
+    ``32016R0679`` -> ``("Regulation", ["2016/679"])``. Both are read off the CELEX itself,
+    so this holds for any act in the graph rather than a hardcoded four.
+
+    Two number forms are returned for pre-2000 instruments: EU numbering abbreviated the
+    year until then, so Directive 95/46 (``31995L0046``) is cited "95/46", never "1995/46".
+    """
+    m = _CELEX_RE.match(celex.strip().upper())
+    if not m:
+        return None
+    word = _INSTRUMENT_WORD.get(m.group("instrument"))
+    if not word:
+        return None
+
+    year, number = int(m.group("year")), int(m.group("number"))
+    forms = [f"{year}/{number}"]
+    if year < 2000:
+        forms.append(f"{year % 100:02d}/{number}")
+    return word, forms
 
 
 def act_to_celex(label: str) -> Optional[str]:

@@ -104,6 +104,25 @@ class RagContext:
             embedding_node_property="textEmbedding",
         )
 
+    @cached_property
+    def case_law_vector_store(self) -> Neo4jVector:
+        """Judgment-paragraph store, used only on the INTERPRETIVE branch.
+
+        Built lazily: a corpus with no case law ingested (see ``case_law_init.py``) has no
+        CaseLawParagraph vector index, and DEFINITIONAL queries never touch this store.
+        """
+        logger.info("[RagContext] Building case law vector store…")
+        return Neo4jVector.from_existing_graph(
+            embedding=self.embeddings,
+            url=config.NEO4J_URI,
+            username=config.NEO4J_USERNAME,
+            password=config.NEO4J_PASSWORD,
+            index_name="CaseLawParagraph",
+            node_label="CaseLawParagraph",
+            text_node_properties=["text", "id"],
+            embedding_node_property="textEmbedding",
+        )
+
     def make_hyde_generator(self, iterations: int) -> HyDEGenerator:
         """Build a HyDE generator; temperature > 0 only when sampling >1 doc so
         the hypothetical passages diverge."""

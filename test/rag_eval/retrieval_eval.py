@@ -167,13 +167,17 @@ def main() -> None:
                         help="Dataset name under evals/datasets/ (without .csv).")
     parser.add_argument("--repeats", type=int, default=3,
                         help="Runs per query, averaged to wash out HyDE sampling variance.")
+    parser.add_argument("--no-case-law", action="store_true",
+                        help="Disable the INTERPRETIVE case law branch and its graph boost — "
+                             "the control arm when A/B-ing case law retrieval.")
     args = parser.parse_args()
 
-    rag = RAGPipeline(method_id=args.method)
+    overrides = {"use_case_law": False} if args.no_case_law else None
+    rag = RAGPipeline(method_id=args.method, overrides=overrides)
 
     rows = load_dataset(args.dataset)
-    logger.info("[retrieval_eval] method=%s dataset=%s rows=%d repeats=%d",
-                args.method, args.dataset, len(rows), args.repeats)
+    logger.info("[retrieval_eval] method=%s dataset=%s rows=%d repeats=%d case_law=%s",
+                args.method, args.dataset, len(rows), args.repeats, not args.no_case_law)
 
     report = evaluate(rag, rows, args.repeats)
 

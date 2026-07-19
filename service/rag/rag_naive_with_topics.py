@@ -108,11 +108,6 @@ class GraphEnrichedRetriever(BaseRetriever):
             return True
         return any(paragraph_id.startswith(celex) for celex in acts)
 
-    def _get_case_law_documents(self, user_query: str, acts: List[str]) -> List[Document]:
-        """Stub for INTERPRETIVE intent — case law retrieval not yet implemented."""
-        logger.info("[Case Law] INTERPRETIVE intent detected but case law retrieval is not implemented yet.")
-        return []
-
     def _get_relevant_documents(self, user_query: str, *, run_manager: CallbackManagerForRetrieverRun = None) -> List[Document]:
         seen_ids = set()
         relevant_docs = []
@@ -120,7 +115,6 @@ class GraphEnrichedRetriever(BaseRetriever):
 
         classification = self.classifier.classify(user_query) if self.classifier else None
         target_acts = classification.acts if classification else []
-        is_interpretive = classification is not None and classification.intent == "INTERPRETIVE"
 
         if self.use_topic_filter:
             matched_topics = self._match_topics(user_query)
@@ -159,9 +153,7 @@ class GraphEnrichedRetriever(BaseRetriever):
                 vector_ids.append(paragraph_id)
         logger.info("[Vector Search] Retrieved %d paragraphs: %s", len(vector_ids), vector_ids)
 
-        if is_interpretive:
-            relevant_docs.extend(self._get_case_law_documents(user_query, target_acts))
-
+        # Case law is retrieved only by the `hybrid` method — see HybridRetriever.
         relevant_docs.extend(recitals)
 
         logger.info("[Retriever] Reranking %d documents total (incl. %d recitals)", len(relevant_docs), len(recitals))

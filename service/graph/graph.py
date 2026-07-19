@@ -36,6 +36,11 @@ class Neo4jGraph:
             session.run("MATCH (n) DETACH DELETE n")
             logger.info("Database cleared")
 
+    def query(self, cypher: str, params: dict | None = None) -> list[dict]:
+        """Run a read/write Cypher statement and return its records as dicts."""
+        with self.driver.session() as session:
+            return session.run(cypher, **(params or {})).data()
+
     def node_exists(self, node_name: str, node_id: str) -> bool:
         """Return True if a node with the given id already exists."""
         with self.driver.session() as session:

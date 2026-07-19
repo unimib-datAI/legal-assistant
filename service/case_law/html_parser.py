@@ -95,20 +95,50 @@ def _text(tag: Tag) -> str:
     return " ".join(tag.get_text().split())
 
 
+def _text_outside_tables(tag: Tag) -> str:
+    """Text of *tag*, pruning any nested table.
+
+    A numbered paragraph that introduces a quotation holds the quotation in a table nested
+    inside its own prose cell. That inner table's rows are emitted separately, in document
+    order, right after this one — so taking the cell's full ``get_text()`` here would repeat
+    every quoted line inside the introducing paragraph.
+    """
+    parts: list[str] = []
+
+    def walk(node: Tag) -> None:
+        for child in node.children:
+            name = getattr(child, "name", None)
+            if name == "table":
+                continue
+            if name is None:
+                parts.append(str(child))
+            else:
+                walk(child)
+
+    walk(tag)
+    return " ".join(" ".join(parts).split())
+
+
 def _linearize(soup: BeautifulSoup) -> list[tuple[str | None, str]]:
     """Flatten the document into ordered (heading_class | None, text) pairs.
 
     Numbered paragraphs are split across two table cells — the number and the
     prose — and must be re-joined here. Without this merge every body paragraph
     would arrive as two fragments.
+
+    The cells must be counted non-recursively. A paragraph that introduces a quotation
+    ("3 Recitals 1, 4, 10 … state:") nests the quotation's own table inside its prose cell,
+    so a recursive ``find_all("td")`` sees 20 cells rather than 2, the row fails the pair
+    check, and the introducing paragraph is dropped from the document — while the quoted
+    lines it introduces survive, orphaned.
     """
     items: list[tuple[str | None, str]] = []
 
     for element in soup.find_all(["p", "tr"]):
         if element.name == "tr":
-            cells = element.find_all("td")
+            cells = element.find_all("td", recursive=False)
             if len(cells) == 2:
-                number, prose = _text(cells[0]), _text(cells[1])
+                number, prose = _text(cells[0]), _text_outside_tables(cells[1])
                 if prose:
                     items.append((None, f"{number} {prose}".strip()))
             continue
@@ -178,8 +208,8 @@ def _build_preamble(
 ) -> None:
     """Emit the three synthetic depth-0 sections that precede the judgment body.
 
-    ``create_case_law_kg`` keys its HAS_TOPIC edges off the literal heading "Topics",
-    so these names are a contract, not a cosmetic choice.
+    ``kg_builder`` keys its HAS_TOPIC edges off the literal heading "Topics" and skips all
+    three when creating paragraphs, so these names are a contract, not a cosmetic choice.
     """
     topics_idx = next((i for i, (_, text) in enumerate(items[:anchor]) if text == topics), anchor)
 
