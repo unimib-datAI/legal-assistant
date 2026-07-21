@@ -1,0 +1,676 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="2aac46b9-d4a6-4ea1-8017-d11d286eba73" name="Changes" comment="Rename dataset files and enhance prompt registry to support specific version retrieval for A/B testing" />
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="CopilotPersistence">
+    <persistenceIdMap>
+      <entry key="_E:/Projects/legal-assistant" value="37yn6QTkGA6J8w6tENo6cq5eTyX" />
+    </persistenceIdMap>
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Python Script" />
+      </list>
+    </option>
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_BRANCH_BY_REPOSITORY">
+      <map>
+        <entry key="$PROJECT_DIR$" value="feature/caselaw-integration-v2" />
+      </map>
+    </option>
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 4
+}</component>
+  <component name="ProjectId" id="37yn6QTkGA6J8w6tENo6cq5eTyX" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;Docker.docker-compose.yml: Compose Deployment.executor&quot;: &quot;Run&quot;,
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;Python.act_classification_eval.executor&quot;: &quot;Run&quot;,
+    &quot;Python.article_summary_pipeline.executor&quot;: &quot;Run&quot;,
+    &quot;Python.aske_pipeline (1).executor&quot;: &quot;Run&quot;,
+    &quot;Python.case_law_pipeline.executor&quot;: &quot;Run&quot;,
+    &quot;Python.chapter_summary_pipeline.executor&quot;: &quot;Run&quot;,
+    &quot;Python.evals.executor&quot;: &quot;Run&quot;,
+    &quot;Python.evals_ragas.executor&quot;: &quot;Run&quot;,
+    &quot;Python.graphRAG.executor&quot;: &quot;Debug&quot;,
+    &quot;Python.graphRAG2.executor&quot;: &quot;Run&quot;,
+    &quot;Python.graph_init.executor&quot;: &quot;Run&quot;,
+    &quot;Python.graph_rag.executor&quot;: &quot;Run&quot;,
+    &quot;Python.prova.executor&quot;: &quot;Run&quot;,
+    &quot;Python.rag.executor&quot;: &quot;Run&quot;,
+    &quot;Python.rag_pipeline.executor&quot;: &quot;Run&quot;,
+    &quot;Python.ragas_eval.executor&quot;: &quot;Run&quot;,
+    &quot;Python.socratic_knowledge_extraction.executor&quot;: &quot;Run&quot;,
+    &quot;Python.temp.executor&quot;: &quot;Run&quot;,
+    &quot;Python.test.executor&quot;: &quot;Run&quot;,
+    &quot;Python.test_parser.executor&quot;: &quot;Run&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.typescript.service.memoryLimit.init&quot;: &quot;true&quot;,
+    &quot;SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
+    &quot;codeWithMe.voiceChat.enabledByDefault&quot;: &quot;false&quot;,
+    &quot;last_opened_file_path&quot;: &quot;E:/Projects/legal-assistant/test/rag_eval/evals/evaluations&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;editor.preferences.fonts.default&quot;,
+    &quot;vcs.patch.path&quot;: &quot;C:/Users/nicho/Downloads&quot;
+  }
+}</component>
+  <component name="RecentsManager">
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="E:\Projects\legal-assistant\test\rag_eval\evals\evaluations" />
+      <recent name="E:\Projects\legal-assistant\docs" />
+      <recent name="E:\Projects\legal-assistant" />
+      <recent name="E:\Projects\legal-assistant\test\rag_eval\evals\datasets" />
+      <recent name="C:\Users\nicho\AppData\Roaming\JetBrains\PyCharm2026.1\scratches" />
+    </key>
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="E:\Projects\legal-assistant\test\rag_eval\evals\evaluations" />
+      <recent name="E:\Projects\legal-assistant\test\rag_eval\evals\evaluations\v1_bench" />
+      <recent name="E:\Projects\legal-assistant\test\rag_eval\evals\datasets" />
+      <recent name="E:\Projects\legal-assistant\docs" />
+      <recent name="E:\Projects\legal-assistant\.claude" />
+    </key>
+  </component>
+  <component name="RunManager" selected="Python.rag_pipeline">
+    <configuration name="aske_pipeline (1)" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="legal-assistant" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="DEBUG_JUST_MY_CODE" value="true" />
+      <option name="RUN_TOOL" value="" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/aske_pipeline.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="graph_init" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="legal-assistant" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="DEBUG_JUST_MY_CODE" value="true" />
+      <option name="RUN_TOOL" value="" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/graph_init.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="graph_rag" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="legal-assistant" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/service/rag" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="DEBUG_JUST_MY_CODE" value="true" />
+      <option name="RUN_TOOL" value="" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/service/rag/graph_rag.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="rag_pipeline" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="legal-assistant" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="DEBUG_JUST_MY_CODE" value="true" />
+      <option name="RUN_TOOL" value="" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/rag_pipeline.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration default="true" type="docker-deploy" factoryName="docker-compose.yml" temporary="true">
+      <deployment type="docker-compose.yml">
+        <settings />
+      </deployment>
+      <method v="2" />
+    </configuration>
+    <configuration name="docker-compose.yml: Compose Deployment" type="docker-deploy" factoryName="docker-compose.yml" temporary="true" server-name="Docker">
+      <deployment type="docker-compose.yml">
+        <settings>
+          <option name="sourceFilePath" value="docker-compose.yml" />
+        </settings>
+      </deployment>
+      <method v="2" />
+    </configuration>
+    <recent_temporary>
+      <list>
+        <item itemvalue="Python.rag_pipeline" />
+        <item itemvalue="Python.graph_rag" />
+        <item itemvalue="Python.graph_init" />
+        <item itemvalue="Python.aske_pipeline (1)" />
+        <item itemvalue="Docker.docker-compose.yml: Compose Deployment" />
+      </list>
+    </recent_temporary>
+  </component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-python-sdk-024ed6589d45-c2ffad84badb-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-261.23567.174" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="2aac46b9-d4a6-4ea1-8017-d11d286eba73" name="Changes" comment="" />
+      <created>1767884002550</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1767884002550</updated>
+    </task>
+    <task id="LOCAL-00001" summary="(WIP) &#10;* Implemented the graph init using the scraped information&#10;* RAG v1">
+      <option name="closed" value="true" />
+      <created>1768430411913</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1768430411913</updated>
+    </task>
+    <task id="LOCAL-00002" summary="First experiment with RAG">
+      <option name="closed" value="true" />
+      <created>1768778464858</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1768778464858</updated>
+    </task>
+    <task id="LOCAL-00003" summary="ASKE approach implementation v1">
+      <option name="closed" value="true" />
+      <created>1769426391231</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1769426391231</updated>
+    </task>
+    <task id="LOCAL-00004" summary="- ASKE implementation updated&#10;- First consistent version of GraphRAG with topic filtering">
+      <option name="closed" value="true" />
+      <created>1769502439957</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1769502439957</updated>
+    </task>
+    <task id="LOCAL-00005" summary="- Added another result">
+      <option name="closed" value="true" />
+      <created>1769502496633</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1769502496633</updated>
+    </task>
+    <task id="LOCAL-00006" summary="Refactor GraphEnrichedRetriever and enhance topic extraction logic">
+      <option name="closed" value="true" />
+      <created>1769897750781</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1769897750781</updated>
+    </task>
+    <task id="LOCAL-00007" summary="Add initial project configuration files and update RAG and ASKE pipelines">
+      <option name="closed" value="true" />
+      <created>1770546831140</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1770546831140</updated>
+    </task>
+    <task id="LOCAL-00008" summary="Improvements">
+      <option name="closed" value="true" />
+      <created>1773006022491</created>
+      <option name="number" value="00008" />
+      <option name="presentableId" value="LOCAL-00008" />
+      <option name="project" value="LOCAL" />
+      <updated>1773006022491</updated>
+    </task>
+    <task id="LOCAL-00009" summary="General refactor of the packages and the logic to reorganize the codebase">
+      <option name="closed" value="true" />
+      <created>1773042238463</created>
+      <option name="number" value="00009" />
+      <option name="presentableId" value="LOCAL-00009" />
+      <option name="project" value="LOCAL" />
+      <updated>1773042238463</updated>
+    </task>
+    <task id="LOCAL-00010" summary="Refactor EUR-Lex document handling to use Playwright for downloading documents and improve logging throughout the codebase">
+      <option name="closed" value="true" />
+      <created>1773045348810</created>
+      <option name="number" value="00010" />
+      <option name="presentableId" value="LOCAL-00010" />
+      <option name="project" value="LOCAL" />
+      <updated>1773045348810</updated>
+    </task>
+    <task id="LOCAL-00011" summary="Refactor document fetching to use BrowserFetcher for improved web scraping and error handling">
+      <option name="closed" value="true" />
+      <created>1773046587618</created>
+      <option name="number" value="00011" />
+      <option name="presentableId" value="LOCAL-00011" />
+      <option name="project" value="LOCAL" />
+      <updated>1773046587618</updated>
+    </task>
+    <task id="LOCAL-00012" summary="text preprocessor">
+      <option name="closed" value="true" />
+      <created>1773245761966</created>
+      <option name="number" value="00012" />
+      <option name="presentableId" value="LOCAL-00012" />
+      <option name="project" value="LOCAL" />
+      <updated>1773245761966</updated>
+    </task>
+    <task id="LOCAL-00013" summary="RAG enhancement (WIP)">
+      <option name="closed" value="true" />
+      <created>1773338120050</created>
+      <option name="number" value="00013" />
+      <option name="presentableId" value="LOCAL-00013" />
+      <option name="project" value="LOCAL" />
+      <updated>1773338120050</updated>
+    </task>
+    <task id="LOCAL-00014" summary="Enhance ASKE pipeline with JSON output and update seed definitions for improved legal topic classification">
+      <option name="closed" value="true" />
+      <created>1773430303379</created>
+      <option name="number" value="00014" />
+      <option name="presentableId" value="LOCAL-00014" />
+      <option name="project" value="LOCAL" />
+      <updated>1773430303379</updated>
+    </task>
+    <task id="LOCAL-00015" summary="Refactor of ASKE process">
+      <option name="closed" value="true" />
+      <created>1773844141670</created>
+      <option name="number" value="00015" />
+      <option name="presentableId" value="LOCAL-00015" />
+      <option name="project" value="LOCAL" />
+      <updated>1773844141670</updated>
+    </task>
+    <task id="LOCAL-00016" summary="Added BM25 on paragraph extracted by topic filtering">
+      <option name="closed" value="true" />
+      <created>1773875901925</created>
+      <option name="number" value="00016" />
+      <option name="presentableId" value="LOCAL-00016" />
+      <option name="project" value="LOCAL" />
+      <updated>1773875901925</updated>
+    </task>
+    <task id="LOCAL-00017" summary="Add RagasEvaluator class and implement PDF fetching for case law processing">
+      <option name="closed" value="true" />
+      <created>1774103806475</created>
+      <option name="number" value="00017" />
+      <option name="presentableId" value="LOCAL-00017" />
+      <option name="project" value="LOCAL" />
+      <updated>1774103806475</updated>
+    </task>
+    <task id="LOCAL-00018" summary="Ragas implementation">
+      <option name="closed" value="true" />
+      <created>1774295841214</created>
+      <option name="number" value="00018" />
+      <option name="presentableId" value="LOCAL-00018" />
+      <option name="project" value="LOCAL" />
+      <updated>1774295841214</updated>
+    </task>
+    <task id="LOCAL-00019" summary="Draft: GraphRAG approach to generate case law">
+      <option name="closed" value="true" />
+      <created>1775688066657</created>
+      <option name="number" value="00019" />
+      <option name="presentableId" value="LOCAL-00019" />
+      <option name="project" value="LOCAL" />
+      <updated>1775688066657</updated>
+    </task>
+    <task id="LOCAL-00020" summary="refactor of useless doc">
+      <option name="closed" value="true" />
+      <created>1777627656372</created>
+      <option name="number" value="00020" />
+      <option name="presentableId" value="LOCAL-00020" />
+      <option name="project" value="LOCAL" />
+      <updated>1777627656372</updated>
+    </task>
+    <task id="LOCAL-00021" summary="Improved doc_parser + case law insert">
+      <option name="closed" value="true" />
+      <created>1777843625607</created>
+      <option name="number" value="00021" />
+      <option name="presentableId" value="LOCAL-00021" />
+      <option name="project" value="LOCAL" />
+      <updated>1777843625607</updated>
+    </task>
+    <task id="LOCAL-00022" summary="Improved parsing + claims evaluation implemented for the first benchmark">
+      <option name="closed" value="true" />
+      <created>1778405397735</created>
+      <option name="number" value="00022" />
+      <option name="presentableId" value="LOCAL-00022" />
+      <option name="project" value="LOCAL" />
+      <updated>1778405397735</updated>
+    </task>
+    <task id="LOCAL-00023" summary="Implemented a new RAG approach + query + improved parsing of paragraphs">
+      <option name="closed" value="true" />
+      <created>1778524895864</created>
+      <option name="number" value="00023" />
+      <option name="presentableId" value="LOCAL-00023" />
+      <option name="project" value="LOCAL" />
+      <updated>1778524895864</updated>
+    </task>
+    <task id="LOCAL-00024" summary="rag alternative model">
+      <option name="closed" value="true" />
+      <created>1778597846946</created>
+      <option name="number" value="00024" />
+      <option name="presentableId" value="LOCAL-00024" />
+      <option name="project" value="LOCAL" />
+      <updated>1778597846946</updated>
+    </task>
+    <task id="LOCAL-00025" summary="rag alternative model">
+      <option name="closed" value="true" />
+      <created>1781864222493</created>
+      <option name="number" value="00025" />
+      <option name="presentableId" value="LOCAL-00025" />
+      <option name="project" value="LOCAL" />
+      <updated>1781864222493</updated>
+    </task>
+    <task id="LOCAL-00026" summary="Enhance RAG integration with new query capabilities and improved logging">
+      <option name="closed" value="true" />
+      <created>1782477728260</created>
+      <option name="number" value="00026" />
+      <option name="presentableId" value="LOCAL-00026" />
+      <option name="project" value="LOCAL" />
+      <updated>1782477728260</updated>
+    </task>
+    <task id="LOCAL-00027" summary="Nuovo retrieval (con performance okay)">
+      <option name="closed" value="true" />
+      <created>1782564261546</created>
+      <option name="number" value="00027" />
+      <option name="presentableId" value="LOCAL-00027" />
+      <option name="project" value="LOCAL" />
+      <updated>1782564261546</updated>
+    </task>
+    <task id="LOCAL-00028" summary="Refine HybridRetriever to filter recitals by score threshold and enhance candidate selection">
+      <option name="closed" value="true" />
+      <created>1782574686975</created>
+      <option name="number" value="00028" />
+      <option name="presentableId" value="LOCAL-00028" />
+      <option name="project" value="LOCAL" />
+      <updated>1782574686975</updated>
+    </task>
+    <task id="LOCAL-00029" summary="Add HyDE prompt and generator for act-grounded legal passage generation">
+      <option name="closed" value="true" />
+      <created>1782765340112</created>
+      <option name="number" value="00029" />
+      <option name="presentableId" value="LOCAL-00029" />
+      <option name="project" value="LOCAL" />
+      <updated>1782765340112</updated>
+    </task>
+    <task id="LOCAL-00030" summary="Refactor RAG pipeline to use shared context for resources and simplify initialization">
+      <option name="closed" value="true" />
+      <created>1782851579669</created>
+      <option name="number" value="00030" />
+      <option name="presentableId" value="LOCAL-00030" />
+      <option name="project" value="LOCAL" />
+      <updated>1782851579669</updated>
+    </task>
+    <task id="LOCAL-00031" summary="Implement RAG method framework with shared resources and attribution logic">
+      <option name="closed" value="true" />
+      <created>1782859251708</created>
+      <option name="number" value="00031" />
+      <option name="presentableId" value="LOCAL-00031" />
+      <option name="project" value="LOCAL" />
+      <updated>1782859251708</updated>
+    </task>
+    <task id="LOCAL-00032" summary="Add command-line interface for RAGAS evaluation and refactor RAGPipeline initialization">
+      <option name="closed" value="true" />
+      <created>1782860240307</created>
+      <option name="number" value="00032" />
+      <option name="presentableId" value="LOCAL-00032" />
+      <option name="project" value="LOCAL" />
+      <updated>1782860240307</updated>
+    </task>
+    <task id="LOCAL-00033" summary="Refactor case law parser to remove logging dependencies and add structure logging for document parsing">
+      <option name="closed" value="true" />
+      <created>1782993811692</created>
+      <option name="number" value="00033" />
+      <option name="presentableId" value="LOCAL-00033" />
+      <option name="project" value="LOCAL" />
+      <updated>1782993811692</updated>
+    </task>
+    <task id="LOCAL-00034" summary="Refactor chat engine initialization and update evaluation metrics for factual accuracy">
+      <option name="closed" value="true" />
+      <created>1783241317592</created>
+      <option name="number" value="00034" />
+      <option name="presentableId" value="LOCAL-00034" />
+      <option name="project" value="LOCAL" />
+      <updated>1783241317592</updated>
+    </task>
+    <task id="LOCAL-00035" summary="Add act score threshold configuration and enhance query classification output">
+      <option name="closed" value="true" />
+      <created>1783250538952</created>
+      <option name="number" value="00035" />
+      <option name="presentableId" value="LOCAL-00035" />
+      <option name="project" value="LOCAL" />
+      <updated>1783250538952</updated>
+    </task>
+    <task id="LOCAL-00036" summary="Add act score threshold configuration and enhance query classification output">
+      <option name="closed" value="true" />
+      <created>1783250562375</created>
+      <option name="number" value="00036" />
+      <option name="presentableId" value="LOCAL-00036" />
+      <option name="project" value="LOCAL" />
+      <updated>1783250562375</updated>
+    </task>
+    <task id="LOCAL-00037" summary="Add embedding model configuration and enhance query decomposition support">
+      <option name="closed" value="true" />
+      <created>1783603532966</created>
+      <option name="number" value="00037" />
+      <option name="presentableId" value="LOCAL-00037" />
+      <option name="project" value="LOCAL" />
+      <updated>1783603532966</updated>
+    </task>
+    <task id="LOCAL-00038" summary="Rename chat page to evaluation and update functionality to compare RAG answers with Ground Truth">
+      <option name="closed" value="true" />
+      <created>1783629018404</created>
+      <option name="number" value="00038" />
+      <option name="presentableId" value="LOCAL-00038" />
+      <option name="project" value="LOCAL" />
+      <updated>1783629018404</updated>
+    </task>
+    <task id="LOCAL-00039" summary="Enhance answer rendering with attributed segments and improve source citation handling">
+      <option name="closed" value="true" />
+      <created>1783858919661</created>
+      <option name="number" value="00039" />
+      <option name="presentableId" value="LOCAL-00039" />
+      <option name="project" value="LOCAL" />
+      <updated>1783858919661</updated>
+    </task>
+    <task id="LOCAL-00040" summary="Enhance document handling by adding decoration functions for articles and recitals">
+      <option name="closed" value="true" />
+      <created>1783949607517</created>
+      <option name="number" value="00040" />
+      <option name="presentableId" value="LOCAL-00040" />
+      <option name="project" value="LOCAL" />
+      <updated>1783949607517</updated>
+    </task>
+    <task id="LOCAL-00041" summary="Add acts module for EU legislation handling and source attribution enhancement">
+      <option name="closed" value="true" />
+      <created>1783955320250</created>
+      <option name="number" value="00041" />
+      <option name="presentableId" value="LOCAL-00041" />
+      <option name="project" value="LOCAL" />
+      <updated>1783955320250</updated>
+    </task>
+    <task id="LOCAL-00042" summary="Add project configuration files for legal assistant integration">
+      <option name="closed" value="true" />
+      <created>1783956888917</created>
+      <option name="number" value="00042" />
+      <option name="presentableId" value="LOCAL-00042" />
+      <option name="project" value="LOCAL" />
+      <updated>1783956888917</updated>
+    </task>
+    <task id="LOCAL-00043" summary="Add CSV editor configuration and legal assistant module setup">
+      <option name="closed" value="true" />
+      <created>1783956956485</created>
+      <option name="number" value="00043" />
+      <option name="presentableId" value="LOCAL-00043" />
+      <option name="project" value="LOCAL" />
+      <updated>1783956956485</updated>
+    </task>
+    <task id="LOCAL-00044" summary="Refactor case law parser to fetch CJEU judgments from EUR-Lex by CELEX id and read hierarchy from XHTML markup">
+      <option name="closed" value="true" />
+      <created>1784037613569</created>
+      <option name="number" value="00044" />
+      <option name="presentableId" value="LOCAL-00044" />
+      <option name="project" value="LOCAL" />
+      <updated>1784037613569</updated>
+    </task>
+    <task id="LOCAL-00045" summary="Refactor case law integration by updating imports, enhancing graph query capabilities, and implementing case law citation extraction">
+      <option name="closed" value="true" />
+      <created>1784467241545</created>
+      <option name="number" value="00045" />
+      <option name="presentableId" value="LOCAL-00045" />
+      <option name="project" value="LOCAL" />
+      <updated>1784467241545</updated>
+    </task>
+    <task id="LOCAL-00046" summary="Rename dataset files and enhance prompt registry to support specific version retrieval for A/B testing">
+      <option name="closed" value="true" />
+      <created>1784659375788</created>
+      <option name="number" value="00046" />
+      <option name="presentableId" value="LOCAL-00046" />
+      <option name="project" value="LOCAL" />
+      <updated>1784659375788</updated>
+    </task>
+    <option name="localTasksCounter" value="47" />
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="refactor of useless doc" />
+    <MESSAGE value="Improved doc_parser + case law insert" />
+    <MESSAGE value="Improved parsing + claims evaluation implemented for the first benchmark" />
+    <MESSAGE value="Implemented a new RAG approach + query + improved parsing of paragraphs" />
+    <MESSAGE value="rag alternative model" />
+    <MESSAGE value="Enhance RAG integration with new query capabilities and improved logging" />
+    <MESSAGE value="Nuovo retrieval (con performance okay)" />
+    <MESSAGE value="Refine HybridRetriever to filter recitals by score threshold and enhance candidate selection" />
+    <MESSAGE value="Add HyDE prompt and generator for act-grounded legal passage generation" />
+    <MESSAGE value="Refactor RAG pipeline to use shared context for resources and simplify initialization" />
+    <MESSAGE value="Implement RAG method framework with shared resources and attribution logic" />
+    <MESSAGE value="Add command-line interface for RAGAS evaluation and refactor RAGPipeline initialization" />
+    <MESSAGE value="Refactor case law parser to remove logging dependencies and add structure logging for document parsing" />
+    <MESSAGE value="Refactor chat engine initialization and update evaluation metrics for factual accuracy" />
+    <MESSAGE value="Add act score threshold configuration and enhance query classification output" />
+    <MESSAGE value="Add embedding model configuration and enhance query decomposition support" />
+    <MESSAGE value="Rename chat page to evaluation and update functionality to compare RAG answers with Ground Truth" />
+    <MESSAGE value="Enhance answer rendering with attributed segments and improve source citation handling" />
+    <MESSAGE value="Enhance document handling by adding decoration functions for articles and recitals" />
+    <MESSAGE value="Add acts module for EU legislation handling and source attribution enhancement" />
+    <MESSAGE value="Add project configuration files for legal assistant integration" />
+    <MESSAGE value="Add CSV editor configuration and legal assistant module setup" />
+    <MESSAGE value="Refactor case law parser to fetch CJEU judgments from EUR-Lex by CELEX id and read hierarchy from XHTML markup" />
+    <MESSAGE value="Refactor case law integration by updating imports, enhancing graph query capabilities, and implementing case law citation extraction" />
+    <MESSAGE value="Rename dataset files and enhance prompt registry to support specific version retrieval for A/B testing" />
+    <option name="LAST_COMMIT_MESSAGE" value="Rename dataset files and enhance prompt registry to support specific version retrieval for A/B testing" />
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/service/rag/rag_naive_with_topics.py</url>
+          <line>124</line>
+          <option name="timeStamp" value="2" />
+        </line-breakpoint>
+      </breakpoints>
+      <default-breakpoints>
+        <breakpoint type="python-exception">
+          <properties notifyOnTerminate="true" exception="BaseException">
+            <option name="notifyOnTerminate" value="true" />
+          </properties>
+        </breakpoint>
+      </default-breakpoints>
+    </breakpoint-manager>
+    <watches-manager>
+      <configuration name="PythonConfigurationType">
+        <watch expression="matched_topics" language="Python" />
+      </configuration>
+    </watches-manager>
+  </component>
+  <component name="github-copilot-workspace">
+    <instructionFileLocations>
+      <option value=".github/instructions" />
+    </instructionFileLocations>
+    <promptFileLocations>
+      <option value=".github/prompts" />
+    </promptFileLocations>
+  </component>
+</project>
