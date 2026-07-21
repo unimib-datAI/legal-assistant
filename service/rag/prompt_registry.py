@@ -65,6 +65,23 @@ class PromptRegistry:
             )
         return actives[0]
 
+    def get(self, name: str, version: str) -> PromptVersion:
+        """Return a specific version of ``name``, active or not.
+
+        Lets an eval pin a non-active prompt for an A/B run without flipping the
+        ``active`` flag, which would change the prompt for every other caller.
+        """
+        bucket = self._versions.get(name)
+        if not bucket:
+            raise ValueError(f"No prompt registered under name '{name}'")
+        for candidate in bucket:
+            if candidate.version == version:
+                return candidate
+        known = ", ".join(v.version for v in bucket)
+        raise ValueError(
+            f"Prompt '{name}' has no version '{version}'; known: {known}"
+        )
+
     def versions(self, name: str) -> list[PromptVersion]:
         """Return all registered versions for ``name`` (registration order)."""
         bucket = self._versions.get(name)

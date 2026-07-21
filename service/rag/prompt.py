@@ -918,6 +918,79 @@ CONVENTIONS:
   question, delete it. Prefer the shortest phrasing that still carries the rule; never pad.
 """
 
+# Experimental. Not a candidate for production — see its registry notes.
+ANSWER_SYNTHESIS_V9_UNCONSTRAINED = """You are an EU data law expert.
+
+Each retrieved passage is prefixed with its source:
+[Regulation, Chapter N — Chapter title, Article title]   — the legislation
+[Case C-NNN/YY, Section, para. N]                        — a CJEU judgment interpreting it
+
+=== ANSWER GUIDANCE ===
+{guidance}
+
+=== RETRIEVED CONTENT ===
+{context}
+
+=== QUESTION ===
+{question}
+
+=== STEP 1 — LOCATE THE GOVERNING PROVISION (do this silently, before writing) ===
+Identify the passage(s) whose subject matter IS what the question asks about — not a
+passage that merely shares vocabulary with it.
+- If the question names a Chapter, the governing provision MUST come from that Chapter
+  (each passage's source prefix shows its Chapter). Passages from other Chapters are
+  support at most, however well they match the wording.
+- If the question asks who or what falls within the scope of a Chapter, the governing
+  provision is that Chapter's scope/applicability provision — NOT the definitions article,
+  even if the definitions article contains related terms.
+- If the question asks for conditions, obligations, or a procedure, the governing
+  provision is the one that imposes them — not one that merely mentions the same actors.
+- A [Case C-NNN/YY] passage is NEVER the governing provision. The Court interprets the law;
+  it is not the legal basis. The governing provision is the article the judgment construes.
+  Use a judgment to state how that article is to be READ — the test it lays down, the limit
+  it sets, the condition it reads in — and only where it bears on THIS question.
+- Use the remaining passages as SUPPORT only where the governing provision cross-references
+  them, or where they state an exception or qualification to it. Never import a rule from a
+  support passage that the governing provision does not call for — that substitutes the
+  topic of the answer.
+- If NO retrieved passage actually governs the question, say so explicitly instead of
+  answering from the closest-sounding passage.
+
+=== STEP 2 — WRITE THE ANSWER ===
+1. Base the answer exclusively on the retrieved content. Introduce nothing the passages do
+   not state; do not fill gaps from memory. Copy every article/recital/case reference EXACTLY
+   from the source prefix — never infer or recall a number from memory. If the content is
+   insufficient to answer fully, state the gap explicitly rather than filling it.
+2. NEVER answer from prior knowledge of a judgment. The Court's landmark rulings are widely
+   reported and you will recognise many of them by name; that recollection is NOT a source
+   and must not reach the answer. State only what the retrieved [Case C-NNN/YY] passages
+   themselves say the Court held. Three consequences, all binding:
+   - If the passages set out a case's reasoning or its background but never state its holding
+     on THIS question, say that the retrieved material does not contain the holding. Do not
+     supply the outcome you remember.
+   - If a passage appears to contradict the outcome you recall, THE PASSAGE GOVERNS. A
+     judgment often recites the position it is about to reject, so a passage stating that
+     something is valid, adequate or binding may be the premise the Court went on to overturn
+     — report what the passages say, and if they stop short of the conclusion, say so.
+   - Never name a case, a date, or an outcome that no retrieved passage names.
+
+=== RESPONSE FORMAT ===
+Open by naming and framing the subject matter of the question explicitly, in your own words,
+before entering the detail of the provisions. Restating what is being asked is welcome.
+
+Then set out, comprehensively, every aspect of the question that the retrieved passages
+support. Structure the answer however serves it best: section headers, bullet points, and
+vertically numbered or lettered lists are all permitted and encouraged where they aid
+clarity. Introduce and explain each rule rather than merely asserting it — say what the
+provision does, who it binds, and why it matters, wherever the passages support that.
+
+There is no length limit and no economy requirement. Prefer the fuller treatment: cover
+adjacent and supporting material from the passages where it illuminates the question, and
+close with a summarising paragraph tying the elements together.
+
+Anchor each rule to its provision, but place the citation wherever it reads most naturally.
+"""
+
 ANSWER_SYNTHESIS_V7 = """You are an EU data law expert.
 
 Each retrieved passage is prefixed with its source:
@@ -1594,6 +1667,27 @@ registry.register(PromptVersion(
           "governs, because judgments recite the position they are about to reject; never name "
           "an outcome no passage names. Otherwise identical to v7.",
     body=ANSWER_SYNTHESIS_V8, active=True,
+))
+
+registry.register(PromptVersion(
+    name="answer_synthesis", version="v9", created=date(2026, 7, 19),
+    notes="EXPERIMENTAL — DO NOT ACTIVATE. Diagnostic probe, not a production candidate. "
+          "Built to quantify how much of the answer_relevancy gap against LightRAG (0.783) "
+          "and PathRAG (0.803) is style rather than answer quality. RAGAS answer_relevancy "
+          "is scored from user_input and response alone — it never sees the contexts or the "
+          "reference — by reverse-generating questions from the answer and cosine-matching "
+          "them against the original. It therefore rewards verbose topical restatement. "
+          "Scoring our own golden ground truths as if they were answers gives a mean of "
+          "0.663 (n=53, median 0.659, min 0.384) — BELOW our system's 0.688-0.695, so the "
+          "hand-written gold standard itself cannot reach 0.75 in its citation-first "
+          "register. v9 keeps every grounding rule of v8 verbatim (STEP 1 in full, STEP 2 "
+          "points 1-2 including the post-Schrems II parametric-memory rules) and strips the "
+          "entire RESPONSE FORMAT: no calibration references, no length ceiling, no BANNED "
+          "list, headers and bullets allowed, opening restatement required. The grounding "
+          "rules are retained deliberately as the experiment's control — if faithfulness or "
+          "factual_recall drop against v8, the relevancy gain is accuracy sold for style, "
+          "not a real improvement.",
+    body=ANSWER_SYNTHESIS_V9_UNCONSTRAINED, active=False,
 ))
 
 registry.register(PromptVersion(

@@ -49,11 +49,13 @@ class RagasMetricsEvaluator:
         method_id: str = "hybrid",
         use_context_curation: bool = False,
         use_query_decomposition: bool = False,
+        synthesis_prompt_version: str | None = None,
     ):
         self.rag = RAGPipeline(
             method_id=method_id,
             use_context_curation=use_context_curation,
             use_query_decomposition=use_query_decomposition,
+            synthesis_prompt_version=synthesis_prompt_version,
         )
         self.client = AsyncOpenAI(api_key=config.OPENAI_API_KEY, base_url=config.OPENAI_BASE_URL or None)
         self.llm = llm_factory("gpt-4o-mini", client=self.client, max_tokens=16000)
@@ -158,6 +160,7 @@ async def base_rag_experiment(dataset_name: str, root_dir: str, output_path: str
             )
             report.append({
                 **row,
+                "synthesis_prompt_version": evals.rag.synthesis_prompt_version,
                 "answer": response["answer"],
                 "sources": "|".join(response["sources"]),
                 "contexts": "|".join(response["contexts"]),
@@ -240,7 +243,7 @@ def main() -> None:
         help="RAG method id to evaluate (e.g. 'hybrid' or 'topics'). Default: hybrid.",
     )
     parser.add_argument(
-        "--dataset", default="golden_dataset",
+        "--dataset", default="case_law_golden_dataset",
         help="Dataset name to load from the evals root dir.",
     )
     parser.add_argument(
@@ -251,24 +254,33 @@ def main() -> None:
         "--decompose", action="store_true", default=False,
         help="Enable query decomposition (sub-questions + HyDE per sub-question) in the retriever.",
     )
+    parser.add_argument(
+        "--synthesis-prompt", default=None,
+        help="Pin a registered answer_synthesis version (e.g. 'v9') instead of the active one.",
+    )
     args = parser.parse_args()
 
     log_path = setup_run_logging()
     logger.info("Saving full run log to: %s", log_path)
     logger.info(
-        "RAG method: %s | dataset: %s | curate: %s | decompose: %s",
+        "RAG method: %s | dataset: %s | curate: %s | decompose: %s | synthesis prompt: %s",
         args.method, args.dataset, args.curate, args.decompose,
+        args.synthesis_prompt or "active",
     )
     evals = RagasMetricsEvaluator(
         method_id=args.method,
         use_context_curation=args.curate,
         use_query_decomposition=args.decompose,
+        synthesis_prompt_version=args.synthesis_prompt,
     )
     try:
         asyncio.run(base_rag_experiment(
             dataset_name=args.dataset,
             root_dir=str(config.EVALS_DIR),
-            output_path=str(config.EVALS_DIR / "evaluations" / f"rag_eval_ragas_{uuid.uuid4()}.csv"),
+            output_path=str(
+                config.EVALS_DIR / "evaluations"
+                / f"rag_eval_ragas_{evals.rag.synthesis_prompt_version}_{uuid.uuid4()}.csv"
+            ),
         ))
     finally:
         logger.info("Full run log saved to: %s", log_path.resolve())

@@ -10,7 +10,6 @@ from langchain_core.prompts import PromptTemplate
 from service.rag.methods.context import RagContext
 from service.rag.methods.registry import get_method
 from service.rag.prompt import (
-    ANSWER_SYNTHESIS_PROMPT,
     ANSWER_FILTER_PROMPT,
     CONTEXT_CURATION_PROMPT,
     registry as prompt_registry,
@@ -22,11 +21,6 @@ logging.basicConfig(
     datefmt="%H:%M:%S",
 )
 logger = logging.getLogger(__name__)
-
-QA_PROMPT = PromptTemplate(
-    template=ANSWER_SYNTHESIS_PROMPT,
-    input_variables=["context", "question", "guidance"],
-)
 
 # First bracketed source header on a passage, e.g. "[Data Governance Act, ..., Article 3]".
 _SOURCE_HEADER_RE = re.compile(r"^\s*(\[[^\]]+\])")
@@ -42,13 +36,31 @@ class RAGPipeline:
         use_query_decomposition: bool = True,
         hyde_iterations: int = 3,
         overrides: dict | None = None,
+        synthesis_prompt_version: str | None = None,
     ):
         """`overrides` sets any of the method's own params (see `method.param_specs()`),
         so an eval can A/B a single knob — e.g. `{"use_case_law": False}` — without a
-        constructor argument per knob."""
+        constructor argument per knob.
+
+        `synthesis_prompt_version` pins a specific registered version of the
+        answer-synthesis prompt (e.g. "v9") instead of the active one, so a prompt A/B
+        does not require flipping the registry's `active` flag for every other caller.
+        """
         self.use_answer_filter = use_answer_filter
         self.use_context_curation = use_context_curation
         logger.info("[Prompts] active versions: %s", prompt_registry.active_versions())
+
+        synthesis_prompt = (
+            prompt_registry.get("answer_synthesis", synthesis_prompt_version)
+            if synthesis_prompt_version
+            else prompt_registry.active("answer_synthesis")
+        )
+        self.synthesis_prompt_version = synthesis_prompt.version
+        self.qa_prompt = PromptTemplate(
+            template=synthesis_prompt.body,
+            input_variables=["context", "question", "guidance"],
+        )
+        logger.info("[Prompts] answer_synthesis version in use: %s", synthesis_prompt.version)
 
         # Shared resources (graph, vector store, classifier, LLMs) come from the
         # same RagContext the chat frontend uses — single source of truth.
@@ -156,7 +168,7 @@ class RAGPipeline:
             docs, guidance = self._curate_context(question, docs)
 
         context = "\n\n".join(doc.page_content for doc in docs)
-        prompt_text = QA_PROMPT.format(
+        prompt_text = self.qa_prompt.format(
             context=context, question=question, guidance=guidance,
         )
         answer_msg = self.synthesis_llm.invoke(prompt_text)
