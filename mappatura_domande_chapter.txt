@@ -1,0 +1,273 @@
+MAPPATURA DOMANDE -> ARTICOLI -> CHAPTER
+======================================================================
+
+[1] DGA - Data Governance Act 2022/868
+  Domanda : What is the subject matter of the Data Governance Act?
+  Articoli: Art. 1(1)
+  Chapter : Cap. I
+
+[2] DGA - Data Governance Act 2022/868
+  Domanda : What is the scope of applicability of the Data Governance Act?
+  Articoli: Art. 2(17); Art. 2(18); Art. 2(19); Art. 2(11); Art. 2(16); Art. 3(1); Art. 10
+  Chapter : Cap. I , Cap. II , Cap. III
+
+[3] DGA - Data Governance Act 2022/868
+  Domanda : What types of protected data fall under the material scope of Chapter II?
+  Articoli: Art. 3(1); Art. 3(2)(e)
+  Chapter : Cap. II
+
+[4] DGA - Data Governance Act 2022/868
+  Domanda : What entities fall under the personal scope of Chapter II?
+  Articoli: Art. 2(17); Art. 2(18); Art. 2(19); Art. 3(2)
+  Chapter : Cap. I , Cap. II
+
+[5] DGA - Data Governance Act 2022/868
+  Domanda : Does Chapter II create an obligation to allow the re-use of data?
+  Articoli: Art. 1(2)
+  Chapter : Cap. I
+
+[6] DGA - Data Governance Act 2022/868
+  Domanda : Can a public sector body conclude an exclusive agreement regarding the re-use of protected data covered under Chapter II?
+  Articoli: Art. 4(1); Art. 4(2)-(5)
+  Chapter : Cap. II
+
+[7] DGA - Data Governance Act 2022/868
+  Domanda : What are the conditions to be allowed to conclude exclusive arrangements under Chapter II?
+  Articoli: Art. 4(2); Art. 4(3); Art. 4(4); Art. 4(5)
+  Chapter : Cap. II
+
+[8] DGA - Data Governance Act 2022/868
+  Domanda : What obligations do public sector bodies have regarding conditions for allowing the re-use of protected data?
+  Articoli: Art. 5(1); Art. 5(2); Art. 8
+  Chapter : Cap. II
+
+[9] DGA - Data Governance Act 2022/868
+  Domanda : Does the Data Governance Act allow public sector bodies to charge a fee for the re-use of protected data they hold?
+  Articoli: Art. 6(2); Art. 6(5)
+  Chapter : Cap. II
+
+[10] DGA - Data Governance Act 2022/868
+  Domanda : Does Chapter II impose specific requirements regarding the nature of the data made available for re-use?
+  Articoli: Art. 5(3); Art. 5(4); Art. 5(5); Art. 5(6); Art. 5(8); Art. 5(9)-(14)
+  Chapter : Cap. II
+
+[11] DGA - Data Governance Act 2022/868
+  Domanda : What type of services fall under the material scope of Chapter III?
+  Articoli: Art. 2(11); Art. 2(15); Art. 10; Art. 15; Recital 28
+  Chapter : Cap. I , Cap. III , Recitals
+
+[12] DGA - Data Governance Act 2022/868
+  Domanda : What is the notification procedure that data intermediation service providers must follow?
+  Articoli: Art. 11(1); Art. 11(4); Art. 11(5); Art. 11(6); Art. 13
+  Chapter : Cap. III
+
+[13] DGA - Data Governance Act 2022/868
+  Domanda : What conditions do the provision of data intermediation services need to fulfill?
+  Articoli: Art. 12; Art. 12(a); Art. 12(c); Art. 12(e); Art. 12(f); Art. 12(i); Art. 12(l)
+  Chapter : Cap. III
+
+[14] DGA - Data Governance Act 2022/868
+  Domanda : What services fall under the material scope of Chapter IV of the Data Governance Act?
+  Articoli: Art. 1(c); Art. 2(16); Recital 45
+  Chapter : Cap. I , Recitals
+
+[15] DGA - Data Governance Act 2022/868
+  Domanda : What is the 'data altruism consent form' issued by the Commission?
+  Articoli: Art. 25(1); Art. 25(2); Art. 25(3); Art. 25(4); Recital 52
+  Chapter : Cap. IV , Recitals
+
+[16] DGA - Data Governance Act 2022/868
+  Domanda : What is the registration mechanism for data altruism organisations?
+  Articoli: Art. 17(2); Art. 18; Recital 46
+  Chapter : Cap. IV , Recitals
+
+[17] DGA - Data Governance Act 2022/868
+  Domanda : What requirements do data altruism organisations need to fulfill to be recognised as 'data altruism organisation recognised in the Union'?
+  Articoli: Art. 18; Art. 19(1); Art. 19(4); Art. 19(6); Art. 22(1)
+  Chapter : Cap. IV
+
+[18] DGA - Data Governance Act 2022/868
+  Domanda : What requirements must registered data altruism organisations continuously fulfill?
+  Articoli: Art. 17; Art. 18; Art. 19; Art. 20(1); Art. 20(2); Art. 21(1)(a); Art. 21(2); Art. 21(3)
+  Chapter : Cap. IV
+
+[19] DGA - Data Governance Act 2022/868
+  Domanda : What is the European Data Innovation Board?
+  Articoli: Art. 29(1); Art. 29(2); Art. 29(3); Art. 30
+  Chapter : Cap. VI
+
+[20] DA - Data Act 2023/2854
+  Domanda : What is the subject matter of the Data Act?
+  Articoli: Art. 1(1)
+  Chapter : Cap. I
+
+[21] DA - Data Act 2023/2854
+  Domanda : What is the scope of applicability of the Data Act?
+  Articoli: Art. 1(3)
+  Chapter : Cap. I
+
+[22] DA - Data Act 2023/2854
+  Domanda : How should connected products and related services be designed and manufactured/provided?
+  Articoli: Art. 3(1)
+  Chapter : Cap. II
+
+[23] DA - Data Act 2023/2854
+  Domanda : What information is the seller/renter/lessor of a connected product obliged to provide to the user before contract conclusion?
+  Articoli: Art. 3(2)
+  Chapter : Cap. II
+
+[24] DA - Data Act 2023/2854
+  Domanda : What information is the provider of a related service obliged to provide to the user before contract conclusion?
+  Articoli: Art. 3(3); Art. 7(1)
+  Chapter : Cap. II
+
+[25] DA - Data Act 2023/2854
+  Domanda : What does a communication done 'in a clear and comprehensible manner' entail?
+  Articoli: Recital 24
+  Chapter : Recitals
+
+[26] DA - Data Act 2023/2854
+  Domanda : How can the obligation for communication 'in a clear and comprehensible manner' be fulfilled?
+  Articoli: Recital 24
+  Chapter : Recitals
+
+[27] DA - Data Act 2023/2854
+  Domanda : If the connected product or related service data are not directly accessible by the user, what is the data holder obliged to do?
+  Articoli: Art. 4(1); Art. 4(2); Art. 37
+  Chapter : Cap. II , Cap. VIII
+
+[28] DA - Data Act 2023/2854
+  Domanda : Can the user of the connected product or related service ask from the data holder to share data with third parties?
+  Articoli: Art. 5(1); Art. 5(2)
+  Chapter : Cap. II
+
+[29] DA - Data Act 2023/2854
+  Domanda : How should the third party process the data they receive from the data holder?
+  Articoli: Art. 6(1); Art. 6(2)
+  Chapter : Cap. II
+
+[30] DA - Data Act 2023/2854
+  Domanda : What obligations does the data holder have towards the data recipient (B2B context)?
+  Articoli: Art. 8(1)
+  Chapter : Cap. II
+
+[31] DA - Data Act 2023/2854
+  Domanda : Which terms are considered or presumed to be unfair for the purposes of Art. 8(1)?
+  Articoli: Art. 8(4); Art. 8(5); Art. 13(3)
+  Chapter : Cap. II , Cap. III
+
+[32] DA - Data Act 2023/2854
+  Domanda : What elements should be taken into consideration upon agreement of a reasonable compensation between a data holder and a data recipient?
+  Articoli: Art. 9(1)
+  Chapter : Cap. II
+
+[33] DA - Data Act 2023/2854
+  Domanda : In which cases is a data holder obliged to make data available to a public sector body, the Commission, the ECB or a Union body?
+  Articoli: Art. 14; Art. 15
+  Chapter : Cap. V
+
+[34] DA - Data Act 2023/2854
+  Domanda : What obstacles should data processing services' providers not impose and/or remove to customers of their services?
+  Articoli: Art. 23; Art. 24; Art. 25; Art. 30(1)
+  Chapter : Cap. VI
+
+[35] GDPR - GDPR 2016/679
+  Domanda : How do you obtain valid consent under the GDPR?
+  Articoli: Art. 6; Art. 7; Art. 8; Art. 9
+  Chapter : Cap. II
+
+[36] GDPR - GDPR 2016/679
+  Domanda : What must a privacy notice include when data are collected directly from the individual?
+  Articoli: Art. 12; Art. 13
+  Chapter : Cap. III
+
+[37] GDPR - GDPR 2016/679
+  Domanda : What is a DPIA and when is it required under the EU GDPR?
+  Articoli: Art. 35; Art. 36
+  Chapter : Cap. IV
+
+[38] GDPR - GDPR 2016/679
+  Domanda : What does the data minimisation principle require in practice?
+  Articoli: Art. 5(1)(c)
+  Chapter : Cap. II
+
+[39] GDPR - GDPR 2016/679
+  Domanda : What are the controller's obligations in order to maintain data accuracy?
+  Articoli: Art. 5(1)(d); Art. 16; Art. 18
+  Chapter : Cap. II , Cap. III
+
+[40] GDPR - GDPR 2016/679
+  Domanda : How should the storage limitation principle and data retention schedules be applied?
+  Articoli: Art. 5(1)(e)
+  Chapter : Cap. II
+
+[41] GDPR - GDPR 2016/679
+  Domanda : What does security of processing require under Article 32 of the GDPR?
+  Articoli: Art. 28; Art. 32
+  Chapter : Cap. IV
+
+[42] GDPR - GDPR 2016/679
+  Domanda : What is 'data protection by design and by default' and how is it applied?
+  Articoli: Art. 25
+  Chapter : Cap. IV
+
+[43] GDPR - GDPR 2016/679
+  Domanda : What are records of processing activities and what should they contain?
+  Articoli: Art. 30
+  Chapter : Cap. IV
+
+[44] GDPR - GDPR 2016/679
+  Domanda : When are parties joint controllers and what must their arrangement cover?
+  Articoli: Art. 26
+  Chapter : Cap. IV
+
+[45] GDPR - GDPR 2016/679
+  Domanda : What are the mandatory processor obligations and what should a data processing agreement (DPA) include?
+  Articoli: Art. 28; Art. 28(3)
+  Chapter : Cap. IV
+
+[46] GDPR - GDPR 2016/679
+  Domanda : What are the requirements for engaging a sub-processor?
+  Articoli: Art. 28
+  Chapter : Cap. IV
+
+[47] GDPR - GDPR 2016/679
+  Domanda : When can legitimate interests be relied on and how is the LIA conducted?
+  Articoli: Art. 6(1)(f)
+  Chapter : Cap. II
+
+[48] GDPR - GDPR 2016/679
+  Domanda : How is the right to rectification exercised and managed?
+  Articoli: Art. 16; Art. 18; Art. 19
+  Chapter : Cap. III
+
+[49] GDPR - GDPR 2016/679
+  Domanda : What does the right to erasure ('right to be forgotten') cover and what are its limits?
+  Articoli: Art. 17; Art. 19
+  Chapter : Cap. III
+
+[50] GDPR - GDPR 2016/679
+  Domanda : What constitutes a personal data breach and when must it be notified?
+  Articoli: Art. 33; Art. 34
+  Chapter : Cap. IV
+
+[51] GDPR - GDPR 2016/679
+  Domanda : What are the roles of 'controller' and 'processor'?
+  Articoli: Art. 4(7); Art. 4(8); Art. 24; Art. 28
+  Chapter : Cap. I , Cap. IV
+
+[52] GDPR - GDPR 2016/679
+  Domanda : What are the requirements for international data transfers?
+  Articoli: Art. 45; Art. 46; Art. 47; Art. 49
+  Chapter : Cap. V
+
+[53] GDPR - GDPR 2016/679
+  Domanda : What is a Transfer Impact Assessment (TIA) and what should it contain?
+  Articoli: Art. 46; Art. 49
+  Chapter : Cap. V
+
+======================================================================
+RIEPILOGO
+  Domande multi-chapter : 2, 4, 11, 14, 15, 16, 27, 31, 39, 51
+  Domande con Recitals  : 11, 14, 15, 16, 25, 26
+  Domande SOLO-Recital  : 25, 26  (critiche: nessun articolo)

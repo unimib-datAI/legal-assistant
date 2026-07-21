@@ -3,3 +3,4 @@ neo4j/
 venv/
 __pycache__/
 .env
+test/rag_eval/evals/logs/

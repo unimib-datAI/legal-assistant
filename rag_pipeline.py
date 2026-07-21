@@ -1,17 +1,19 @@
 import json
 import logging
 import pathlib
+import re
+from typing import List, Tuple
 
-from langchain_classic.chains.retrieval_qa.base import RetrievalQA
-from langchain_community.vectorstores import Neo4jVector
+from langchain_core.documents import Document
 from langchain_core.prompts import PromptTemplate
-from langchain_neo4j import Neo4jGraph
-from langchain_huggingface import HuggingFaceEmbeddings
-from langchain_openai import ChatOpenAI
 
-import config
-from service.rag.prompt import ANSWER_SYNTHESIS_PROMPT
-from service.rag.rag_naive_with_topics import GraphEnrichedRetriever
+from service.rag.methods.context import RagContext
+from service.rag.methods.registry import get_method
+from service.rag.prompt import (
+    ANSWER_FILTER_PROMPT,
+    CONTEXT_CURATION_PROMPT,
+    registry as prompt_registry,
+)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -20,56 +22,168 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-QA_PROMPT = PromptTemplate(
-    template=ANSWER_SYNTHESIS_PROMPT,
-    input_variables=["context", "question"]
-)
+# First bracketed source header on a passage, e.g. "[Data Governance Act, ..., Article 3]".
+_SOURCE_HEADER_RE = re.compile(r"^\s*(\[[^\]]+\])")
 
 
 class RAGPipeline:
 
-    def __init__(self):
-        graph = Neo4jGraph(
-            url=config.NEO4J_URI,
-            username=config.NEO4J_USERNAME,
-            password=config.NEO4J_PASSWORD
-        )
+    def __init__(
+        self,
+        method_id: str = "hybrid",
+        use_answer_filter: bool = False,
+        use_context_curation: bool = False,
+        use_query_decomposition: bool = True,
+        hyde_iterations: int = 3,
+        overrides: dict | None = None,
+        synthesis_prompt_version: str | None = None,
+    ):
+        """`overrides` sets any of the method's own params (see `method.param_specs()`),
+        so an eval can A/B a single knob — e.g. `{"use_case_law": False}` — without a
+        constructor argument per knob.
 
-        vector_store = Neo4jVector.from_existing_graph(
-            embedding=HuggingFaceEmbeddings(
-                model_name="BAAI/bge-large-en-v1.5",
-                encode_kwargs={"normalize_embeddings": True},
-            ),
-            url=config.NEO4J_URI,
-            username=config.NEO4J_USERNAME,
-            password=config.NEO4J_PASSWORD,
-            index_name="Paragraph",
-            node_label="Paragraph",
-            text_node_properties=["text", "id"],
-            embedding_node_property="textEmbedding"
-        )
+        `synthesis_prompt_version` pins a specific registered version of the
+        answer-synthesis prompt (e.g. "v9") instead of the active one, so a prompt A/B
+        does not require flipping the registry's `active` flag for every other caller.
+        """
+        self.use_answer_filter = use_answer_filter
+        self.use_context_curation = use_context_curation
+        logger.info("[Prompts] active versions: %s", prompt_registry.active_versions())
 
-        retriever = GraphEnrichedRetriever(
-            vector_store=vector_store,
-            graph=graph,
-            k=5,
-            use_topic_filter=True
+        synthesis_prompt = (
+            prompt_registry.get("answer_synthesis", synthesis_prompt_version)
+            if synthesis_prompt_version
+            else prompt_registry.active("answer_synthesis")
         )
+        self.synthesis_prompt_version = synthesis_prompt.version
+        self.qa_prompt = PromptTemplate(
+            template=synthesis_prompt.body,
+            input_variables=["context", "question", "guidance"],
+        )
+        logger.info("[Prompts] answer_synthesis version in use: %s", synthesis_prompt.version)
 
-        self.qa_chain = RetrievalQA.from_chain_type(
-            llm=ChatOpenAI(temperature=0, api_key=config.OPENAI_API_KEY, base_url=config.OPENAI_BASE_URL),
-            chain_type="stuff",
-            retriever=retriever,
-            return_source_documents=True,
-            chain_type_kwargs={"prompt": QA_PROMPT}
+        # Shared resources (graph, vector store, classifier, LLMs) come from the
+        # same RagContext the chat frontend uses — single source of truth.
+        ctx = RagContext()
+        self.classifier = ctx.classifier
+        self.synthesis_llm = ctx.synthesis_llm
+        self.filter_llm = ctx.filter_llm if use_answer_filter else None
+        self.curator_llm = ctx.curator_llm if use_context_curation else None
+
+        method = get_method(method_id)
+        config = method.default_config()
+        if "hyde_iterations" in config:  # only the hybrid method consumes this
+            config["hyde_iterations"] = hyde_iterations
+        if "use_query_decomposition" in config:
+            config["use_query_decomposition"] = use_query_decomposition
+        for key, value in (overrides or {}).items():
+            if key not in config:
+                raise ValueError(f"{method_id!r} has no parameter {key!r}; known: {sorted(config)}")
+            config[key] = value
+        self.retriever = method.build_retriever(ctx, config)
+        logger.info("[RAGPipeline] method=%s config=%s", method_id, config)
+
+    def retrieve(self, question: str) -> dict:
+        """Run only the retrieval step, without any LLM answer synthesis."""
+        docs = self.retriever.invoke(question)
+        return {
+            "sources": [doc.metadata.get("id") for doc in docs],
+            "contexts": [doc.page_content for doc in docs],
+        }
+
+    @staticmethod
+    def _source_header(doc: Document) -> str:
+        """The bracketed source header decorating a passage, or its id as fallback."""
+        m = _SOURCE_HEADER_RE.match(doc.page_content)
+        return m.group(1) if m else str(doc.metadata.get("id", ""))
+
+    def _curate_context(
+        self, question: str, docs: List[Document]
+    ) -> Tuple[List[Document], str]:
+        """Select the passages needed to answer the question with a cheap LLM.
+
+        Filters (never rewrites) the retrieved passages, returning the kept ``Document``
+        objects verbatim (governing-first) plus a ``guidance`` string naming the governing
+        provision(s) for the synthesis prompt. Fail-open: on an empty selection or any
+        parse error the full set is returned unchanged, since dropping a needed provision
+        is unrecoverable downstream.
+        """
+        if not docs:
+            return docs, ""
+
+        numbered = "\n\n".join(f"[{i}] {d.page_content}" for i, d in enumerate(docs))
+        prompt_text = CONTEXT_CURATION_PROMPT.format(
+            question=question, numbered_passages=numbered
         )
+        raw = self.curator_llm.invoke(prompt_text).content
+
+        try:
+            # Strip an optional ```json … ``` fence before parsing.
+            cleaned = re.sub(r"^\s*```(?:json)?|```\s*$", "", raw.strip()).strip()
+            sel = json.loads(cleaned)
+            keep = [i for i in sel["keep"] if isinstance(i, int) and 0 <= i < len(docs)]
+            governing = {i for i in sel.get("governing", []) if i in keep}
+        except (json.JSONDecodeError, KeyError, TypeError):
+            logger.warning("[Curation] unparsable curator output — keeping all passages.")
+            return docs, ""
+
+        if not keep:  # fail-open on empty selection
+            logger.warning("[Curation] empty selection — keeping all passages.")
+            return docs, ""
+
+        # Governing passages first, then the rest of the kept set — a positional signal
+        # that reinforces the synthesis prompt's governing-provision step.
+        ordered = [i for i in keep if i in governing] + [i for i in keep if i not in governing]
+        kept_docs = [docs[i] for i in ordered]
+
+        guidance = ""
+        if governing:
+            headers = ", ".join(self._source_header(docs[i]) for i in keep if i in governing)
+            guidance = (
+                f"The provision(s) that directly govern this question are: {headers}. "
+                "Base the answer on them; treat the other passages only as cross-reference "
+                "or exception support."
+            )
+
+        kept_ids = [
+            f"{docs[i].metadata.get('id') or self._source_header(docs[i])}"
+            f"{'(G)' if i in governing else ''}"
+            for i in ordered
+        ]
+        dropped_ids = [
+            str(docs[i].metadata.get("id") or self._source_header(docs[i]))
+            for i in range(len(docs)) if i not in keep
+        ]
+        logger.info(
+            "[Curation] kept %d/%d — kept: %s | dropped: %s  (G = governing)",
+            len(kept_docs), len(docs), kept_ids, dropped_ids,
+        )
+        return kept_docs, guidance
 
     def query(self, question: str) -> dict:
-        result = self.qa_chain.invoke({"query": question})
+        docs = self.retriever.invoke(question)
+
+        guidance = ""
+        if self.use_context_curation:
+            docs, guidance = self._curate_context(question, docs)
+
+        context = "\n\n".join(doc.page_content for doc in docs)
+        prompt_text = self.qa_prompt.format(
+            context=context, question=question, guidance=guidance,
+        )
+        answer_msg = self.synthesis_llm.invoke(prompt_text)
+        answer = answer_msg.content.replace("\r\n", "\n").replace("\r", "\n").strip()
+
+        if self.use_answer_filter:
+            filtered = self.filter_llm.invoke(
+                ANSWER_FILTER_PROMPT.format(question=question, draft_answer=answer)
+            )
+            answer = filtered.content.replace("\r\n", "\n").replace("\r", "\n").strip()
+
         return {
-            "answer": result["result"].replace("\r\n", "\n").replace("\r", "\n").strip(),
-            "sources": [doc.metadata.get("id") for doc in result["source_documents"]],
-            "contexts": [doc.page_content for doc in result["source_documents"]],
+            "answer": answer,
+            "sources": [doc.metadata.get("id") for doc in docs],
+            "contexts": [doc.page_content for doc in docs],
         }
 
     def run_batch(self, questions_path: str, output_path: str) -> None:
@@ -96,4 +210,4 @@ class RAGPipeline:
 
 if __name__ == "__main__":
     rag = RAGPipeline()
-    rag.run_batch("docs/golden_dataset.json", "results/rag_result.json")
+    rag.run_batch("docs/question_recital_required.json", "results/rag_result.json")

@@ -5,7 +5,7 @@ Loads EU regulation documents into Neo4j and generates paragraph embeddings.
 """
 import logging
 from utils.streamlit_log_handler import StreamlitLogHandler
-from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_openai import OpenAIEmbeddings
 from service.graph.graph import Neo4jGraph
 from service.graph.graph_loader import GraphLoader
 from service.scraper.eurlex_document_utils import EurlexDocumentUtils
@@ -55,16 +55,29 @@ if st.button("Run Graph Initialization", type="primary"):
             documents_config = [eurlex_utils.build_document_config(c) for c in celex_ids]
             loader.load_all_documents(documents_config)
 
-            bge_embeddings = HuggingFaceEmbeddings(
-                model_name="BAAI/bge-large-en-v1.5",
-                encode_kwargs={"normalize_embeddings": True},
+            openai_embeddings = OpenAIEmbeddings(
+                model=config.EMBEDDING_MODEL,
+                api_key=config.OPENAI_API_KEY,
+                base_url=config.OPENAI_BASE_URL or None,
             )
-            dimensions = graph.generate_text_embeddings(
-                embed_fn=bge_embeddings.embed_documents,
-                embedding_dim=1536,
+            paragraph_dimension = graph.generate_text_embeddings(
+                embed_fn=openai_embeddings.embed_documents,
+                embedding_dim=config.EMBEDDING_DIM,
                 node_name="Paragraph",
             )
-            graph.create_vector_index("Paragraph", "Paragraph", dimensions)
+            rec_dimension = graph.generate_text_embeddings(
+                embed_fn=openai_embeddings.embed_documents,
+                embedding_dim=config.EMBEDDING_DIM,
+                node_name="Recital",
+            )
+            article_dimension = graph.generate_text_embeddings(
+                embed_fn=openai_embeddings.embed_documents,
+                embedding_dim=config.EMBEDDING_DIM,
+                node_name="Article",
+            )
+            graph.create_vector_index("Paragraph", "Paragraph", paragraph_dimension)
+            graph.create_vector_index("Recital", "Recital", rec_dimension)
+            graph.create_vector_index("Article", "Article", article_dimension)
             graph.close()
 
         st.success(f"Graph initialized — {len(celex_ids)} document(s) loaded.")

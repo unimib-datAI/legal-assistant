@@ -53,7 +53,7 @@ class GraphLoader:
 
     def _load_act(self, act):
         """Create Act node."""
-        self.graph.create_graph_node(
+        self.graph.upsert_graph_node(
             node_name="Act",
             node_properties={
                 'id': act['celex'],
@@ -68,7 +68,7 @@ class GraphLoader:
             chapter_id = f"{act['celex']}{chapter['id']}"
             chapter_number = self._extract_number(chapter['id'], 'cpt_')
 
-            self.graph.create_graph_node(
+            self.graph.upsert_graph_node(
                 node_name="Chapter",
                 node_properties={
                     'id': chapter_id,
@@ -93,7 +93,7 @@ class GraphLoader:
         for section in chapter['sections']:
             section_id = f"{act['celex']}{section['id']}"
 
-            self.graph.create_graph_node(
+            self.graph.upsert_graph_node(
                 node_name="Section",
                 node_properties={
                     'id': section_id,
@@ -116,7 +116,7 @@ class GraphLoader:
         for article in parent['articles']:
             article_id = f"{act['celex']}{article['id']}"
 
-            self.graph.create_graph_node(
+            self.graph.upsert_graph_node(
                 node_name="Article",
                 node_properties={
                     'id': article_id,
@@ -149,7 +149,7 @@ class GraphLoader:
         for paragraph in article['paragraphs']:
             paragraph_id = f"{act['celex']}_{paragraph['id']}"
 
-            self.graph.create_graph_node(
+            self.graph.upsert_graph_node(
                 node_name="Paragraph",
                 node_properties={
                     'id': paragraph_id,
@@ -178,7 +178,7 @@ class GraphLoader:
         for recital in recitals:
             recital_id = f"{act['celex']}{recital['id']}"
 
-            self.graph.create_graph_node(
+            self.graph.upsert_graph_node(
                 node_name="Recital",
                 node_properties={
                     'id': recital_id,
@@ -216,7 +216,7 @@ class GraphLoader:
             case_law_id = case_law['case_law_identifier']
 
             try:
-                self.graph.create_graph_node(
+                self.graph.upsert_graph_node(
                     node_name="CaseLaw",
                     node_properties={'id': case_law_id}
                 )
