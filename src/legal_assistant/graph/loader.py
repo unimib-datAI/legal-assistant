@@ -1,55 +1,104 @@
 import logging
 import re
 
-from legal_assistant.scraper.eurlex_exporter import EURLexHTMLParser
 from legal_assistant.graph import Neo4jGraph
+from legal_assistant.scraper.eurlex_exporter import EURLexHTMLParser
+from legal_assistant.validation import act_source
+from legal_assistant.validation.gate import GraphValidationError, build_validated
+from legal_assistant.validation.plan import GraphPlan
 
 logger = logging.getLogger(__name__)
 
 
 class GraphLoader:
-    """Loads legal document data directly into Neo4j from HTML."""
+    """Loads legal document data into Neo4j from HTML, via a validated plan.
+
+    Nothing is written directly. :meth:`plan_document` builds the graph in memory and
+    checks it against the source HTML; only :meth:`write` turns a validated plan into
+    database writes. That split is what lets the caller validate every act *before*
+    clearing the database.
+    """
 
     def __init__(self, neo4j_graph: Neo4jGraph):
         self.graph = neo4j_graph
 
-    def load_document(self, config):
-        """
-        Load a single document into the graph database.
-
-        Args:
-            config: Dict with keys: html_file, celex, author, publication_date,
-                   date_of_application, eurolex_url, document_info_url
-        """
-        parser = EURLexHTMLParser(
-            html_file_path=config['html_file'],
-            celex=config['celex'],
-            eurolex_url=config['eurolex_url'],
-            document_info_url=config['document_info_url']
-        )
-
-        data = parser.extract_data()
-
+    def _emit(self, data):
+        """Write one parsed document into ``self.graph`` — the real client or a recorder."""
         self._load_act(data['act'])
         self._load_chapters(data['act'], data['chapters'])
         self._load_recitals(data['act'], data['recitals'])
-        self._load_citations(data['citations'])
         self._load_case_law(data['act'], data['case_law'])
 
+    def plan_document(self, config, *, strict: bool = True) -> GraphPlan:
+        """Parse, build in memory, and validate. Raises unless the graph is sound.
+
+        Parsing happens once: it reaches the network for the case-law metadata, so the
+        determinism check re-runs the *builder* over the parsed data rather than the parser
+        itself. Parser determinism is covered by ``tests/graph_validation/``.
+        """
+        celex = config['celex']
+        parser = EURLexHTMLParser(
+            html_file_path=config['html_file'],
+            celex=celex,
+            eurolex_url=config['eurolex_url'],
+            document_info_url=config['document_info_url'],
+        )
+        data = parser.extract_data()
+
+        def build(graph):
+            GraphLoader(graph)._emit(data)
+
+        return build_validated(
+            build,
+            root_id=celex,
+            label=f"act {celex}",
+            source_inventory=act_source.html_fragments(config['html_file']),
+            reconstructed=act_source.reconstructed_fragments,
+            conservation_kind="act_text",
+            strict=strict,
+        )
+
+    def write(self, plan: GraphPlan) -> None:
+        """Replay a validated plan onto the real graph."""
+        plan.replay(self.graph)
+
+    def load_document(self, config, *, strict: bool = True):
+        """Validate one document and write it."""
+        plan = self.plan_document(config, strict=strict)
+        self.write(plan)
         logger.info("Loaded document %s into graph", config['celex'])
+        return plan
 
-    def load_all_documents(self, documents_config):
-        """
-        Load multiple documents into the graph database.
+    def plan_all_documents(self, documents_config, *, strict: bool = True):
+        """Validate every document before any of them is written.
 
-        Args:
-            documents_config: List of config dicts
+        Failures are collected and re-raised together, rather than logged and swallowed:
+        a half-loaded graph is worse than a failed load.
         """
+        plans, failures = [], []
         for config in documents_config:
+            celex = config['celex']
             try:
-                self.load_document(config)
-            except Exception as e:
-                logger.error("Error loading %s: %s", config['celex'], e)
+                plans.append((celex, self.plan_document(config, strict=strict)))
+            except (GraphValidationError, OSError, ValueError, KeyError) as exc:
+                logger.error("Validation failed for %s: %s", celex, exc)
+                failures.append((celex, exc))
+
+        if failures:
+            summary = "\n".join(f"  {celex}: {exc}" for celex, exc in failures)
+            raise RuntimeError(
+                f"{len(failures)}/{len(documents_config)} document(s) failed validation:\n"
+                f"{summary}"
+            ) from failures[0][1]
+        return plans
+
+    def load_all_documents(self, documents_config, *, strict: bool = True):
+        """Validate all documents, then write them. Nothing is written if any fails."""
+        plans = self.plan_all_documents(documents_config, strict=strict)
+        for celex, plan in plans:
+            self.write(plan)
+            logger.info("Loaded document %s into graph", celex)
+        return plans
 
     def _load_act(self, act):
         """Create Act node."""
@@ -165,14 +214,6 @@ class GraphLoader:
                 relationship="CONTAINS"
             )
 
-            self.graph.create_relationship(
-                left_node_name="Article",
-                right_node_name="Paragraph",
-                left_id=article_id,
-                right_id=paragraph_id,
-                relationship="CITES"
-            )
-
     def _load_recitals(self, act, recitals):
         """Create Recital nodes."""
         for recital in recitals:
@@ -194,21 +235,6 @@ class GraphLoader:
                 right_id=recital_id,
                 relationship="CONTAINS"
             )
-
-    def _load_citations(self, citations):
-        """Create citation relationships between articles."""
-        for citation in citations:
-            try:
-                self.graph.create_relationship(
-                    left_node_name="Article",
-                    right_node_name="Article",
-                    left_id=citation['from_article_id'],
-                    right_id=citation['to_article_id'],
-                    relationship=citation['citation_type']
-                )
-            except Exception as e:
-                logger.warning("Skipped citation %s -> %s: %s",
-                               citation['from_article_id'], citation['to_article_id'], e)
 
     def _load_case_law(self, act, case_law_list):
         """Create CaseLaw nodes and their interpretation relationships."""

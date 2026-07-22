@@ -1,7 +1,7 @@
 """Writes a parsed CJEU judgment into Neo4j.
 
 The retrieval unit is the **numbered judgment paragraph**, not the section. A section can
-run to 46 paragraphs (tens of KB) — far too coarse to embed or to put in a prompt — and the
+run to 46 paragraphs (tens of KB)   far too coarse to embed or to put in a prompt   and the
 paragraph is anyway the unit the Court itself is cited by ("see paragraph 71 of that
 judgment"), which is also how ``case_law_golden_dataset.csv`` records its sources.
 
@@ -13,7 +13,7 @@ Graph structure::
                           -[:CONTAINS]->      (CaseLawSection)
                           -[:HAS_PARAGRAPH]-> (CaseLawParagraph {number, text, is_operative})
 
-The text property is named ``text`` — not ``body`` — so ``Neo4jGraph.generate_text_embeddings``
+The text property is named ``text``  not ``body``  so ``Neo4jGraph.generate_text_embeddings``
 and ``Neo4jVector.from_existing_graph``, both of which read ``n.text``, work on it unchanged.
 """
 import logging
@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 # language of the case) and the topic index, which becomes CaseLawTopic edges instead.
 PREAMBLE_SECTIONS = frozenset({"Reports of Cases", "Topics", "General Information"})
 
-# "71 That said, it must be emphasised that..." — _linearize merges the number cell and the
+# "71 That said, it must be emphasised that..."  _linearize merges the number cell and the
 # prose cell of the source table, so the number arrives at the head of the string.
 _PARAGRAPH_NUM = re.compile(r"^(\d+)\s+")
 
@@ -67,12 +67,12 @@ def split_paragraphs(celex: str, body: list[str]) -> list[CaseLawParagraph]:
 
     Three item kinds are interleaved in ``body``:
 
-    * **numbered paragraphs** — the judgment's own reasoning, the citable unit.
-    * **unnumbered continuations** — block quotes of the legislation under discussion,
+    * **numbered paragraphs**  the judgment's own reasoning, the citable unit.
+    * **unnumbered continuations**  block quotes of the legislation under discussion,
       following the paragraph that introduces them ("4 Recital 10 of the GDPR states:").
       They are merged into that paragraph: floating free they would put verbatim regulation
       text into the case law index, where it would read as if the Court had said it.
-    * **the operative part** — everything after the "hereby rules" anchor.
+    * **the operative part**  everything after the "hereby rules" anchor.
 
     Unnumbered items with no preceding paragraph are dropped (headnote fragments).
     """
@@ -136,7 +136,7 @@ def split_paragraphs(celex: str, body: list[str]) -> list[CaseLawParagraph]:
 def _section_paths(flat: list[dict]) -> list[str]:
     """Positional path per section ("5", "5.1", …).
 
-    Used as the section id, so the id is stable under a re-parse that changes a heading —
+    Used as the section id, so the id is stable under a re-parse that changes a heading
     unlike the old scheme, which baked the flat index and a 60-char heading prefix into it.
     """
     paths: list[str] = []
@@ -161,8 +161,61 @@ def create_case_law_kg(
     flat: list[dict],
     graph,
     summaries: list[dict] | None = None,
+    *,
+    strict: bool = True,
 ) -> dict:
-    """Build the case law subgraph for one judgment. Returns per-judgment counts.
+    """Validate and write the case law subgraph for one judgment. Returns counts.
+
+    The judgment is built in memory first and checked against the parsed tree: every body
+    item of a substantive section must end up inside a ``CaseLawParagraph``. Only then is
+    anything written to ``graph``. With ``strict=False`` violations are logged and the write
+    proceeds anyway.
+
+    This is the gate for **both** write paths  the ingest pipeline (through
+    :func:`build_from_tree`) and the Streamlit parser page call it.
+    """
+    # Imported here: the validation package imports kg_builder for its regexes, so a
+    # module-level import would be circular.
+    from legal_assistant.validation import case_law_source
+    from legal_assistant.validation.gate import build_validated
+
+    plan = build_validated(
+        lambda recorder: _write_case_law_kg(celex, flat, recorder, summaries),
+        root_id=celex,
+        label=f"case law {celex}",
+        source_inventory=case_law_source.body_fragments(flat),
+        reconstructed=case_law_source.paragraph_texts,
+        exempt=case_law_source.body_exemptions(flat),
+        conservation_kind="body",
+        strict=strict,
+    )
+    plan.replay(graph)
+    return _counts_from_plan(plan, celex)
+
+
+def _counts_from_plan(plan, celex: str) -> dict:
+    """Per-judgment counts, read off the validated plan."""
+    paragraphs = [n for n in plan.node_ops if n.label == "CaseLawParagraph"]
+    counts = {
+        "sections": sum(1 for n in plan.node_ops if n.label == "CaseLawSection"),
+        "paragraphs": len(paragraphs),
+        "operative": sum(1 for n in paragraphs if n.properties.get("is_operative")),
+    }
+    logger.info(
+        "[KG] %s (%s): %d sections, %d paragraphs (%d operative)",
+        celex, celex_to_case_number(celex),
+        counts["sections"], counts["paragraphs"], counts["operative"],
+    )
+    return counts
+
+
+def _write_case_law_kg(
+    celex: str,
+    flat: list[dict],
+    graph,
+    summaries: list[dict] | None = None,
+) -> dict:
+    """Emit the case law subgraph into ``graph``. No validation  see the caller.
 
     ``summaries`` is optional: paragraph-level retrieval does not need it, and generating it
     costs one LLM call per section. When given, it is the list produced by
@@ -179,14 +232,7 @@ def create_case_law_kg(
     })
 
     _write_topics(celex, flat, graph)
-    counts = _write_sections(celex, flat, graph, by_heading)
-
-    logger.info(
-        "[KG] %s (%s): %d sections, %d paragraphs (%d operative)",
-        celex, celex_to_case_number(celex),
-        counts["sections"], counts["paragraphs"], counts["operative"],
-    )
-    return counts
+    return _write_sections(celex, flat, graph, by_heading)
 
 
 def _write_topics(celex: str, flat: list[dict], graph) -> None:
@@ -260,6 +306,15 @@ def _write_sections(celex: str, flat: list[dict], graph, by_heading: dict[str, s
     return counts
 
 
-def build_from_tree(celex: str, roots: list[Node], graph, summaries: list[dict] | None = None) -> dict:
-    """Convenience wrapper: flatten a parsed tree and write it."""
-    return create_case_law_kg(celex=celex, flat=flatten(roots), graph=graph, summaries=summaries)
+def build_from_tree(
+    celex: str,
+    roots: list[Node],
+    graph,
+    summaries: list[dict] | None = None,
+    *,
+    strict: bool = True,
+) -> dict:
+    """Convenience wrapper: flatten a parsed tree, validate it, and write it."""
+    return create_case_law_kg(
+        celex=celex, flat=flatten(roots), graph=graph, summaries=summaries, strict=strict
+    )

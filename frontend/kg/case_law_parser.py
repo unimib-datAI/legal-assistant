@@ -12,6 +12,7 @@ from legal_assistant.case_law.kg_builder import create_case_law_kg
 from legal_assistant.case_law.llm_orchestrator import parse_document
 from legal_assistant.case_law.tree import flatten
 from legal_assistant.resources import make_graph_client
+from legal_assistant.validation.gate import GraphValidationError
 
 st.title("Case Law Parser")
 st.caption(
@@ -146,6 +147,9 @@ with col_info:
                     )
                     graph.close()
                 st.success(f"KG created for {celex}.")
+            except GraphValidationError as exc:
+                st.error(f"Validation failed — nothing was written for {celex}:")
+                st.code(exc.report(), language="text")
             except Exception as exc:
                 st.error(f"Error: {exc}")
 

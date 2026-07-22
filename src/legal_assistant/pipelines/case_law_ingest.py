@@ -23,6 +23,7 @@ from legal_assistant.case_law.tree import flatten
 from legal_assistant.graph.client import Neo4jGraph
 from legal_assistant.graph.queries import CaseLawQueries
 from legal_assistant.resources import make_embeddings
+from legal_assistant.validation.gate import GraphValidationError
 
 logger = logging.getLogger(__name__)
 
@@ -66,8 +67,19 @@ def _summarise(celex: str, flat: List[dict]) -> List[dict]:
     return [s for s in (summarize_section(section) for section in flat) if s]
 
 
-def ingest(graph: Neo4jGraph, celex_list: Sequence[str], with_summaries: bool = False) -> IngestTotals:
-    """Parse and write each judgment. A judgment that cannot be fetched is skipped, not fatal."""
+def ingest(
+    graph: Neo4jGraph,
+    celex_list: Sequence[str],
+    with_summaries: bool = False,
+    *,
+    strict: bool = True,
+) -> IngestTotals:
+    """Parse, validate and write each judgment.
+
+    A judgment that cannot be fetched — or that fails validation — is skipped and recorded
+    in ``failed``; nothing is written for it and the batch continues. ``strict=False``
+    downgrades validation failures to warnings and writes anyway.
+    """
     totals = IngestTotals()
 
     for i, celex in enumerate(celex_list, start=1):
@@ -85,7 +97,13 @@ def ingest(graph: Neo4jGraph, celex_list: Sequence[str], with_summaries: bool = 
             continue
 
         summaries = _summarise(celex, flatten(roots)) if with_summaries else None
-        counts = build_from_tree(celex, roots, graph, summaries=summaries)
+        try:
+            counts = build_from_tree(celex, roots, graph, summaries=summaries, strict=strict)
+        except GraphValidationError as exc:
+            logger.error("[%d/%d] SKIP %s validation failed:\n%s",
+                         i, len(celex_list), label, exc.report())
+            totals.failed.append((celex, f"validation failed ({len(exc.violations)} violation(s))"))
+            continue
 
         totals.judgments += 1
         totals.sections += counts["sections"]

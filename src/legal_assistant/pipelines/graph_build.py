@@ -37,11 +37,17 @@ class GraphBuildResult:
     indexed_labels: List[str]
 
 
-def build_graph(celex_ids: Sequence[str], clear_db: bool = True) -> GraphBuildResult:
+def build_graph(
+    celex_ids: Sequence[str], clear_db: bool = True, *, strict: bool = True
+) -> GraphBuildResult:
     """Load ``celex_ids`` from EUR-Lex into Neo4j, then embed and index their text nodes.
 
-    ``clear_db`` wipes the database first — the normal path, since a partial reload would
-    leave the previous run's nodes behind. The connection is always closed, even on error.
+    Every act is fetched, built in memory and **validated before anything is written** — and
+    before the database is cleared. A parser regression therefore leaves the existing graph
+    untouched rather than wiping it and failing halfway through the reload.
+
+    ``clear_db`` wipes the database once all acts have validated. ``strict=False`` downgrades
+    validation failures to warnings. The connection is always closed, even on error.
     """
     ids = [c.strip() for c in celex_ids if c.strip()]
     if not ids:
@@ -50,12 +56,21 @@ def build_graph(celex_ids: Sequence[str], clear_db: bool = True) -> GraphBuildRe
     graph = make_graph_client()
     try:
         graph.verify_connection()
-        if clear_db:
-            graph.clear_database()
 
         eurlex_utils = EurlexDocumentUtils()
         loader = GraphLoader(graph)
-        loader.load_all_documents([eurlex_utils.build_document_config(c) for c in ids])
+        configs = [eurlex_utils.build_document_config(c) for c in ids]
+
+        # Validate everything first: nothing below this line runs if an act is malformed.
+        plans = loader.plan_all_documents(configs, strict=strict)
+        logger.info("[graph_build] %d/%d act(s) validated", len(plans), len(ids))
+
+        if clear_db:
+            graph.clear_database()
+
+        for celex, plan in plans:
+            loader.write(plan)
+            logger.info("[graph_build] wrote %s", celex)
 
         embeddings = make_embeddings()
         for label in EMBEDDED_LABELS:

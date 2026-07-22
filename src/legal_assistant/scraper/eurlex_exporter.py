@@ -2,8 +2,13 @@ import re
 
 from bs4 import BeautifulSoup
 
-_SPLIT_DEF_NUM_RE = re.compile(r'^\((\d+)\)$')
 from legal_assistant.scraper.metadata_parser import MetadataParser
+
+# A standalone "(3)" element: the number half of a split definition entry.
+_SPLIT_DEF_NUM_RE = re.compile(r'^\((\d+)\)$')
+
+# Any paragraph div, whatever article it belongs to: "<article:3>.<paragraph>".
+_PARAGRAPH_DIV_RE = re.compile(r'^\d{3}\.\d+$')
 
 
 class EURLexHTMLParser:
@@ -19,74 +24,16 @@ class EURLexHTMLParser:
 
     def extract_data(self):
         """Extract structured data from the HTML document"""
-        title = self._get_title()
-        chapters_data = self._get_chapters()
-        recitals_data = self._get_recitals()
-        citations = self._extract_citations(chapters_data)
-        case_law = self._get_case_law()
-
         return {
             'act': {
                 'celex': self.celex,
-                'title': title,
+                'title': self._get_title(),
                 'eurolex_url': self.eurolex_url
             },
-            'chapters': chapters_data,
-            'recitals': recitals_data,
-            'citations': citations,
-            'case_law': case_law
+            'chapters': self._get_chapters(),
+            'recitals': self._get_recitals(),
+            'case_law': self._get_case_law()
         }
-
-    def _extract_citations(self, chapters_data):
-        """Extract citations from the entire document"""
-        citations = []
-
-        for chapter in chapters_data:
-            for article in chapter['articles']:
-                citations.extend(self._extract_article_citations(article))
-
-            for section in chapter['sections']:
-                for article in section['articles']:
-                    citations.extend(self._extract_article_citations(article))
-
-        return citations
-
-    def _extract_article_citations(self, article):
-        """Extract citations from a single article"""
-        citations = []
-        source_article_id = f"{self.celex}{article['id']}"
-
-        for paragraph in article['paragraphs']:
-            cited_articles = self._find_article_references(paragraph['text'])
-
-            for cited_article_num in cited_articles:
-                citations.append({
-                    'from_article_id': source_article_id,
-                    'to_article_id': f"{self.celex}art_{cited_article_num}",
-                    'citation_type': 'CITES',
-                    'paragraph_id': f"{self.celex}_{paragraph['id']}"
-                })
-
-        return citations
-
-    def _find_article_references(self, text):
-        """Find article references in a given text"""
-        cited_articles = set()
-
-        # "Article 5", "Article 89"
-        for match in re.finditer(r'\bArticle\s+(\d+)', text, re.IGNORECASE):
-            cited_articles.add(int(match.group(1)))
-
-        # "Articles 12 to 15"
-        for match in re.finditer(r'\bArticles\s+(\d+)\s+to\s+(\d+)', text, re.IGNORECASE):
-            start, end = int(match.group(1)), int(match.group(2))
-            cited_articles.update(range(start, end + 1))
-
-        # "Art. 98"
-        for match in re.finditer(r'\bArt\.\s+(\d+)', text, re.IGNORECASE):
-            cited_articles.add(int(match.group(1)))
-
-        return cited_articles
 
     def _get_title(self):
         """Extract the main title of the document"""
@@ -176,51 +123,97 @@ class EURLexHTMLParser:
                 return title_p.get_text(strip=True)
         return None
 
+    @staticmethod
+    def _div_text(div):
+        """Concatenated oj-normal text of one paragraph div."""
+        parts = [p.get_text(separator=' ', strip=True) for p in div.find_all('p', class_='oj-normal')]
+        return ' '.join(t for t in parts if t)
+
     def _get_paragraphs(self, article_div, article_id):
-        """Extract paragraph from the article"""
-        paragraphs = []
+        """Extract the paragraphs of one article.
+
+        Three shapes occur in the published markup:
+
+        1. **Numbered paragraphs** — ``div`` children whose id is ``<article>.<paragraph>``.
+        2. **Amending articles** — an article whose body restates paragraphs of *another*
+           act, so their div ids carry the amended article's number, not this one's
+           (AI Act art_108 holds ``017.003``, ``019.004``, …). Their ids must be re-derived
+           from the containing article: ``017.003`` is also the real id of AI Act Article
+           17(3), and reusing it would silently overwrite that provision.
+        3. **Unnumbered articles** — definitions and single-clause articles, whose text sits
+           directly under the article div.
+        """
         article_num = article_id.split('_')[1].zfill(3)
-        paragraph_divs = article_div.find_all('div', id=re.compile(f'^{article_num}\\.\\d+$'))
+        paragraphs = []
+        used_ids = set()
+        consumed_divs = []
 
-        for para_div in paragraph_divs:
+        own_pattern = re.compile(f'^{article_num}\\.\\d+$')
+        for para_div in article_div.find_all('div', id=own_pattern):
             para_id = para_div.get('id')
-            para_paragraphs = para_div.find_all('p', class_='oj-normal')
-            text_parts = [p.get_text(separator=' ', strip=True) for p in para_paragraphs]
+            used_ids.add(para_id)
+            consumed_divs.append(para_div)
+            paragraphs.append({'id': para_id, 'text': self._div_text(para_div)})
 
-            paragraphs.append({
-                'id': para_id,
-                'text': ' '.join(text_parts)
-            })
+        # Shape 2: paragraph divs belonging to another article.
+        foreign = [d for d in article_div.find_all('div', id=_PARAGRAPH_DIV_RE)
+                   if d.get('id') not in used_ids]
+        seq = 0
+        for para_div in foreign:
+            seq += 1
+            while f'{article_num}.{seq:03d}' in used_ids:
+                seq += 1
+            para_id = f'{article_num}.{seq:03d}'
+            used_ids.add(para_id)
+            consumed_divs.append(para_div)
+            paragraphs.append({'id': para_id, 'text': self._div_text(para_div)})
 
-        if not paragraphs:
-            # Articles with no numbered subdivisions (e.g. GDPR art_4 "Definitions",
-            # single-clause articles) still carry their text as oj-normal children of
-            # the article div. Collect them as a single synthetic paragraph so the
-            # content reaches the graph instead of being silently dropped.
-            text_parts = [
-                p.get_text(separator=' ', strip=True)
-                for p in article_div.find_all('p', class_='oj-normal')
-            ]
-            text_parts = [t for t in text_parts if t]
+        # Text that sits directly under the article, outside every paragraph div.
+        consumed = {id(p) for div in consumed_divs for p in div.find_all('p', class_='oj-normal')}
+        text_parts = [
+            t for p in article_div.find_all('p', class_='oj-normal')
+            if id(p) not in consumed and (t := p.get_text(separator=' ', strip=True))
+        ]
 
-            if text_parts and any(_SPLIT_DEF_NUM_RE.match(t) for t in text_parts):
-                # EUR-Lex definition articles split each entry across two oj-normal
-                # elements: a standalone "(N)" followed by the definition text.
-                # Zip them into one paragraph per definition.
-                i = 0
-                while i < len(text_parts):
-                    m = _SPLIT_DEF_NUM_RE.match(text_parts[i])
-                    if m and i + 1 < len(text_parts):
-                        def_num = m.group(1)
-                        paragraphs.append({
-                            'id': f'{article_num}.{def_num}',
-                            'text': f'({def_num}) {text_parts[i + 1]}',
-                        })
-                        i += 2
-                    else:
-                        i += 1  # skip preamble or trailing non-definition parts
-            elif text_parts:
-                paragraphs.append({'id': f'{article_num}.0', 'text': ' '.join(text_parts)})
+        if paragraphs:
+            # An amending article introduces each restated paragraph with a connective line
+            # ("In Article 17, the following paragraph is added:"). Those lines are the
+            # article's own words and belong in the graph.
+            if text_parts:
+                paragraphs.insert(0, {'id': f'{article_num}.0', 'text': ' '.join(text_parts)})
+            return paragraphs
+
+        # Shape 3: no numbered subdivisions — definitions or a single-clause article.
+        if not text_parts:
+            return paragraphs
+
+        if not any(_SPLIT_DEF_NUM_RE.match(t) for t in text_parts):
+            paragraphs.append({'id': f'{article_num}.0', 'text': ' '.join(text_parts)})
+            return paragraphs
+
+        # A definitions article splits each entry across several oj-normal elements: a
+        # standalone "(N)" followed by the definition, which may itself run across further
+        # elements (nested sub-points). Group everything up to the next "(N)".
+        groups: list[tuple[str | None, list[str]]] = []
+        for part in text_parts:
+            match = _SPLIT_DEF_NUM_RE.match(part)
+            if match:
+                groups.append((match.group(1), []))
+            elif groups:
+                groups[-1][1].append(part)
+            else:
+                # The article's opening line ("For the purposes of this Regulation:"),
+                # which precedes the first definition.
+                groups.append((None, [part]))
+
+        for def_num, body in groups:
+            text = ' '.join(body)
+            if not text:
+                continue
+            if def_num is None:
+                paragraphs.append({'id': f'{article_num}.0', 'text': text})
+            else:
+                paragraphs.append({'id': f'{article_num}.{def_num}', 'text': f'({def_num}) {text}'})
 
         return paragraphs
 

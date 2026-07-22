@@ -43,7 +43,7 @@ def _cmd_graph_build(args: argparse.Namespace) -> int:
     from legal_assistant.pipelines.graph_build import DEFAULT_CELEX_IDS, build_graph
 
     celex_ids = args.celex or list(DEFAULT_CELEX_IDS)
-    result = build_graph(celex_ids, clear_db=not args.no_clear)
+    result = build_graph(celex_ids, clear_db=not args.no_clear, strict=not args.allow_invalid)
     logger.info(
         "Graph built — %d document(s), indexed: %s",
         len(result.celex_ids), ", ".join(result.indexed_labels),
@@ -91,7 +91,9 @@ def _cmd_ingest_case_law(args: argparse.Namespace) -> int:
             return 1
 
         logger.info("Ingesting %d judgment(s) for acts %s…", len(celex_list), args.acts)
-        totals = ingest_mod.ingest(graph, celex_list, with_summaries=args.summaries)
+        totals = ingest_mod.ingest(
+            graph, celex_list, with_summaries=args.summaries, strict=not args.allow_invalid
+        )
 
         if not args.skip_embeddings and totals.paragraphs:
             ingest_mod.embed_and_index(graph)
@@ -103,7 +105,10 @@ def _cmd_ingest_case_law(args: argparse.Namespace) -> int:
         )
         for celex, reason in totals.failed:
             logger.info("  skipped %s: %s", celex, reason)
-        return 0
+
+        # A skipped judgment is a failure, not a warning: exit non-zero so a scripted
+        # ingest does not report success on a partial run.
+        return 1 if totals.failed else 0
     finally:
         graph.close()
 
@@ -212,6 +217,9 @@ def build_parser() -> argparse.ArgumentParser:
     build.add_argument("--celex", nargs="+", help="CELEX ids to load (default: the four acts).")
     build.add_argument("--no-clear", action="store_true",
                        help="Keep the existing database instead of wiping it first.")
+    build.add_argument("--allow-invalid", action="store_true",
+                       help="Write acts that fail graph validation, logging the violations "
+                            "as warnings instead of aborting.")
     build.set_defaults(func=_cmd_graph_build)
 
     aske = graph_sub.add_parser("aske", help="Run the ASKE topic-extraction cycle.")
@@ -238,6 +246,9 @@ def build_parser() -> argparse.ArgumentParser:
                           help="Generate LLM section summaries (one call per section; off by default).")
     case_law.add_argument("--skip-embeddings", action="store_true",
                           help="Do not embed or (re)create the vector index.")
+    case_law.add_argument("--allow-invalid", action="store_true",
+                          help="Write judgments that fail graph validation, logging the "
+                               "violations as warnings instead of skipping them.")
     case_law.set_defaults(func=_cmd_ingest_case_law)
 
     # summarize

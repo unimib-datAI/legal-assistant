@@ -6,3 +6,6 @@ __pycache__/
 evals/evals/logs/
 *.egg-info/
 results/
+
+# Case-law XHTML downloaded on demand by tests/graph_validation cache, not source.
+tests/graph_validation/fixtures/

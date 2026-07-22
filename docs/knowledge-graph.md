@@ -37,12 +37,12 @@ would collide. Every id therefore combines the act's CELEX (the unique identifie
 assigns) with the element's own identifier. A node keeps its identity across reloads and
 across acts, which is what makes cross-document citations expressible at all.
 
-Ids are not opaque — retrieval parses them:
+Ids are not opaque retrieval parses them:
 
 - **Paragraph ids are zero-padded and dotted**: `32016R0679_012.001` is Article 12(1). A
   `.000` suffix points at the article as a whole.
 - **Judgment paragraph ids are sequential integers**, so a passage's neighbours are
-  reachable by arithmetic instead of a query — `rag/documents.py::neighbour_ids` uses this
+  reachable by arithmetic instead of a query  `rag/documents.py::neighbour_ids` uses this
   to recover a holding that follows its reasoning.
 
 ---
@@ -65,7 +65,7 @@ eurolex_url   String       Source page the document was fetched from
 id            String       "<celex>cpt_<roman>"     e.g. "32016R0679cpt_III"
 number        String       Roman numeral            e.g. "III"
 title         String       e.g. "Rights of the data subject"
-summary       String       optional — written by `legal-assistant summarize chapters`
+summary       String       optional  written by `legal-assistant summarize chapters`
 ```
 
 ### Section
@@ -84,7 +84,7 @@ id              String     "<celex>art_<n>"    e.g. "32016R0679art_12"
 title           String     e.g. "Transparent information, communication and modalities …"
 text            String     Full article text
 textEmbedding   Float[]    Embedding of `text`, dimension EMBEDDING_DIM (1536)
-summary         String     optional — written by `legal-assistant summarize articles`
+summary         String     optional  written by `legal-assistant summarize articles`
 ```
 
 ### Paragraph
@@ -112,7 +112,7 @@ textEmbedding   Float[]    Embedding of `text`
 
 ## Case law nodes
 
-A `CaseLaw` node is created in two stages. `graph build` writes a **stub** — id, CELEX,
+A `CaseLaw` node is created in two stages. `graph build` writes a **stub**  id, CELEX,
 case number — for every judgment listed as "Interpreted by" in an act's EUR-Lex metadata,
 together with its `INTERPRETS` edge. `ingest case-law` later fetches the judgment and fills
 in the sections, paragraphs and topics below it. A stub with no sections is a judgment not
@@ -123,9 +123,9 @@ stay stubs.
 
 ```
 id             String      CELEX of the judgment, e.g. "62018CJ0311"
-celex          String      Same value, optional — absent on some stubs
+celex          String      Same value, optional  absent on some stubs
 case_number    String      Court-style number, e.g. "C-311/18"     optional
-summary        String      optional — whole-document LLM summary
+summary        String      optional  whole-document LLM summary
 ```
 
 ### CaseLawSection
@@ -152,7 +152,7 @@ celex             String   Owning judgment
 number            Integer  Paragraph number within the judgment
 text              String   Paragraph text
 textEmbedding     Float[]  Embedding of `text`
-is_operative      Boolean  True for the operative part — the binding holding
+is_operative      Boolean  True for the operative part  the binding holding
 section_heading   String   Heading of the section it sits in, denormalised for retrieval
 ```
 
@@ -174,20 +174,36 @@ label    String            e.g. "Reference for a preliminary ruling"
 
 ## Relationships
 
+The act hierarchy:
+
 ```
 Act ─CONTAINS→ Chapter ─CONTAINS→ [Section ─CONTAINS→] Article ─CONTAINS→ Paragraph
- └──CONTAINS→ Recital                                     │  ▲
-                                             CITES ───────┘  │ INTERPRETS
-                                                             │
+ └──CONTAINS→ Recital
+```
+
+The judgment hierarchy, which hangs off its own root and points back into the acts:
+
+```
 CaseLaw ─HAS_SECTION→ CaseLawSection ─HAS_PARAGRAPH→ CaseLawParagraph
-   ├──HAS_TOPIC→ CaseLawTopic          └─CONTAINS→ CaseLawSection (nested)
-   └──INTERPRETS→ Article | Paragraph
+   │                        └──CONTAINS→ CaseLawSection (nested)
+   ├──HAS_TOPIC→ CaseLawTopic
+   └──INTERPRETS→ Article | Paragraph | Chapter
 ```
 
 `CONTAINS` is the single containment edge in both hierarchies, so the article side is
 reached with a variable-length `(:Act)-[:CONTAINS*]->(:Article)` — chapters may or may not
-interpose a section. `INTERPRETS` points at articles **and** paragraphs, never at chapters,
-so a query walking it must handle both target labels.
+interpose a section. `INTERPRETS` may point at an article, a paragraph **or** a chapter,
+depending on how precise the EUR-Lex metadata is, so a query walking it must handle all
+three target labels.
+
+**There is no citation edge.** Article-to-article citations used to be materialised as
+`CITES`, derived by regex over the article text ("Articles 12 to 15" expanded to a whole
+range, including articles of other acts). Nothing read them, most pointed at ids that did
+not exist, and because `CREATE_RELATIONSHIP` does `MATCH … MATCH … MERGE` those edges were
+dropped in silence. Cross-references are resolved at query time from the passage text
+instead — see [`rag/citations.py`](../src/legal_assistant/rag/citations.py). A graph built
+before this change still carries the old edges until it is rebuilt.
+
 
 ## Vector indexes
 
@@ -201,7 +217,7 @@ created by `graph build`, the judgment one by `ingest case-law`.
 | `Recital` | `Recital` | recital retrieval |
 | `CaseLawParagraph` | `CaseLawParagraph` | `hybrid` INTERPRETIVE branch |
 
-Index name and node label are always the same string — `RagContext._vector_store` relies on
+Index name and node label are always the same string  `RagContext._vector_store` relies on
 that.
 
 ## Where the Cypher lives
