@@ -4,7 +4,108 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="2aac46b9-d4a6-4ea1-8017-d11d286eba73" name="Changes" comment="Rename dataset files and enhance prompt registry to support specific version retrieval for A/B testing" />
+    <list default="true" id="2aac46b9-d4a6-4ea1-8017-d11d286eba73" name="Changes" comment="Add initial project configuration files for legal assistant integration">
+      <change afterPath="$PROJECT_DIR$/.claude/graph_validation.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/legal_assistant/utils/__init__.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/tests/__init__.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/tests/conftest.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.claude/ASKE.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/aske.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.claude/CLAUDE.md" beforeDir="false" afterPath="$PROJECT_DIR$/.claude/CLAUDE.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.claude/Evaluation.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/csv-editor.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/legal-assistant.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/legal-assistant.iml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/article_summary_pipeline.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/case_law_init.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/case_law_pipeline.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/chapter_summary_pipeline.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/config.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/32016R0679.html" beforeDir="false" afterPath="$PROJECT_DIR$/corpus/32016R0679.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/32022R0868.html" beforeDir="false" afterPath="$PROJECT_DIR$/corpus/32022R0868.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/32023R2854.html" beforeDir="false" afterPath="$PROJECT_DIR$/corpus/32023R2854.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/32024R1689.html" beforeDir="false" afterPath="$PROJECT_DIR$/corpus/32024R1689.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/golden_dataset.json" beforeDir="false" afterPath="$PROJECT_DIR$/corpus/golden_dataset.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/app.py" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/app.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/chat/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/evals/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/chat/chat.py" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/evaluation/evaluation.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/kg/aske_pipeline.py" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/kg/aske_pipeline.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/kg/case_law_parser.py" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/kg/case_law_parser.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/kg/graph_init.py" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/kg/graph_init.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/utils/streamlit_log_handler.py" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/utils/streamlit_log_handler.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/rag_pipeline.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/rag/pipeline.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/requirements.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/service/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/evaluation/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/service/case_law/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/service/case_law/html_parser.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/case_law/html_parser.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/service/case_law/kg_builder.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/case_law/kg_builder.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/service/case_law/llm_orchestrator.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/case_law/llm_orchestrator.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/service/case_law/tree.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/case_law/tree.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/service/graph/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/graph/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/service/graph/graph.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/graph/client.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/service/graph/graph_loader.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/graph/loader.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/service/graph/query.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/graph/queries.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/service/graph/seed.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/graph/seed.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/service/rag/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/case_law/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/service/rag/acts.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/rag/acts.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/service/rag/attribution.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/rag/attribution.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/service/rag/citations.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/rag/citations.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/service/rag/engine.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/service/rag/intent_classifier.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/rag/intent_classifier.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/service/rag/methods/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/rag/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/service/rag/methods/base.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/rag/methods/base.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/service/rag/methods/context.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/rag/context.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/service/rag/methods/hybrid_method.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/rag/methods/hybrid.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/service/rag/methods/registry.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/rag/methods/registry.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/service/rag/methods/topics_method.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/rag/methods/topics.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/service/rag/prompt.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/service/rag/prompt_registry.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/rag/prompts/registry.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/service/rag/rag_alternative.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/rag/retrievers/hybrid.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/service/rag/rag_naive_with_topics.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/rag/retrievers/topics.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/service/scraper/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/rag/methods/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/service/scraper/browser_fetcher.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/scraper/browser_fetcher.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/service/scraper/eurlex_document_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/scraper/eurlex_document_utils.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/service/scraper/eurlex_exporter.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/scraper/eurlex_exporter.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/service/scraper/metadata_parser.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/scraper/metadata_parser.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/service/text/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/rag/prompts/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/service/text/preprocessor.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/text/preprocessor.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/service/topic/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/rag/retrievers/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/service/topic/aske.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/topic/aske.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/service/topic/concept.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/topic/concept.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/service/topic/filters.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/topic/filters.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/service/utils/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/scraper/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/service/utils/tpm_rate_limiter.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/utils/tpm_rate_limiter.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/text/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/rag_eval/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/topic/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/rag_eval/act_classification_eval.py" beforeDir="false" afterPath="$PROJECT_DIR$/evals/act_classification_eval.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/rag_eval/backfill_attribution.py" beforeDir="false" afterPath="$PROJECT_DIR$/evals/backfill_attribution.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/rag_eval/evals.py" beforeDir="false" afterPath="$PROJECT_DIR$/evals/evals.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/rag_eval/evals/datasets/case_law_golden_dataset.csv" beforeDir="false" afterPath="$PROJECT_DIR$/evals/evals/datasets/case_law_golden_dataset.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/rag_eval/evals/datasets/golden_dataset.csv" beforeDir="false" afterPath="$PROJECT_DIR$/evals/evals/datasets/golden_dataset.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/rag_eval/evals/datasets/golden_dataset_light.csv" beforeDir="false" afterPath="$PROJECT_DIR$/evals/evals/datasets/golden_dataset_light.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/rag_eval/evals/datasets/question_recital_required.csv" beforeDir="false" afterPath="$PROJECT_DIR$/evals/evals/datasets/question_recital_required.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/rag_eval/evals/datasets/subset_retrieval_scarso.csv" beforeDir="false" afterPath="$PROJECT_DIR$/evals/evals/datasets/subset_retrieval_scarso.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/rag_eval/evals/datasets/subset_retrieval_scarso_dga.csv" beforeDir="false" afterPath="$PROJECT_DIR$/evals/evals/datasets/subset_retrieval_scarso_dga.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/rag_eval/evals/datasets/zero_tp_queries.csv" beforeDir="false" afterPath="$PROJECT_DIR$/evals/evals/datasets/zero_tp_queries.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/rag_eval/evals/evaluations/bench_after_fix.csv" beforeDir="false" afterPath="$PROJECT_DIR$/evals/evals/evaluations/bench_after_fix.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/rag_eval/evals/evaluations/best_bench.csv" beforeDir="false" afterPath="$PROJECT_DIR$/evals/evals/evaluations/best_bench.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/rag_eval/evals/evaluations/best_bench_attributed.csv" beforeDir="false" afterPath="$PROJECT_DIR$/evals/evals/evaluations/best_bench_attributed.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/rag_eval/evals/evaluations/best_bench_attributed_v2.csv" beforeDir="false" afterPath="$PROJECT_DIR$/evals/evals/evaluations/best_bench_attributed_v2.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/rag_eval/evals/evaluations/best_bench_backup.csv" beforeDir="false" afterPath="$PROJECT_DIR$/evals/evals/evaluations/best_bench_backup.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/rag_eval/evals/evaluations/lightRAG_bench.csv" beforeDir="false" afterPath="$PROJECT_DIR$/evals/evals/evaluations/lightRAG_bench.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/rag_eval/evals/evaluations/lightRAG_bench_case_law.csv" beforeDir="false" afterPath="$PROJECT_DIR$/evals/evals/evaluations/lightRAG_bench_case_law.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/rag_eval/evals/evaluations/pathRAG_bench.csv" beforeDir="false" afterPath="$PROJECT_DIR$/evals/evals/evaluations/pathRAG_bench.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/rag_eval/evals/evaluations/pathRAG_bench_case_law.csv" beforeDir="false" afterPath="$PROJECT_DIR$/evals/evals/evaluations/pathRAG_bench_case_law.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/rag_eval/evals/evaluations/rag_eval_0855f115-2671-4cc0-9615-93bc5da4ff67.csv" beforeDir="false" afterPath="$PROJECT_DIR$/evals/evals/evaluations/rag_eval_0855f115-2671-4cc0-9615-93bc5da4ff67.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/rag_eval/evals/evaluations/rag_eval_8f39b701-e8e8-4d2b-9f55-49002f8a6d05.csv" beforeDir="false" afterPath="$PROJECT_DIR$/evals/evals/evaluations/rag_eval_8f39b701-e8e8-4d2b-9f55-49002f8a6d05.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/rag_eval/evals/evaluations/rag_eval_golden_dataset.csv" beforeDir="false" afterPath="$PROJECT_DIR$/evals/evals/evaluations/rag_eval_golden_dataset.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/rag_eval/evals/evaluations/successful_eval.csv" beforeDir="false" afterPath="$PROJECT_DIR$/evals/evals/evaluations/successful_eval.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/rag_eval/evals/evaluations/unimibRAG_bench.csv" beforeDir="false" afterPath="$PROJECT_DIR$/evals/evals/evaluations/unimibRAG_bench.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/rag_eval/evals/evaluations/unimibRAG_bench_case_law.csv" beforeDir="false" afterPath="$PROJECT_DIR$/evals/evals/evaluations/unimibRAG_bench_case_law.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/rag_eval/evals_ragas.py" beforeDir="false" afterPath="$PROJECT_DIR$/evals/evals_ragas.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/rag_eval/retrieval_eval.py" beforeDir="false" afterPath="$PROJECT_DIR$/evals/retrieval_eval.py" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -25,7 +126,7 @@
   <component name="Git.Settings">
     <option name="RECENT_BRANCH_BY_REPOSITORY">
       <map>
-        <entry key="$PROJECT_DIR$" value="feature/caselaw-integration-v2" />
+        <entry key="$PROJECT_DIR$" value="main" />
       </map>
     </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
@@ -65,8 +166,8 @@
     &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.typescript.service.memoryLimit.init&quot;: &quot;true&quot;,
-    &quot;SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
     &quot;codeWithMe.voiceChat.enabledByDefault&quot;: &quot;false&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;feature/project-refactor&quot;,
     &quot;last_opened_file_path&quot;: &quot;E:/Projects/legal-assistant/test/rag_eval/evals/evaluations&quot;,
     &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
     &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
@@ -93,7 +194,7 @@
       <recent name="E:\Projects\legal-assistant\.claude" />
     </key>
   </component>
-  <component name="RunManager" selected="Python.rag_pipeline">
+  <component name="RunManager" selected="Python.evals_ragas">
     <configuration name="aske_pipeline (1)" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="legal-assistant" />
       <option name="ENV_FILES" value="" />
@@ -110,6 +211,30 @@
       <option name="DEBUG_JUST_MY_CODE" value="true" />
       <option name="RUN_TOOL" value="" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/aske_pipeline.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="evals_ragas" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="legal-assistant" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/evals" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="DEBUG_JUST_MY_CODE" value="false" />
+      <option name="RUN_TOOL" value="" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/evals/evals_ragas.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -196,21 +321,13 @@
       </deployment>
       <method v="2" />
     </configuration>
-    <configuration name="docker-compose.yml: Compose Deployment" type="docker-deploy" factoryName="docker-compose.yml" temporary="true" server-name="Docker">
-      <deployment type="docker-compose.yml">
-        <settings>
-          <option name="sourceFilePath" value="docker-compose.yml" />
-        </settings>
-      </deployment>
-      <method v="2" />
-    </configuration>
     <recent_temporary>
       <list>
+        <item itemvalue="Python.evals_ragas" />
         <item itemvalue="Python.rag_pipeline" />
         <item itemvalue="Python.graph_rag" />
         <item itemvalue="Python.graph_init" />
         <item itemvalue="Python.aske_pipeline (1)" />
-        <item itemvalue="Docker.docker-compose.yml: Compose Deployment" />
       </list>
     </recent_temporary>
   </component>
@@ -597,7 +714,15 @@
       <option name="project" value="LOCAL" />
       <updated>1784659375788</updated>
     </task>
-    <option name="localTasksCounter" value="47" />
+    <task id="LOCAL-00047" summary="Add initial project configuration files for legal assistant integration">
+      <option name="closed" value="true" />
+      <created>1784662609795</created>
+      <option name="number" value="00047" />
+      <option name="presentableId" value="LOCAL-00047" />
+      <option name="project" value="LOCAL" />
+      <updated>1784662609795</updated>
+    </task>
+    <option name="localTasksCounter" value="48" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -615,7 +740,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="refactor of useless doc" />
     <MESSAGE value="Improved doc_parser + case law insert" />
     <MESSAGE value="Improved parsing + claims evaluation implemented for the first benchmark" />
     <MESSAGE value="Implemented a new RAG approach + query + improved parsing of paragraphs" />
@@ -640,14 +764,15 @@
     <MESSAGE value="Refactor case law parser to fetch CJEU judgments from EUR-Lex by CELEX id and read hierarchy from XHTML markup" />
     <MESSAGE value="Refactor case law integration by updating imports, enhancing graph query capabilities, and implementing case law citation extraction" />
     <MESSAGE value="Rename dataset files and enhance prompt registry to support specific version retrieval for A/B testing" />
-    <option name="LAST_COMMIT_MESSAGE" value="Rename dataset files and enhance prompt registry to support specific version retrieval for A/B testing" />
+    <MESSAGE value="Add initial project configuration files for legal assistant integration" />
+    <option name="LAST_COMMIT_MESSAGE" value="Add initial project configuration files for legal assistant integration" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
       <breakpoints>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/service/rag/rag_naive_with_topics.py</url>
-          <line>124</line>
+          <line>152</line>
           <option name="timeStamp" value="2" />
         </line-breakpoint>
       </breakpoints>

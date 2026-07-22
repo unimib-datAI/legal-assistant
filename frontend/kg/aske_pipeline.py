@@ -1,16 +1,20 @@
 """
 ASKE Pipeline page.
 
-Extracts and enriches legal concepts from the knowledge graph.
+Extracts and enriches legal concepts from the knowledge graph. The cycle itself lives in
+``legal_assistant.pipelines.aske_run`` — this page collects the parameters, streams the
+logs, and renders the resulting concepts.
 """
-import logging
+import json
+import pathlib
 
+import pandas as pd
 import streamlit as st
-from dotenv import load_dotenv
-from utils.streamlit_log_handler import StreamlitLogHandler
+from utils.streamlit_log_handler import stream_logs
 
-load_dotenv()
-import config  # noqa: E402
+from legal_assistant.pipelines.aske_run import AskeParams, run_aske
+
+REPORT_PATH = pathlib.Path("results/aske_result_1.json")
 
 st.title("ASKE Topic Extraction")
 st.caption(
@@ -20,91 +24,51 @@ st.caption(
 
 # ── parameters ────────────────────────────────────────────────────────────────
 
+defaults = AskeParams()
 col_n, col_a, col_b, col_g = st.columns(4)
 with col_n:
-    n_generations = st.number_input("Generations", min_value=1, max_value=50, value=15)
+    n_generations = st.number_input("Generations", min_value=1, max_value=50, value=defaults.n_generations)
 with col_a:
-    alpha = st.slider("α — classification threshold", 0.0, 1.0, 0.4, 0.05)
+    alpha = st.slider("α — classification threshold", 0.0, 1.0, defaults.alpha, 0.05)
 with col_b:
-    beta = st.slider("β — enrichment threshold", 0.0, 1.0, 0.4, 0.05)
+    beta = st.slider("β — enrichment threshold", 0.0, 1.0, defaults.beta, 0.05)
 with col_g:
-    gamma = st.number_input("γ — max new terms / concept", min_value=1, max_value=30, value=7)
+    gamma = st.number_input("γ — max new terms / concept", min_value=1, max_value=30, value=defaults.gamma)
 
 if st.button("Run ASKE Pipeline", type="primary"):
-    log_area = st.empty()
-    handler = StreamlitLogHandler(log_area)
-    root_logger = logging.getLogger()
-    root_logger.addHandler(handler)
+    params = AskeParams(
+        n_generations=int(n_generations),
+        alpha=float(alpha),
+        beta=float(beta),
+        gamma=int(gamma),
+    )
 
     try:
-        with st.spinner("Running ASKE cycle…"):
-            import json
-            import pathlib
+        with stream_logs(), st.spinner("Running ASKE cycle…"):
+            result = run_aske(params)
 
-            from service.graph.graph import Neo4jGraph
-            from service.graph.seed import SEEDS
-            from service.text.preprocessor import TextPreprocessor
-            from service.topic.aske import ASKETopicExtractor
-
-            graph = Neo4jGraph(config.NEO4J_URI, config.NEO4J_USERNAME, config.NEO4J_PASSWORD)
-            aske = ASKETopicExtractor(graph)
-            preprocessor = TextPreprocessor()
-
-            paragraphs = graph.get_paragraphs_from_kg()
-            chunks = preprocessor.to_chunks(paragraphs, skip_first=True)
-
-            concepts, final_classifications = aske.run_aske_cycle(
-                chunks=chunks,
-                seeds=SEEDS,
-                n_generations=int(n_generations),
-                alpha=float(alpha),
-                beta=float(beta),
-                gamma=int(gamma),
-            )
-
-            active = [c for c in concepts if c.get("active", True)]
-            inactive = [c for c in concepts if not c.get("active", True)]
-
-            paragraph_topics = aske.aggregate_topics_by_paragraph(final_classifications, top_n=3)
-            updated_count = graph.update_paragraph_topics(paragraph_topics)
-
-            report_path = pathlib.Path("results/aske_result_1.json")
-            report_path.parent.mkdir(parents=True, exist_ok=True)
-            report = [
-                {
-                    "label": c["label"],
-                    "terms": sorted(
-                        {t["label"] if isinstance(t, dict) else t for t in c.get("terms", [])}
-                    ),
-                }
-                for c in sorted(active, key=lambda x: x["label"])
-            ]
-            report_path.write_text(json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8")
-
-        st.success(
-            f"ASKE complete — {len(active)} active concepts, "
-            f"{len(inactive)} inactive, {updated_count} paragraphs updated."
+        report = result.as_report()
+        REPORT_PATH.parent.mkdir(parents=True, exist_ok=True)
+        REPORT_PATH.write_text(
+            json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8"
         )
 
-        if active:
-            import pandas as pd
+        st.success(
+            f"ASKE complete — {len(result.active)} active concepts, "
+            f"{len(result.inactive)} inactive, {result.updated_paragraphs} paragraphs updated."
+        )
 
+        if report:
             st.subheader("Active concepts")
             rows = [
                 {
-                    "Concept": c["label"],
-                    "Terms": len(c.get("terms", [])),
-                    "Sample terms": ", ".join(
-                        sorted(
-                            {t["label"] if isinstance(t, dict) else t for t in c.get("terms", [])}
-                        )[:5]
-                    ),
+                    "Concept": concept["label"],
+                    "Terms": len(concept["terms"]),
+                    "Sample terms": ", ".join(concept["terms"][:5]),
                 }
-                for c in sorted(active, key=lambda x: x["label"])
+                for concept in report
             ]
             st.dataframe(pd.DataFrame(rows), hide_index=True, use_container_width=True)
 
     except Exception as exc:
         st.error(f"Error: {exc}")
-    finally:
-        root_logger.removeHandler(handler)

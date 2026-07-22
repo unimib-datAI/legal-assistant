@@ -1,31 +1,4 @@
-beautifulsoup4==4.14.3
-bs4==0.0.2
-certifi==2025.11.12
-charset-normalizer==3.4.4
-idna==3.11
-requests==2.32.5
-soupsieve==2.8.1
-typing_extensions==4.15.0
-urllib3==2.6.2
-neo4j
-python-dotenv
-langchain
-langchain-community
-langchain-classic
-streamlit
-langchain-neo4j
-langchain_openai
-langchain-huggingface
-langchain-core
-openai
-sentence-transformers
-transformers==4.49.0
-FlagEmbedding
-nltk
-rank-bm25
-playwright
-ollama
-huggingface_hub[hf_xet]
-docling
-ragas
-spacy
+# Dependencies are declared in pyproject.toml — this file exists so that
+#     pip install -r requirements.txt
+# still works. It installs the package (and therefore its dependencies) in editable mode.
+-e .

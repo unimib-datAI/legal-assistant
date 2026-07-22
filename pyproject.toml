@@ -1,0 +1,63 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "legal-assistant"
+version = "0.1.0"
+description = "Graph-RAG over EU digital-regulation legislation (AI Act, DGA, Data Act, GDPR)."
+readme = "README.md"
+requires-python = ">=3.11"
+
+# Kept in sync with requirements.txt. Pins are preserved verbatim; unpinned entries were
+# unpinned there too.
+dependencies = [
+    "beautifulsoup4==4.14.3",
+    "bs4==0.0.2",
+    "certifi==2025.11.12",
+    "charset-normalizer==3.4.4",
+    "idna==3.11",
+    "requests==2.32.5",
+    "soupsieve==2.8.1",
+    "typing_extensions==4.15.0",
+    "urllib3==2.6.2",
+    "transformers==4.49.0",
+    "neo4j",
+    "python-dotenv",
+    "langchain",
+    "langchain-community",
+    "langchain-classic",
+    "langchain-core",
+    "langchain-neo4j",
+    "langchain_openai",
+    "langchain-huggingface",
+    "streamlit",
+    "openai",
+    "sentence-transformers",
+    "FlagEmbedding",
+    "nltk",
+    "rank-bm25",
+    "playwright",
+    "ollama",
+    "huggingface_hub[hf_xet]",
+    "ragas",
+    "spacy",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-mock",
+]
+
+[project.scripts]
+legal-assistant = "legal_assistant.cli.main:main"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

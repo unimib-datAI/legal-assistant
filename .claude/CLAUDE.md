@@ -4,41 +4,62 @@ A Graph-RAG system over EU digital-regulation legislation. It models a knowledge
 
 Queries are enriched by graph-aware topic filtering (ASKE) before being passed to an LLM, so answers are both semantically relevant and traceable to specific articles and paragraphs.
 
-# Tech Stack
+# Layout
 
-| Layer | Technology | Role |
-|---|---|---|
-| Language | Python | Entire codebase |
-| Graph DB | Neo4j (Docker) | Stores nodes (Act, Chapter, Article, Paragraph, Concept) and vector embeddings |
-| LLM orchestration | LangChain + `langchain-neo4j` | RetrievalQA chain, Neo4j vector store integration |
-| LLM / Embeddings | OpenAI API (`langchain-openai`) | Answer generation and paragraph embeddings |
-| Semantic re-ranking | `sentence-transformers` (`all-MiniLM-L6-v2`) | Topic similarity filtering in GraphEnrichedRetriever |
-| NLP | NLTK | Tokenization and lemmatization in the ASKE pipeline |
-| HTML parsing | BeautifulSoup4 | Scraping EUR-Lex legal documents from `docs/` |
-| Config | `python-dotenv` | Loads `NEO4J_URI`, `NEO4J_USERNAME`, `NEO4J_PASSWORD`, `OPENAI_API_KEY` from `.env` |
+The project is an installable package (`pip install -e .`) under `src/`:
 
-# Architecture & Data Flow
+| Path | Contents |
+|---|---|
+| `src/legal_assistant/` | The package — everything importable |
+| `src/legal_assistant/config.py` | Env-driven settings: models, thresholds, paths |
+| `src/legal_assistant/resources.py` | **The only** place Neo4j / OpenAI clients are constructed |
+| `src/legal_assistant/logging_setup.py` | **The only** place root logging is configured |
+| `src/legal_assistant/pipelines/` | The runnable jobs, callable without a shell |
+| `src/legal_assistant/cli/` | `legal-assistant` argument parsing, nothing else |
+| `frontend/` | Streamlit app — thin UI shells over `pipelines/` |
+| `evals/` | Eval harnesses, datasets, result CSVs |
+| `tests/` | pytest unit tests, mirroring the package layout |
 
-The system has three sequential phases:
+Two rules that keep it that way:
+- **Never construct `Neo4jGraph` / `ChatOpenAI` / `OpenAIEmbeddings` inline.** Use the
+  factories in `resources.py` (`make_graph_client`, `make_langchain_graph`,
+  `make_chat_llm`, `make_embeddings`).
+- **Never call `logging.basicConfig` outside `logging_setup.py`.** Library modules only
+  ever do `logger = logging.getLogger(__name__)`; entry points call `configure_logging()`.
 
-## Phase 1 — Graph Initialization (`graph_init.py`)
-1. Reads the four legal HTML documents from `docs/` (GDPR, AI Act, Data Act, Data Governance Act)
-2. `service/scraper/eurlex_exporter.py` parses each document into structured nodes: **Act → Chapter → Section → Article → Paragraph**
-3. Cross-document citations and case-law relationships are extracted by `service/scraper/metadata_parser.py`
-4. All nodes and relationships are written into Neo4j via `service/graph/graph_loader.py`
+`corpus/` holds the EUR-Lex source HTML the graph is built from — input data, not
+documentation. Documentation lives in `docs/`.
 
-## Phase 2 — Topic Extraction (`aske_pipeline.py`)
-1. Fetches all Paragraph nodes from Neo4j
-2. Each paragraph is tokenized and lemmatized (NLTK)
-3. `service/graph/aske.py` classifies tokens against seed terms in `service/graph/seed.py` (150+ legal concepts)
-4. New concepts are clustered via affinity propagation (`service/topic/concept.py`) and written back to Neo4j as **Concept** nodes linked to paragraphs
-5. Tunable parameters: `N_GENERATIONS`, `ALPHA`, `BETA`, `GAMMA`
+# Documentation
 
-## Phase 3 — RAG Query (`rag_pipeline.py`)
-1. User question → OpenAI embeddings → Neo4j vector search retrieves candidate Paragraph nodes
-2. `service/rag/rag_naive_with_topics.py` (`GraphEnrichedRetriever`) re-ranks candidates using SentenceTransformer (`all-MiniLM-L6-v2`) topic similarity (threshold: 0.35)
-3. Top-k filtered paragraphs are passed as context to an OpenAI LLM via a LangChain `RetrievalQA` chain
-4. Prompt templates live in `service/rag/prompt.py`
+Only this file is loaded automatically. The documents below are **not** — read the one that
+matches the task before starting, rather than inferring the design from the code.
+
+| Before… | Read |
+|---|---|
+| writing Cypher or touching `graph/` | `docs/knowledge-graph.md` |
+| adding or changing a RAG strategy | `docs/extending.md` |
+| adding an act, a pipeline, or a summarisation task | `docs/extending.md` |
+| moving modules or changing package boundaries | `docs/architecture.md` |
+| tracing how a query becomes an answer | `docs/architecture.md` |
+| touching `topic/` or the ASKE cycle | `docs/aske.md` |
+| changing a CLI flag or an eval harness | `README.md` |
+
+## Keeping it current
+
+One fact has one home. When a change lands, update the document that owns it — do not
+restate it elsewhere, because the copy is what goes stale.
+
+| When you change… | Update |
+|---|---|
+| `graph/loader.py` or `graph/queries.py` in a way that alters the schema | `docs/knowledge-graph.md` — **re-derive the fields from a live Neo4j** with `db.schema.nodeTypeProperties()`; never write them from memory or from the loader source |
+| the `RagMethod` contract, the registry, or an extension point | `docs/extending.md` |
+| a package folder, a layer boundary, or one of the two rules above | `docs/architecture.md` **and** the Layout table here |
+| a CLI flag, its default, or an eval harness flag | the Command Reference in `README.md` |
+| the ASKE algorithm or its parameters | `docs/aske.md` |
+
+Documents describe **contracts and conventions**, not implementation detail the code already
+states. A doc that repeats the code diverges from it; a doc that explains *why* does not.
 
 # Python Coding Rules
 
@@ -72,11 +93,11 @@ The system has three sequential phases:
 ## Testing & Reliability
 - Write tests for any non-trivial logic. Use `pytest` as the test runner.
 - Use `unittest.mock` to isolate external dependencies (Neo4j, OpenAI API) in tests.
-- Keep test files mirroring source structure: `service/rag/foo.py` → `tests/service/rag/test_foo.py`.
+- Keep test files mirroring source structure: `src/legal_assistant/rag/foo.py` → `tests/rag/test_foo.py`.
 
 ## LangChain / AI Specifics
 - Always set `temperature` explicitly when creating LLM instances — don't rely on defaults.
 - Log or trace the full prompt sent to the LLM during development for debuggability.
-- Keep prompt templates in dedicated files (`prompt.py`), not inline in business logic.
+- Keep prompt templates in `rag/prompts/`, registered as versioned `PromptVersion`s — never inline in business logic.
 - When building chains, prefer LCEL (LangChain Expression Language) over legacy `Chain` classes.
 

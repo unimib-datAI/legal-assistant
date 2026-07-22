@@ -1,19 +1,14 @@
 """
 Graph Initialization page.
 
-Loads EU regulation documents into Neo4j and generates paragraph embeddings.
+Downloads EU regulation documents from EUR-Lex, loads them into Neo4j, and generates
+embeddings. All of that lives in ``legal_assistant.pipelines.graph_build`` — this page
+only collects the parameters and streams the log output.
 """
-import logging
-from utils.streamlit_log_handler import StreamlitLogHandler
-from langchain_openai import OpenAIEmbeddings
-from service.graph.graph import Neo4jGraph
-from service.graph.graph_loader import GraphLoader
-from service.scraper.eurlex_document_utils import EurlexDocumentUtils
 import streamlit as st
-from dotenv import load_dotenv
+from utils.streamlit_log_handler import stream_logs
 
-load_dotenv()
-import config  # noqa: E402
+from legal_assistant.pipelines.graph_build import DEFAULT_CELEX_IDS, build_graph
 
 st.title("Graph Initialization")
 st.caption(
@@ -25,7 +20,7 @@ st.caption(
 
 celex_input = st.text_area(
     "CELEX IDs (one per line)",
-    value="32016R0679\n32024R1689\n32023R2854\n32022R0868",
+    value="\n".join(DEFAULT_CELEX_IDS),
     height=120,
     help="GDPR · AI Act · Data Act · Data Governance Act",
 )
@@ -37,51 +32,9 @@ if st.button("Run Graph Initialization", type="primary"):
         st.error("Enter at least one CELEX ID.")
         st.stop()
 
-    log_area = st.empty()
-    handler = StreamlitLogHandler(log_area)
-    root_logger = logging.getLogger()
-    root_logger.addHandler(handler)
-
     try:
-        with st.spinner("Initializing graph — this may take several minutes…"):
-            graph = Neo4jGraph(config.NEO4J_URI, config.NEO4J_USERNAME, config.NEO4J_PASSWORD)
-            graph.verify_connection()
-
-            if clear_db:
-                graph.clear_database()
-
-            eurlex_utils = EurlexDocumentUtils()
-            loader = GraphLoader(graph)
-            documents_config = [eurlex_utils.build_document_config(c) for c in celex_ids]
-            loader.load_all_documents(documents_config)
-
-            openai_embeddings = OpenAIEmbeddings(
-                model=config.EMBEDDING_MODEL,
-                api_key=config.OPENAI_API_KEY,
-                base_url=config.OPENAI_BASE_URL or None,
-            )
-            paragraph_dimension = graph.generate_text_embeddings(
-                embed_fn=openai_embeddings.embed_documents,
-                embedding_dim=config.EMBEDDING_DIM,
-                node_name="Paragraph",
-            )
-            rec_dimension = graph.generate_text_embeddings(
-                embed_fn=openai_embeddings.embed_documents,
-                embedding_dim=config.EMBEDDING_DIM,
-                node_name="Recital",
-            )
-            article_dimension = graph.generate_text_embeddings(
-                embed_fn=openai_embeddings.embed_documents,
-                embedding_dim=config.EMBEDDING_DIM,
-                node_name="Article",
-            )
-            graph.create_vector_index("Paragraph", "Paragraph", paragraph_dimension)
-            graph.create_vector_index("Recital", "Recital", rec_dimension)
-            graph.create_vector_index("Article", "Article", article_dimension)
-            graph.close()
-
-        st.success(f"Graph initialized — {len(celex_ids)} document(s) loaded.")
+        with stream_logs(), st.spinner("Initializing graph — this may take several minutes…"):
+            result = build_graph(celex_ids, clear_db=clear_db)
+        st.success(f"Graph initialized — {len(result.celex_ids)} document(s) loaded.")
     except Exception as exc:
         st.error(f"Error: {exc}")
-    finally:
-        root_logger.removeHandler(handler)

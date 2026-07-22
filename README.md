@@ -1,148 +1,285 @@
-# Legal KG V1.1
-## Document assumption
-The following knowledge graph is evaluated based on the Eurolex document structure. In particular, the following assumptions were considered:
-* Each **act** is composed of one or more **chapters**
-* Each **chapter** is composed of one or more **articles**
-    * In some cases, **articles** will be divided into **sections** rather than directly into **chapters** (Chapter -> Section -> Article)
-* **Articles** may cite other **articles** or **paragraphs**
-* An **article** is typically composed of a series of **paragraphs**
-* **Case law** interprets **articles**; one or more **case law** may refer to a specific **article** or **act**
+# Legal Assistant
 
-## Knowledge Graph
-![image](img/KG.png)
+A Graph-RAG system over EU digital regulation. It models a knowledge graph from four acts —
+**GDPR**, **Data Governance Act**, **Data Act** and **AI Act** — plus the CJEU judgments
+that interpret them, and answers legal questions grounded in those documents, traceable to
+the article or paragraph that supports each claim.
 
-## Nodes
-In order to maintain the uniqueness of nodes such as articles or chapters (which remain constant across different documents), it was decided to utilise a string that combines the unique identifier of the act (CELEX) provided by Eurolex and the identifier of the chapter/article, etc.
+All data comes from EUR-Lex: the acts are parsed from the published English HTML into a
+structured hierarchy, and each act's document-information page is parsed to link the case
+law that interprets it. Only completed case law is considered — ongoing cases are ignored.
 
-### Act
-```
-id: String 
-title: String
-eurlex_url: String
-```
+- **[docs/architecture.md](docs/architecture.md)** — layout, layers, and how a query becomes
+  an answer
+- **[docs/extending.md](docs/extending.md)** — adding a retrieval strategy, an act, a
+  pipeline
+- **[docs/knowledge-graph.md](docs/knowledge-graph.md)** — the Neo4j schema: nodes, fields,
+  and how they relate
+- **[docs/aske.md](docs/aske.md)** — the topic-extraction algorithm
 
-### Recitals
-```
-id: String         #CELEX+num_recital
-number: String     #Recital number -> 1, 2
-text: String       #actual content of the recital
+## Getting Started
+
+```bash
+pip install -e .            # installs the `legal_assistant` package and the CLI
+docker compose up -d        # Neo4j
+cp .env.example .env        # NEO4J_URI / NEO4J_USERNAME / NEO4J_PASSWORD / OPEN_API_KEY
 ```
 
-### Chapter
-```
-id: String         #CELEX+num_chapter
-number: String     #Roman numerals -> I, II, III
-title: String
-```
+Then build the graph and ask a question:
 
-### Section
-```
-id: String         #CELEX+num_section
-title: String
+```bash
+legal-assistant graph build
+legal-assistant graph aske
+legal-assistant ingest case-law --acts 32016R0679
+legal-assistant rag query "What entities fall under the personal scope of Chapter II?"
 ```
 
+`streamlit run frontend/app.py` opens the same pipelines behind a UI, plus the
+RAG-vs-Ground-Truth evaluation viewer.
 
-### Article
+---
+
+## Command Reference
+
+Everything runs through the `legal-assistant` CLI. `--help` works at every level
+(`legal-assistant rag query --help`). Global flag: `-v` / `--verbose` raises logging to
+DEBUG.
+
+### `graph build` — Phase 1: load the acts
+
+Scrapes EUR-Lex, writes the graph, embeds and indexes Paragraph, Recital and Article nodes.
+
+| Flag | Type | Default | Meaning |
+|---|---|---|---|
+| `--celex` | list | the four acts | CELEX ids to load |
+| `--no-clear` | flag | off | Keep the existing database instead of wiping it first |
+
+```bash
+legal-assistant graph build                                  # all four acts, fresh database
+legal-assistant graph build --celex 32016R0679               # GDPR only
+legal-assistant graph build --celex 32024R1689 --no-clear    # add the AI Act to what exists
 ```
-id: String        #CELEX+num_article
-title: String
-text: String
+
+Default acts: `32016R0679` (GDPR), `32024R1689` (AI Act), `32023R2854` (Data Act),
+`32022R0868` (Data Governance Act).
+
+### `graph aske` — Phase 2: topic extraction
+
+Runs the ASKE cycle over the paragraphs in the graph and writes Concept nodes back.
+
+| Flag | Type | Default | Meaning |
+|---|---|---|---|
+| `--generations` | int | `15` | ASKE iterations |
+| `--alpha` | float | `0.4` | Chunk-classification similarity threshold |
+| `--beta` | float | `0.4` | Terminology-enrichment acceptance threshold |
+| `--gamma` | int | `7` | Max new terms added per concept per generation |
+| `--out` | path | — | Write the active-concept report as JSON |
+
+```bash
+legal-assistant graph aske
+legal-assistant graph aske --generations 20 --alpha 0.3 --out results/aske.json
 ```
 
-### Paragraph
+> Required only by the `topics` retrieval method. The `hybrid` method does not read
+> Concept nodes, so this phase can be skipped entirely if you only use `hybrid`.
+
+### `ingest case-law` — CJEU judgments
+
+Reads the judgments to fetch out of the graph itself (the `(:CaseLaw)` stubs `graph build`
+created), parses each from EUR-Lex XHTML, and embeds the paragraphs.
+
+| Flag | Type | Default | Meaning |
+|---|---|---|---|
+| `--acts` | list | `32016R0679` | Acts whose case law to ingest |
+| `--celex` | list | — | Ingest these judgments explicitly instead of reading them from the graph |
+| `--limit` | int | — | Ingest at most N judgments (smoke run) |
+| `--reset` | flag | off | Delete existing sections/paragraphs first (`(:CaseLaw)` stubs and INTERPRETS edges are kept) |
+| `--summaries` | flag | off | Generate LLM section summaries — one call per section |
+| `--skip-embeddings` | flag | off | Do not embed or (re)create the vector index |
+
+```bash
+legal-assistant ingest case-law                                  # all GDPR case law
+legal-assistant ingest case-law --acts 32016R0679 32024R1689
+legal-assistant ingest case-law --celex 62019CJ0645 --summaries
+legal-assistant ingest case-law --limit 3 --skip-embeddings      # quick smoke run
+legal-assistant ingest case-law --reset                          # rebuild content from scratch
 ```
-id: String         #CELEX+num_paragraph
-text: String
+
+> Requires `graph build` to have run first. Judgments older than ~2012 have no XHTML
+> manifestation in Cellar and are skipped, not fatal — the run lists them at the end.
+
+### `summarize` — optional LLM summaries on graph nodes
+
+Idempotent: only nodes whose `summary` is still NULL are fetched, so a re-run on a fully
+summarised graph exits immediately.
+
+| Argument | Values | Default | Meaning |
+|---|---|---|---|
+| `kind` | `articles` \| `chapters` | required | Which nodes to summarise |
+| `--concurrency` | int | `5` | Parallel LLM calls |
+
+```bash
+legal-assistant summarize articles
+legal-assistant summarize chapters --concurrency 10
 ```
 
-### Case Law (WIP)
+### `rag query` / `rag batch` — Phase 3: ask questions
+
+| Flag | Type | Default | Meaning |
+|---|---|---|---|
+| `--method` | str | `hybrid` | Retrieval strategy id (`hybrid`, `topics`) |
+| `--override` | `KEY=VALUE …` | — | Override any of the method's own params |
+| `--answer-filter` | flag | off | Post-filter the draft answer to the responsive sentences |
+| `--context-curation` | flag | off | Curate retrieved passages with a cheap LLM before synthesis |
+| `--prompt-version` | str | active (`v8`) | Pin a registered `answer_synthesis` version |
+
+`rag batch` adds `--questions <file.json>` and `--out <report.json>`, both required.
+
+```bash
+legal-assistant rag query "What is personal data?"
+legal-assistant rag query "..." --method topics
+legal-assistant rag query "..." --override use_case_law=false top_k_final=8
+legal-assistant rag query "..." --prompt-version v9 --context-curation
+legal-assistant rag batch --questions corpus/golden_dataset.json --out results/report.json
 ```
-id: String           #case law identifier 
+
+`--override` values are parsed as JSON, so `false`, `8` and `0.3` arrive as the right
+Python types. An unknown key fails fast with the list of valid ones.
+
+### `rag methods` — what is registered
+
+Prints every strategy with its description and every tunable parameter (name, type,
+default). This is the authoritative list of what `--override` accepts.
+
+```bash
+legal-assistant rag methods
 ```
 
-## Document Parsing and Data Retrieval
-All the data used to fill the KG is retrieved from EUR-Lex documents. In particular, specific acts are parsed from the English HTML format into a specific structured data object. Furthermore, the document information section is parsed to match the associated case law. 
+`hybrid` exposes 18 params (`use_hyde`, `hyde_iterations`, `top_k_dense`, `top_k_sparse`,
+`top_k_final`, `top_k_recitals`, `recital_score_threshold`, `use_recitals`, `use_case_law`,
+`top_k_case_law`, `case_law_score_threshold`, `case_law_neighbours`, `guarantee_operative`,
+`top_k_bridge`, `use_query_decomposition`, `max_sub_questions`, `rrf_k`, `use_reranker`);
+`topics` exposes 4 (`use_topic_filter`, `k`, `top_k_topic`, `topic_similarity_threshold`).
 
-PS: The parser ignores ongoing case law; we only consider completed case law. (XXX interprets YYY). 
+---
 
-## Architecture
+## Evaluation
 
-### Tech Stack
+`legal-assistant eval <harness> [flags]` runs a harness from `evals/`, passing the flags
+straight through. Each harness also runs directly (`python evals/<script>.py`). Datasets
+live in `evals/evals/datasets/`, results land in `evals/evals/evaluations/`, and full run
+logs in `evals/evals/logs/`.
 
-| Layer | Technology | Role |
+Available datasets: `golden_dataset`, `golden_dataset_light`, `case_law_golden_dataset`,
+`subset_retrieval_scarso`, `subset_retrieval_scarso_dga`, `question_recital_required`,
+`zero_tp_queries`.
+
+### `eval retrieval` — deterministic retrieval quality
+
+Scores only the retrieval step against the provisions each ground-truth answer cites
+inline. No answer synthesis, no LLM judge — cheap and, HyDE sampling aside, deterministic.
+Metrics: `top1_anchor`, `recall_at_k`, `mrr`, aggregated overall and per act.
+
+| Flag | Type | Default | Meaning |
+|---|---|---|---|
+| `--method` | str | `hybrid` | RAG method id |
+| `--dataset` | str | `subset_retrieval_scarso` | Dataset name, without `.csv` |
+| `--repeats` | int | `3` | Runs per query, averaged to wash out HyDE variance |
+| `--no-case-law` | flag | off | Disable the INTERPRETIVE case law branch — the control arm |
+
+```bash
+legal-assistant eval retrieval
+legal-assistant eval retrieval --dataset golden_dataset --repeats 1
+legal-assistant eval retrieval --no-case-law                          # A/B the case law branch
+RERANK_MODEL=BAAI/bge-reranker-v2-m3 legal-assistant eval retrieval   # A/B the reranker
+```
+
+> The right harness for A/B-ing retrieval changes: no generation and no judge, so a
+> difference in the numbers is a real difference in retrieval.
+
+### `eval ragas` — end-to-end answer quality
+
+Runs the full pipeline and scores the generated answer with six RAGAS metrics:
+`faithfulness`, `answer_relevancy`, `context_precision`, `context_recall`,
+`factual_precision`, `factual_recall`.
+
+| Flag | Type | Default | Meaning |
+|---|---|---|---|
+| `--method` | str | `hybrid` | RAG method id |
+| `--dataset` | str | `case_law_golden_dataset` | Dataset name, without `.csv` |
+| `--curate` / `--no-curate` | flag | **on** | Pre-synthesis context curation |
+| `--decompose` | flag | off | Query decomposition into sub-questions |
+| `--synthesis-prompt` | str | active (`v8`) | Pin a registered `answer_synthesis` version |
+
+```bash
+legal-assistant eval ragas
+legal-assistant eval ragas --dataset golden_dataset --method topics
+legal-assistant eval ragas --synthesis-prompt v9 --no-curate    # isolate the prompt change
+```
+
+> `--curate` defaults to **on** here, unlike `RAGPipeline` itself. When A/B-ing a prompt
+> version, pass the same curation setting on both arms or you are moving two variables at
+> once. The version used is written into the output filename and into the
+> `synthesis_prompt_version` column of every row, so runs stay distinguishable.
+
+### `eval acts` — act-classification accuracy
+
+Runs only `QueryClassifier.classify` — no retrieval, no synthesis, no reranker — so it is
+cheap. Reports `detected` (true act in the prediction), `exact`, and `abstained`.
+
+| Flag | Type | Default | Meaning |
+|---|---|---|---|
+| `--dataset` | str | `golden_dataset` | Dataset name; needs an `act` column |
+| `--threshold` | float | `ACT_SCORE_THRESHOLD` (`0.4`) | Per-act relevance threshold |
+| `--limit` | int | — | Classify only the first N rows |
+
+```bash
+legal-assistant eval acts
+legal-assistant eval acts --threshold 0.5
+legal-assistant eval acts --limit 5                     # smoke run
+```
+
+### `eval backfill` — add attribution to an existing results CSV
+
+Adds per-sentence source attribution to a results CSV *post hoc* — one LLM call per row,
+no re-retrieval, no re-synthesis. Appends `segments` and `cited_sources` (both JSON); the
+frontend's evaluation page renders them as `[Sn]` badges.
+
+| Flag | Type | Default | Meaning |
+|---|---|---|---|
+| `--csv` | path | required | Results CSV to enrich |
+| `--out` | path | overwrite `--csv` | Output path |
+| `--model` | str | `RAG_LLM_MODEL` | Chat model for the attribution pass |
+
+```bash
+legal-assistant eval backfill --csv evals/evals/evaluations/best_bench.csv \
+                              --out evals/evals/evaluations/best_bench_attributed.csv
+```
+
+> Requires the CSV to have `answer`, `sources` and `contexts` columns.
+
+> `evals/evals.py` is the older custom-metric harness. It takes no flags — dataset and
+> options are hardcoded — and is kept for reference only; use `eval ragas` instead.
+
+---
+
+## Configuration
+
+All settings are read from `.env` (see `src/legal_assistant/config.py`).
+
+| Variable | Default | Meaning |
 |---|---|---|
-| Language | Python | Entire codebase |
-| Graph DB | Neo4j (Docker) | Stores nodes and vector embeddings |
-| LLM orchestration | LangChain + `langchain-neo4j` | RetrievalQA chain, Neo4j vector store integration |
-| LLM / Embeddings | OpenAI API (`langchain-openai`) | Answer generation and paragraph embeddings |
-| Semantic re-ranking | `sentence-transformers` (`all-MiniLM-L6-v2`) | Topic similarity filtering in GraphEnrichedRetriever |
-| NLP | NLTK | Tokenization and lemmatization in the ASKE pipeline |
-| HTML parsing | BeautifulSoup4 | Parsing EUR-Lex legal documents |
-| Web scraping | Playwright (Chromium) | Headless browser downloads bypassing AWS WAF |
-| Config | `python-dotenv` | Loads secrets from `.env` |
+| `NEO4J_URI` | — | Neo4j bolt URI |
+| `NEO4J_USERNAME` / `NEO4J_PASSWORD` | — | Neo4j credentials |
+| `OPEN_API_KEY` | — | OpenAI API key |
+| `OPENAI_BASE_URL` | `""` | Alternative endpoint; empty means the default |
+| `RAG_LLM_MODEL` | `gpt-4o-mini` | Chat model: classifier, synthesis, filter, curation |
+| `EMBEDDING_MODEL` | `text-embedding-3-small` | Must match at build and query time |
+| `EMBEDDING_DIM` | `1536` | Must match the embedding model's output size |
+| `ACT_SCORE_THRESHOLD` | `0.4` | Minimum per-act relevance for an act to become a retrieval target |
+| `RERANK_MODEL` | `zeroentropy/zerank-2` | Cross-encoder reranker |
+| `RERANK_TRUST_REMOTE_CODE` | `false` | Needed by rerankers shipping custom modeling code |
+| `RERANK_DTYPE` | `auto` | `auto` respects the checkpoint's native dtype (bf16 ≈ half the VRAM) |
 
----
-
-### Pipeline Overview
-
-The system operates in three sequential phases, each with its own entry point:
-
-```
-graph_init.py          →   aske_pipeline.py         →   rag_pipeline.py
-Phase 1: Graph Init        Phase 2: Topic Extraction     Phase 3: RAG Query
-```
-
----
-
-### Step 1: Graph Initialization (`graph_init.py`)
-
-Downloads the four legal HTML documents from EUR-Lex, parses them into a structured knowledge graph, and generates paragraph-level vector embeddings.
-
-1. `BrowserFetcher` launches a headless Chromium browser, navigates each EUR-Lex URL, and saves the rendered HTML to `docs/` — this bypasses the AWS WAF JavaScript challenge that blocks plain HTTP requests
-2. `EURLexHTMLParser` (BeautifulSoup) parses each HTML file into a structured hierarchy: Act → Chapter → Section → Article → Paragraph
-3. `MetadataParser` fetches the document metadata page for each act and extracts case-law "Interpreted by" relationships
-4. `GraphLoader` writes all nodes and edges to Neo4j using parameterized Cypher queries
-5. `Neo4jGraph.generate_text_embeddings` encodes every Paragraph node with `all-MiniLM-L6-v2` and stores the vector on the node
-6. `Neo4jGraph.create_vector_index` creates a COSINE similarity vector index on `Paragraph.textEmbedding` for fast nearest-neighbour lookup
-
----
-
-### Step 2: Topic Extraction (`aske_pipeline.py`)
-
-Runs the ASKE (Automatic Semantic Knowledge Extraction) algorithm over all paragraph nodes, iteratively expanding a set of legal concepts and linking the most relevant topics back to each paragraph.
-
-1. All Paragraph nodes are fetched from Neo4j
-2. `TextPreprocessor` tokenizes paragraphs into sentences, lemmatizes each word, and produces sentence-level chunks (first sentence skipped as it usually just contains the paragraph number)
-3. `ASKETopicExtractor.run_aske_cycle` runs for `N_GENERATIONS` iterations; each generation has four phases:
-   - **Chunk Classification** — cosine similarity between chunk and concept embeddings; chunks above threshold `α` are assigned to that concept
-   - **Deactivate Unused** — concepts that received zero classifications are marked inactive and excluded from further enrichment
-   - **Terminology Enrichment** — for each active concept, candidate terms are extracted from classified chunks using TF-IDF with bigrams; WordNet definitions are fetched and embedded; terms are scored with a discriminative penalty (`sim_to_concept − 0.5 × max_sim_to_others`) to down-rank generic terms; the top `γ` terms above threshold `β` are added to the concept
-   - **Concept Derivation** — terms within each concept are clustered with Affinity Propagation; each distinct cluster spawns a new concept labelled by its centroid term
-4. `ASKETopicExtractor.aggregate_topics_by_paragraph` selects the top-3 topics per paragraph based on maximum chunk-level similarity score
-5. `Neo4jGraph.update_paragraph_topics` writes Topic nodes and `(Paragraph)-[:RELATED_TO]->(Topic)` edges to Neo4j
-6. A human-readable report is written to `results/aske_report.txt` listing every active concept with its associated terms
-
-**Tunable parameters** (top of `aske_pipeline.py`):
-
-| Parameter | Default | Meaning |
-|---|---|---|
-| `N_GENERATIONS` | 20 | ASKE iterations |
-| `ALPHA` | 0.3 | Chunk-classification similarity threshold |
-| `BETA` | 0.4 | Terminology-enrichment acceptance threshold |
-| `GAMMA` | 10 | Max new terms added per concept per generation |
-
----
-
-### Step 3: RAG Query (`rag_pipeline.py`)
-
-Answers user questions by combining topic-aware filtering with vector search, re-ranking results, and passing the top-k paragraphs as grounded context to an OpenAI LLM.
-
-1. The user query is encoded with `all-MiniLM-L6-v2` and compared against all Topic node embeddings (cosine similarity threshold: 0.35); the top-5 matching topics are selected
-2. `GraphEnrichedRetriever` fetches all Paragraph nodes linked to those topics via `(Paragraph)-[:RELATED_TO]->(Topic)`
-3. In parallel, a Neo4j COSINE vector search retrieves the nearest Paragraph nodes to the query embedding
-4. Both result sets are deduplicated and merged
-5. All candidate paragraphs are re-ranked by cosine similarity to the query; the top-5 are returned as context
-6. A LangChain `RetrievalQA` chain passes the context with `ANSWER_SYNTHESIS_PROMPT_v2` to an OpenAI LLM (temperature=0); the prompt enforces strict article citation accuracy
-7. The answer is written to `results/prova.txt`
-
----
+Changing `EMBEDDING_MODEL` or `EMBEDDING_DIM` invalidates the stored vectors — re-run
+`graph build` after either.

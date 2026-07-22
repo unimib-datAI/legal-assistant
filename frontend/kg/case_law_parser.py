@@ -5,17 +5,13 @@ Fetches a CJEU judgment from EUR-Lex by CELEX id, reads its hierarchy straight
 from the published XHTML markup, and renders the parsed document tree.
 """
 import json
-import config
 
 import streamlit as st
-from dotenv import load_dotenv
 
-from service.graph.graph import Neo4jGraph
-from service.case_law.kg_builder import create_case_law_kg
-from service.case_law.llm_orchestrator import parse_document
-from service.case_law.tree import flatten
-
-load_dotenv()
+from legal_assistant.case_law.kg_builder import create_case_law_kg
+from legal_assistant.case_law.llm_orchestrator import parse_document
+from legal_assistant.case_law.tree import flatten
+from legal_assistant.resources import make_graph_client
 
 st.title("Case Law Parser")
 st.caption(
@@ -115,7 +111,7 @@ with col_info:
         sections = [s for s in flat if s["heading"] != "Reports of Cases"]
         progress_bar = st.progress(0, text="Starting...")
         summaries: list[dict] = []
-        from service.case_law.llm_orchestrator import summarize_section, summarize_document
+        from legal_assistant.case_law.llm_orchestrator import summarize_section, summarize_document
         for i, section in enumerate(sections):
             label = section["heading"][:48] + "..." if len(section["heading"]) > 48 else section["heading"]
             progress_bar.progress((i) / len(sections), text=f"Summarising: {label}")
@@ -140,7 +136,7 @@ with col_info:
         if st.button("Create Case Law KG", type="primary"):
             try:
                 with st.spinner(f"Writing {celex} to Neo4j…"):
-                    graph = Neo4jGraph(config.NEO4J_URI, config.NEO4J_USERNAME, config.NEO4J_PASSWORD)
+                    graph = make_graph_client()
                     graph.verify_connection()
                     create_case_law_kg(
                         celex=celex,

@@ -1,4 +1,5 @@
 import logging
+from contextlib import contextmanager
 
 import streamlit as st
 
@@ -20,3 +21,19 @@ class StreamlitLogHandler(logging.Handler):
     def emit(self, record: logging.LogRecord) -> None:
         self._lines.append(self.format(record))
         self._container.text_area("Output", "\n".join(self._lines), height=200)
+
+
+@contextmanager
+def stream_logs():
+    """Show the root logger's output in a text area for the duration of the block.
+
+    The handler is always detached on exit, so a failed run does not leave a handler
+    bound to a stale Streamlit container across reruns.
+    """
+    handler = StreamlitLogHandler(st.empty())
+    root_logger = logging.getLogger()
+    root_logger.addHandler(handler)
+    try:
+        yield
+    finally:
+        root_logger.removeHandler(handler)
