@@ -27,6 +27,7 @@ class GraphLoader:
         self._load_act(data['act'])
         self._load_chapters(data['act'], data['chapters'])
         self._load_recitals(data['act'], data['recitals'])
+        self._load_annexes(data['act'], data.get('annexes', []))
         self._load_case_law(data['act'], data['case_law'])
 
     def plan_document(self, config, *, strict: bool = True) -> GraphPlan:
@@ -233,6 +234,65 @@ class GraphLoader:
                 right_node_name="Recital",
                 left_id=act['celex'],
                 right_id=recital_id,
+                relationship="CONTAINS"
+            )
+
+    def _load_annexes(self, act, annexes):
+        """Create Annex and AnnexPoint nodes. Only the AI Act has any.
+
+        Annexes hang off the act, in the same structural position as recitals, because the
+        published markup places them outside the chapter tree.
+        """
+        for annex in annexes:
+            annex_id = f"{act['celex']}{annex['id']}"
+
+            self.graph.upsert_graph_node(
+                node_name="Annex",
+                node_properties={
+                    'id': annex_id,
+                    'number': annex['number'],
+                    'title': annex['title']
+                }
+            )
+
+            self.graph.create_relationship(
+                left_node_name="Act",
+                right_node_name="Annex",
+                left_id=act['celex'],
+                right_id=annex_id,
+                relationship="CONTAINS"
+            )
+
+            self._load_annex_points(act, annex, annex_id)
+
+    def _load_annex_points(self, act, annex, annex_id):
+        """Create the AnnexPoint nodes of one annex.
+
+        The id is positional: an annex div carries no element per point, so deriving identity
+        from the prose numbering would repeat the mistake the removed CITES edges made, where
+        regex-derived ids mostly pointed at nodes that did not exist. ``point_label`` carries
+        the citation a lawyer writes, composed from the markup's own numbering, and is null
+        for lead-in prose that has no marker of its own.
+        """
+        for position, point in enumerate(annex['points'], start=1):
+            label = point['label']
+
+            self.graph.upsert_graph_node(
+                node_name="AnnexPoint",
+                node_properties={
+                    'id': f"{annex_id}.p_{position:03d}",
+                    'celex': act['celex'],
+                    'text': point['text'],
+                    'section_heading': point['section_heading'],
+                    'point_label': f"{annex['number']}, point {label}" if label else None
+                }
+            )
+
+            self.graph.create_relationship(
+                left_node_name="Annex",
+                right_node_name="AnnexPoint",
+                left_id=annex_id,
+                right_id=f"{annex_id}.p_{position:03d}",
                 relationship="CONTAINS"
             )
 

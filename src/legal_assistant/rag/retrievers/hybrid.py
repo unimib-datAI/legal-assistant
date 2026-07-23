@@ -16,8 +16,10 @@ from legal_assistant.rag.acts import CELEX_TO_ACT_NAME, celex_instrument_and_num
 from legal_assistant.rag.citations import cited_articles
 from legal_assistant.rag.documents import (
     copy_doc,
+    decorate_annex,
     decorate_article,
     decorate_case_law,
+    decorate_obligation,
     decorate_recital,
     doc_id,
     neighbour_ids,
@@ -59,6 +61,21 @@ class HybridRetriever(BaseRetriever):
     top_k_recitals: int = 2
     recital_score_threshold: float = 0.3
     use_recitals: bool = True
+    # The obligations branch, like the annex branch, is off by default and carries no
+    # ParamSpec. It activates only when the classifier names an addressee role, which the
+    # active v5 classification prompt does not, so it is inert until a prompt that scores
+    # addressees is wired in. See docs/superpowers for the activation plan.
+    use_obligations: bool = False
+    top_k_obligations: int = 5
+    obligation_score_threshold: float = 0.3
+    # The annex branch is deliberately unreachable from the application: it carries no
+    # ParamSpec, so `pipeline.py` neither defaults it nor accepts it as an override. The
+    # obligations work needs Annex *nodes*, not annex retrieval, because an obligation
+    # extracted from an annex carries its own text and cites itself through `point_label`.
+    # Give it a ParamSpec, or read it from `config`, to turn it on.
+    use_annexes: bool = False
+    top_k_annexes: int = 2
+    annex_score_threshold: float = 0.3
     use_case_law: bool = True
     top_k_case_law: int = 5
     case_law_score_threshold: float = 0.3
@@ -77,6 +94,7 @@ class HybridRetriever(BaseRetriever):
     )
     _article_cache: Optional[dict] = None
     _recital_cache: Optional[dict] = None
+    _annex_cache: Optional[dict] = None
     _case_law_cache: Optional[dict] = None
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
@@ -142,6 +160,154 @@ class HybridRetriever(BaseRetriever):
             self._recital_cache = {}
         self._recital_cache[cache_key] = data
         return data
+
+    def _load_annex_points(self, acts: List[str]) -> dict:
+        """Fetch annex points for the given acts and build a BM25 index. Cached.
+
+        Only the AI Act has annexes, so for the other three this loads nothing and the branch
+        is empty rather than absent: there is no fallback path to take.
+        """
+        cache_key = tuple(sorted(acts))
+        if self._annex_cache is not None and cache_key in self._annex_cache:
+            return self._annex_cache[cache_key]
+
+        rows = self.graph.query(NodeQueries.GET_ANNEX_POINTS_BY_ACTS, params={"acts": acts})
+        if not rows:
+            data: dict = {"bm25": None}
+        else:
+            docs = [
+                Document(
+                    page_content=r["text"],
+                    metadata={
+                        "id": r["id"], "celex": r["celex"], "type": "annex",
+                        "point_label": r.get("point_label"),
+                        "section_heading": r.get("section_heading"),
+                        "annex_number": r.get("annex_number"),
+                        "annex_title": r.get("annex_title"),
+                    },
+                )
+                for r in rows
+            ]
+            data = {"bm25": BM25Retriever.from_documents(docs)}
+            logger.info(
+                "[Annex Cache] Loaded %d annex point(s) + built BM25 index for acts %s",
+                len(docs), acts,
+            )
+
+        if self._annex_cache is None:
+            self._annex_cache = {}
+        self._annex_cache[cache_key] = data
+        return data
+
+    def _select_annexes(self, user_query: str, acts: List[str]) -> List[Tuple[Document, float]]:
+        """The annex branch end to end: search, rank, threshold, cap.
+
+        Sparse only, like the recital branch: an annex point is a short, densely referential
+        span ("the AI systems listed in point 1(a)"), which BM25 handles and a hypothetical
+        passage written in the register of an article does not.
+        """
+        data = self._load_annex_points(acts)
+        bm25 = data.get("bm25")
+        if bm25 is None:
+            return []
+
+        bm25.k = self.top_k_annexes * 2
+        candidates = [copy_doc(d) for d in bm25.invoke(user_query)]
+        if not candidates:
+            return []
+
+        scored = self._rerank_annexes(user_query, candidates)
+        scored.sort(key=lambda pair: -pair[1])
+        kept = [
+            (doc, score) for doc, score in scored if score >= self.annex_score_threshold
+        ][: self.top_k_annexes]
+
+        logger.info(
+            "[HybridRetriever] Annex points kept %d/%d (threshold=%.2f): %s",
+            len(kept), len(scored), self.annex_score_threshold,
+            [f"{doc_id(d)}({s:.2f})" for d, s in scored[:8]],
+        )
+        return kept
+
+    def _rerank_annexes(
+        self, user_query: str, candidates: List[Document]
+    ) -> List[Tuple[Document, float]]:
+        """Score annex points whole against the query (short spans, no dilution)."""
+        if not candidates:
+            return []
+        if not self.use_reranker:
+            n = len(candidates)
+            return [(doc, float(n - i)) for i, doc in enumerate(candidates)]
+        pairs = [[user_query, doc.page_content] for doc in candidates]
+        ce_scores = self.cross_encoder.predict(pairs)
+        return [(doc, float(score)) for doc, score in zip(candidates, ce_scores)]
+
+    def _select_obligations(
+        self, user_query: str, acts: List[str], addressees: List[str]
+    ) -> List[Tuple[Document, float]]:
+        """The obligations branch: filter by role on the graph, rerank, threshold, cap.
+
+        Filtered on the graph rather than searched: the ``IS_A`` walk narrows the set to the
+        classified role and its qualified forms, which is small enough to rerank in full. No
+        addressee, no branch: it degrades to nothing rather than guessing who the query is
+        about.
+        """
+        if not addressees:
+            return []
+
+        rows = self.graph.query(
+            NodeQueries.GET_OBLIGATIONS_FOR_ACTORS,
+            params={"acts": acts, "actors": addressees},
+        )
+        if not rows:
+            return []
+
+        candidates = [
+            Document(
+                page_content=self._render_obligation(row),
+                metadata={
+                    "id": row["id"], "source_id": row["source_id"], "actor": row["actor"],
+                    "celex": row["source_id"].split("_", 1)[0].split("anx_")[0],
+                    "weakest_method": row["weakest_method"], "type": "obligation",
+                },
+            )
+            for row in rows
+        ]
+
+        scored = self._rerank_obligations(user_query, candidates)
+        scored.sort(key=lambda pair: -pair[1])
+        kept = [
+            (doc, score) for doc, score in scored
+            if score >= self.obligation_score_threshold
+        ][: self.top_k_obligations]
+
+        logger.info(
+            "[HybridRetriever] Obligations kept %d/%d for %s (threshold=%.2f)",
+            len(kept), len(scored), addressees, self.obligation_score_threshold,
+        )
+        return kept
+
+    @staticmethod
+    def _render_obligation(row: dict) -> str:
+        parts = [row["predicate_text"] or ""]
+        if row.get("target"):
+            parts.append(f"({row['target']})")
+        if row.get("specification"):
+            parts.append(f"[{row['specification']}]")
+        return " ".join(p for p in parts if p)
+
+    def _rerank_obligations(
+        self, user_query: str, candidates: List[Document]
+    ) -> List[Tuple[Document, float]]:
+        """Score each obligation (its rendered text) against the query."""
+        if not candidates:
+            return []
+        if not self.use_reranker:
+            n = len(candidates)
+            return [(doc, float(n - i)) for i, doc in enumerate(candidates)]
+        pairs = [[user_query, doc.page_content] for doc in candidates]
+        ce_scores = self.cross_encoder.predict(pairs)
+        return [(doc, float(score)) for doc, score in zip(candidates, ce_scores)]
 
     def _load_case_law_paragraphs(self, acts: List[str]) -> dict:
         """Fetch judgment paragraphs for the given acts and build a BM25 index + id lookup. Cached."""
@@ -514,7 +680,19 @@ class HybridRetriever(BaseRetriever):
                 bm25_r.k = self.top_k_recitals * 2
                 recital_candidates = [copy_doc(d) for d in bm25_r.invoke(user_query)]
 
-        if not article_candidates and not recital_candidates and not kept_case_law:
+        kept_annexes = self._select_annexes(user_query, target_acts) if self.use_annexes else []
+
+        kept_obligations: List[Tuple[Document, float]] = []
+        if self.use_obligations:
+            addressees = classification.addressees if classification else []
+            # When the shared classifier did not score addressees (its prompt does not), the
+            # branch does its own role classification rather than guessing.
+            if not addressees and self.classifier is not None:
+                addressees, _ = self.classifier.classify_addressees(user_query)
+            kept_obligations = self._select_obligations(user_query, target_acts, addressees)
+
+        if (not article_candidates and not recital_candidates
+                and not kept_case_law and not kept_annexes and not kept_obligations):
             return []
 
         # Articles and recitals are reranked (whole text) and selected independently: neither
@@ -541,9 +719,11 @@ class HybridRetriever(BaseRetriever):
 
         article_docs = [decorate_article(doc) for doc in article_docs]
         recital_docs = [decorate_recital(doc) for doc, _ in surviving]
+        annex_docs = [decorate_annex(doc) for doc, _ in kept_annexes]
+        obligation_docs = [decorate_obligation(doc) for doc, _ in kept_obligations]
         case_law_docs = [decorate_case_law(doc) for doc, _ in kept_case_law]
 
-        final_docs = article_docs + recital_docs + case_law_docs
+        final_docs = article_docs + recital_docs + annex_docs + obligation_docs + case_law_docs
         logger.info(
             "[HybridRetriever] Final top-%d: %s",
             len(final_docs),

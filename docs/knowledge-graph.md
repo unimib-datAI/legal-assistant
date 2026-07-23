@@ -172,14 +172,100 @@ label    String            e.g. "Reference for a preliminary ruling"
 
 ---
 
+## Annex nodes
+
+Only the AI Act has annexes. They hang off the act, in the same structural position as
+recitals, because the published markup places them outside the chapter tree.
+
+### Annex
+
+```
+id       String   "<celex>anx_<roman>"    e.g. "32024R1689anx_III"
+number   String   Roman numeral            e.g. "III"
+title    String   e.g. "High-risk AI systems referred to in Article 6(2)"
+```
+
+### AnnexPoint
+
+The retrievable unit of an annex. Its id is positional, not parsed from the prose numbering;
+the citation a lawyer writes is carried separately in `point_label`.
+
+```
+id                String   "<celex>anx_<roman>.p_<nnn>"   e.g. "32024R1689anx_III.p_007"
+celex             String   Owning act
+text              String   Point text
+textEmbedding     Float[]  Embedding of `text`
+section_heading   String   Nearest preceding internal heading, denormalised   optional
+point_label       String   Derived citation label, e.g. "III, point 1(a)"     optional
+```
+
+---
+
+## Obligation nodes
+
+Deontic obligations extracted from the acts, loaded by `ingest obligations`. An obligation
+hangs off the passage it was extracted from, and is addressed to actors from a curated,
+generated vocabulary. Fields below were read from a live Neo4j with
+`db.schema.nodeTypeProperties()`.
+
+### Obligation
+
+```
+id                    String   "<source_id>#ob_<n>"   e.g. "32016R0679_012.001#ob_1"
+celex                 String   Owning act
+modality              String   OBLIGATION | PROHIBITION
+obligation_type       String   ACTION | BEING
+predicate_text        String   the duty's core, e.g. "shall inform"
+predicate_voice       String   active | passive
+target                String   what the predicate acts on                       optional
+specification         String   standard, method or time to fulfil it            optional
+precondition          String   circumstances that trigger it                    optional
+beneficiary_text      String   who benefits, as extracted                       optional
+<element>_method      String   STATED | CONTEXT | CITATION | BACKGROUND | NONE, one per element
+                               (addressee, predicate, target, specification, precondition, beneficiary)
+weakest_method        String   weakest populated method, the obligation's trust
+```
+
+`weakest_method` is the trust floor: an obligation whose addressee was inferred by
+BACKGROUND is weaker evidence than one where every element is STATED, and retrieval and the
+checklist both surface it.
+
+### Actor
+
+A subject the legislation defines or addresses. The curated core is generated from each
+act's Definitions article (`actors.yaml`); institutional actors and qualified forms the
+definitions do not carry are promoted from the extraction's addressee strings during ingest.
+
+```
+id           String   slug, e.g. "controller", "provider_of_high_risk_ai_system"
+label        String   human-readable form
+celex        String   act that defines it; null for cross-cutting subjects   optional
+defined_in   String   id of the defining paragraph, when there is one         optional
+```
+
+---
+
 ## Relationships
 
 The act hierarchy:
 
 ```
 Act ─CONTAINS→ Chapter ─CONTAINS→ [Section ─CONTAINS→] Article ─CONTAINS→ Paragraph
- └──CONTAINS→ Recital
+ ├──CONTAINS→ Recital
+ └──CONTAINS→ Annex ─CONTAINS→ AnnexPoint
 ```
+
+The obligation subgraph, which points back into the acts and into the actor vocabulary:
+
+```
+Paragraph | AnnexPoint ─STATES→ Obligation ─ADDRESSED_TO→ Actor
+                                     └───────BENEFITS→ Actor
+Actor ─IS_A→ Actor
+```
+
+`STATES` hangs an obligation off its source passage; `ADDRESSED_TO` and `BENEFITS` link it to
+actors; `IS_A` is the actor hierarchy a role filter walks (`(:Actor)-[:IS_A*0..]->(:Actor)`),
+so filtering on "provider" reaches "provider of a high-risk AI system".
 
 The judgment hierarchy, which hangs off its own root and points back into the acts:
 
@@ -215,6 +301,7 @@ created by `graph build`, the judgment one by `ingest case-law`.
 | `Article` | `Article` | `hybrid` dense article search |
 | `Paragraph` | `Paragraph` | `topics` paragraph search |
 | `Recital` | `Recital` | recital retrieval |
+| `AnnexPoint` | `AnnexPoint` | annex retrieval (AI Act only) |
 | `CaseLawParagraph` | `CaseLawParagraph` | `hybrid` INTERPRETIVE branch |
 
 Index name and node label are always the same string  `RagContext._vector_store` relies on

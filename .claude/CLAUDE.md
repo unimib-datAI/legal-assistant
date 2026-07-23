@@ -12,6 +12,7 @@ The project is an installable package (`pip install -e .`) under `src/`:
 |---|---|
 | `src/legal_assistant/` | The package — everything importable |
 | `src/legal_assistant/config.py` | Env-driven settings: models, thresholds, paths |
+| `src/legal_assistant/obligations/` | Deontic obligation extraction: detection, filtering, analysis, anchoring, and the actor vocabulary |
 | `src/legal_assistant/resources.py` | **The only** place Neo4j / OpenAI clients are constructed |
 | `src/legal_assistant/logging_setup.py` | **The only** place root logging is configured |
 | `src/legal_assistant/pipelines/` | The runnable jobs, callable without a shell |

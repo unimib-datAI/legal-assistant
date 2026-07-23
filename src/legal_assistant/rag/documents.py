@@ -101,6 +101,40 @@ def decorate_recital(doc: Document) -> Document:
     return Document(page_content=f"{header}\n{body}", metadata=dict(doc.metadata))
 
 
+def decorate_annex(doc: Document) -> Document:
+    """Return a copy of ``doc`` headed with the citation a lawyer would write.
+
+    An annex point's id is positional and says nothing a reader recognises, so the header is
+    built from ``point_label``, e.g. ``[AI Act, Annex III, point 1(a)]``. Lead-in prose has
+    no marker of its own and is cited through its annex instead.
+    """
+    meta = doc.metadata
+    act_name = CELEX_TO_ACT_NAME.get(meta.get("celex", ""), meta.get("celex", ""))
+    label = meta.get("point_label")
+    locator = f"Annex {label}" if label else f"Annex {meta.get('annex_number', '')}".strip()
+
+    section = meta.get("section_heading")
+    header = f"[{act_name}, {locator}, {section}]" if section else f"[{act_name}, {locator}]"
+    return Document(page_content=f"{header}\n{doc.page_content}", metadata=dict(meta))
+
+
+def decorate_obligation(doc: Document) -> Document:
+    """Head an obligation with its source provision and its trust.
+
+    The header tells the synthesis LLM this is a structured obligation addressed to a role,
+    e.g. ``[AI Act, obligation from 32024R1689_016.0, addressed to provider, trust: STATED]``.
+    When the weakest element was only inferred (BACKGROUND), the header says so, so the answer
+    can flag it rather than present it as stated law.
+    """
+    meta = doc.metadata
+    act_name = CELEX_TO_ACT_NAME.get(meta.get("celex", ""), meta.get("celex", ""))
+    source = meta.get("source_id", "")
+    actor = meta.get("actor", "")
+    trust = meta.get("weakest_method", "")
+    header = f"[{act_name}, obligation from {source}, addressed to {actor}, trust: {trust}]"
+    return Document(page_content=f"{header}\n{doc.page_content}", metadata=dict(meta))
+
+
 def decorate_case_law(doc: Document) -> Document:
     """Return a copy of ``doc`` headed with the case number, section and paragraph.
 

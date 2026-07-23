@@ -5,50 +5,75 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="2aac46b9-d4a6-4ea1-8017-d11d286eba73" name="Changes" comment="Implement graph validation mechanism to ensure data integrity before writing to Neo4j; add new validation classes and methods, and refactor document loading to support validation checks.">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/superpowers/specs/2026-07-23-em-dash-cleanup-design.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/superpowers/specs/2026-07-23-em-dash-cleanup-design.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/evals/act_classification_eval.py" beforeDir="false" afterPath="$PROJECT_DIR$/evals/act_classification_eval.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/evals/backfill_attribution.py" beforeDir="false" afterPath="$PROJECT_DIR$/evals/backfill_attribution.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/evals/evals_ragas.py" beforeDir="false" afterPath="$PROJECT_DIR$/evals/evals_ragas.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/evals/retrieval_eval.py" beforeDir="false" afterPath="$PROJECT_DIR$/evals/retrieval_eval.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/evaluation/evaluation.py" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/evaluation/evaluation.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/kg/aske_pipeline.py" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/kg/aske_pipeline.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/kg/case_law_parser.py" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/kg/case_law_parser.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/kg/graph_init.py" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/kg/graph_init.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/legal_assistant/case_law/html_parser.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/case_law/html_parser.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/legal_assistant/case_law/llm_orchestrator.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/case_law/llm_orchestrator.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/docs/reports/2026-07-24-gdpr-obligations-extraction.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/docs/superpowers/plans/2026-07-23-obligations-graph-plan.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/docs/superpowers/specs/2026-07-23-obligations-graph-design.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/evals/obligation_role_recall.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/legal_assistant/obligations/__init__.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/legal_assistant/obligations/actors.yaml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/legal_assistant/obligations/analysis.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/legal_assistant/obligations/anchoring.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/legal_assistant/obligations/builder.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/legal_assistant/obligations/concurrency.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/legal_assistant/obligations/detection.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/legal_assistant/obligations/extraction_io.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/legal_assistant/obligations/filtering.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/legal_assistant/obligations/json_io.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/legal_assistant/obligations/models.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/legal_assistant/obligations/prompts.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/legal_assistant/obligations/references.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/legal_assistant/obligations/vocabulary.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/legal_assistant/pipelines/obligation_checklist.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/legal_assistant/pipelines/obligations_ingest.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/legal_assistant/rag/prompts/checklist.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/legal_assistant/rag/prompts/obligations.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/legal_assistant/rag/prompts/vocabulary.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/legal_assistant/validation/obligation_checks.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/tests/graph/__init__.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/tests/graph/test_annex_loader.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/tests/graph_validation/test_annex_conservation.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/tests/obligations/__init__.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/tests/obligations/fixtures/analysis_output_aia_23_3.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/tests/obligations/test_analysis.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/tests/obligations/test_anchoring.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/tests/obligations/test_builder.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/tests/obligations/test_concurrency.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/tests/obligations/test_config.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/tests/obligations/test_detection.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/tests/obligations/test_extraction_io.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/tests/obligations/test_filtering.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/tests/obligations/test_models.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/tests/obligations/test_references.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/tests/obligations/test_validation.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/tests/obligations/test_vocabulary.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/tests/pipelines/__init__.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/tests/pipelines/test_checklist.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/tests/pipelines/test_graph_build.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/tests/pipelines/test_obligations_ingest.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/tests/rag/__init__.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/tests/rag/test_addressee_classifier.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/tests/rag/test_annex_branch.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/tests/rag/test_hybrid_params.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/tests/rag/test_obligations_branch.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/tests/scraper/__init__.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/tests/scraper/test_annex_parser.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.claude/CLAUDE.md" beforeDir="false" afterPath="$PROJECT_DIR$/.claude/CLAUDE.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/knowledge-graph.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/knowledge-graph.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pyproject.toml" beforeDir="false" afterPath="$PROJECT_DIR$/pyproject.toml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/legal_assistant/cli/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/cli/main.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/legal_assistant/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/config.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/legal_assistant/graph/loader.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/graph/loader.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/legal_assistant/graph/queries.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/graph/queries.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/legal_assistant/graph/recorder.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/graph/recorder.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/legal_assistant/graph/seed.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/graph/seed.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/legal_assistant/logging_setup.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/logging_setup.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/legal_assistant/pipelines/case_law_ingest.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/pipelines/case_law_ingest.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/legal_assistant/pipelines/graph_build.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/pipelines/graph_build.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/legal_assistant/rag/acts.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/rag/acts.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/legal_assistant/rag/attribution.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/rag/attribution.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/legal_assistant/rag/citations.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/rag/citations.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/legal_assistant/rag/documents.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/rag/documents.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/legal_assistant/rag/methods/base.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/rag/methods/base.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/legal_assistant/rag/methods/registry.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/rag/methods/registry.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/legal_assistant/rag/pipeline.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/rag/pipeline.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/legal_assistant/rag/intent_classifier.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/rag/intent_classifier.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/legal_assistant/rag/prompts/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/rag/prompts/__init__.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/legal_assistant/rag/retrievers/hybrid.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/rag/retrievers/hybrid.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/legal_assistant/rag/retrievers/topics.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/rag/retrievers/topics.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/legal_assistant/resources.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/resources.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/legal_assistant/scraper/browser_fetcher.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/scraper/browser_fetcher.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/legal_assistant/scraper/eurlex_exporter.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/scraper/eurlex_exporter.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/legal_assistant/text/preprocessor.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/text/preprocessor.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/legal_assistant/topic/concept.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/topic/concept.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/legal_assistant/validation/act_source.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/validation/act_source.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/legal_assistant/validation/case_law_source.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/validation/case_law_source.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/legal_assistant/validation/checks.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/validation/checks.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/legal_assistant/validation/gate.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/validation/gate.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/legal_assistant/validation/plan.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/validation/plan.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/conftest.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/conftest.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/graph_validation/test_acts.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/graph_validation/test_acts.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/graph_validation/test_case_law.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/graph_validation/test_case_law.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/graph_validation/test_gate.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/graph_validation/test_gate.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/graph_validation/golden_fingerprints.json" beforeDir="false" afterPath="$PROJECT_DIR$/tests/graph_validation/golden_fingerprints.json" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -83,45 +108,45 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;Docker.docker-compose.yml: Compose Deployment.executor&quot;: &quot;Run&quot;,
-    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
-    &quot;Python.act_classification_eval.executor&quot;: &quot;Run&quot;,
-    &quot;Python.article_summary_pipeline.executor&quot;: &quot;Run&quot;,
-    &quot;Python.aske_pipeline (1).executor&quot;: &quot;Run&quot;,
-    &quot;Python.case_law_pipeline.executor&quot;: &quot;Run&quot;,
-    &quot;Python.chapter_summary_pipeline.executor&quot;: &quot;Run&quot;,
-    &quot;Python.evals.executor&quot;: &quot;Run&quot;,
-    &quot;Python.evals_ragas.executor&quot;: &quot;Run&quot;,
-    &quot;Python.graphRAG.executor&quot;: &quot;Debug&quot;,
-    &quot;Python.graphRAG2.executor&quot;: &quot;Run&quot;,
-    &quot;Python.graph_init.executor&quot;: &quot;Run&quot;,
-    &quot;Python.graph_rag.executor&quot;: &quot;Run&quot;,
-    &quot;Python.prova.executor&quot;: &quot;Run&quot;,
-    &quot;Python.rag.executor&quot;: &quot;Run&quot;,
-    &quot;Python.rag_pipeline.executor&quot;: &quot;Run&quot;,
-    &quot;Python.ragas_eval.executor&quot;: &quot;Run&quot;,
-    &quot;Python.socratic_knowledge_extraction.executor&quot;: &quot;Run&quot;,
-    &quot;Python.temp.executor&quot;: &quot;Run&quot;,
-    &quot;Python.test.executor&quot;: &quot;Run&quot;,
-    &quot;Python.test_parser.executor&quot;: &quot;Run&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.typescript.service.memoryLimit.init&quot;: &quot;true&quot;,
-    &quot;codeWithMe.voiceChat.enabledByDefault&quot;: &quot;false&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;feature/project-refactor&quot;,
-    &quot;last_opened_file_path&quot;: &quot;C:/Users/nicho/AppData/Roaming/JetBrains/PyCharm2026.1/scratches&quot;,
-    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
-    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
-    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
-    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
-    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;editor.preferences.fonts.default&quot;,
-    &quot;vcs.patch.path&quot;: &quot;C:/Users/nicho/Downloads&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "Docker.docker-compose.yml: Compose Deployment.executor": "Run",
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "Python.act_classification_eval.executor": "Run",
+    "Python.article_summary_pipeline.executor": "Run",
+    "Python.aske_pipeline (1).executor": "Run",
+    "Python.case_law_pipeline.executor": "Run",
+    "Python.chapter_summary_pipeline.executor": "Run",
+    "Python.evals.executor": "Run",
+    "Python.evals_ragas.executor": "Run",
+    "Python.graphRAG.executor": "Debug",
+    "Python.graphRAG2.executor": "Run",
+    "Python.graph_init.executor": "Run",
+    "Python.graph_rag.executor": "Run",
+    "Python.prova.executor": "Run",
+    "Python.rag.executor": "Run",
+    "Python.rag_pipeline.executor": "Run",
+    "Python.ragas_eval.executor": "Run",
+    "Python.socratic_knowledge_extraction.executor": "Run",
+    "Python.temp.executor": "Run",
+    "Python.test.executor": "Run",
+    "Python.test_parser.executor": "Run",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
+    "codeWithMe.voiceChat.enabledByDefault": "false",
+    "git-widget-placeholder": "feature/obligations",
+    "last_opened_file_path": "C:/Users/nicho/AppData/Roaming/JetBrains/PyCharm2026.1/scratches",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "settings.editor.selected.configurable": "editor.preferences.fonts.default",
+    "vcs.patch.path": "C:/Users/nicho/Downloads"
   }
-}</component>
+}]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="C:\Users\nicho\AppData\Roaming\JetBrains\PyCharm2026.1\scratches" />

@@ -10,6 +10,17 @@ _SPLIT_DEF_NUM_RE = re.compile(r'^\((\d+)\)$')
 # Any paragraph div, whatever article it belongs to: "<article:3>.<paragraph>".
 _PARAGRAPH_DIV_RE = re.compile(r'^\d{3}\.\d+$')
 
+# An annex root div: "anx_III". Title sub-divs carry a dotted suffix and must not match.
+_ANNEX_DIV_RE = re.compile(r'^anx_[IVXLCDM]+$')
+
+# A point's numbering marker, standing alone in its own element: "1.", "(a)", "(iii)".
+# Deliberately narrow: a prose word such as "The" must never be taken for a label.
+_POINT_LABEL_RE = re.compile(r'^(\d{1,3}\.?|\(\w{1,4}\))$')
+
+# Inside an annex: the two-line heading of the annex itself, and its internal group headings.
+_ANNEX_TITLE_CLASS = 'oj-doc-ti'
+_ANNEX_HEADING_CLASS = 'oj-ti-grseq-1'
+
 
 class EURLexHTMLParser:
     """EURLex HTML parser to extract structured data from legal documents."""
@@ -32,6 +43,7 @@ class EURLexHTMLParser:
             },
             'chapters': self._get_chapters(),
             'recitals': self._get_recitals(),
+            'annexes': self._get_annexes(),
             'case_law': self._get_case_law()
         }
 
@@ -113,6 +125,155 @@ class EURLexHTMLParser:
             })
 
         return articles
+
+    def _get_annexes(self):
+        """Extract the annexes of the document.
+
+        Only some acts have any: the AI Act has thirteen, the other three in the corpus have
+        none. Annexes hang off the act itself, not off a chapter, in the same structural
+        position as recitals.
+        """
+        annexes = []
+        for annex_div in self.soup.find_all('div', id=_ANNEX_DIV_RE):
+            annex_id = annex_div.get('id')
+            annexes.append({
+                'id': annex_id,
+                'number': annex_id.split('_', 1)[1],
+                'title': self._get_annex_title(annex_div),
+                'points': self._get_annex_points(annex_div),
+            })
+
+        return annexes
+
+    def _get_annex_points(self, annex_div):
+        """Split one annex into its numbered points.
+
+        An annex div has no child divs, so unlike an article there is no element per point
+        to read. Two shapes occur in the published markup:
+
+        1. **Tables**: each numbered point is a ``td`` pair, the marker cell then the text
+           cell, with sub-points as tables nested inside the text cell. Most annexes.
+        2. **Bare paragraphs**: unclassed ``<p>`` alternating a marker and its prose. Annex
+           VI is the case, and it carries no ``oj-normal`` class at all, so anything keyed on
+           that class sees an empty annex rather than failing.
+
+        A point's ``label`` carries its whole path within the annex, "1(a)" and not "(a)",
+        because Article 6(2) cites "Annex III, point 1(a)". The annex number is prepended by
+        the loader, which is what knows it.
+        """
+        if annex_div.find('table') is not None:
+            return self._table_points(annex_div)
+        return self._bare_points(annex_div)
+
+    def _table_points(self, annex_div):
+        """Points from the table shape, in document order.
+
+        Prose outside the tables is kept as a point with a null label. Annex III opens with
+        the sentence that governs every point under it, and losing unnumbered lead-in text
+        would drop published words from the graph.
+        """
+        points, heading = [], None
+        for element in annex_div.find_all(['table', 'p']):
+            if element.name == 'table':
+                # Nested tables are reached from the point that owns them, not on their own.
+                if element.find_parent('table') is None:
+                    points.extend(self._points_from_table(element, '', heading))
+                continue
+
+            if element.find_parent('table') is not None:
+                continue
+
+            classes = element.get('class') or []
+            if _ANNEX_TITLE_CLASS in classes:
+                continue
+            if _ANNEX_HEADING_CLASS in classes:
+                heading = element.get_text(separator=' ', strip=True)
+                continue
+            if text := element.get_text(separator=' ', strip=True):
+                points.append({'label': None, 'text': text, 'section_heading': heading})
+
+        return points
+
+    def _points_from_table(self, table, prefix, heading):
+        """One table is one point: marker cell, text cell, then its nested sub-points.
+
+        Some annexes indent a point with a blank leading column, so Annex VII's rows read
+        ``['', '3.1.', 'The application ...']``. Taking the marker off cell zero would give
+        an empty label and push the real marker into the text, hence the skip.
+        """
+        cells = [td for td in table.find_all('td') if td.find_parent('table') is table]
+        while cells and not cells[0].get_text(strip=True):
+            cells.pop(0)
+        if len(cells) < 2:
+            return []
+
+        label = prefix + self._normalise_label(cells[0].get_text(separator=' ', strip=True))
+        body = cells[1]
+        points = [{
+            'label': label,
+            'text': self._own_text(body),
+            'section_heading': heading,
+        }]
+
+        for nested in body.find_all('table'):
+            if nested.find_parent('table') is table:
+                points.extend(self._points_from_table(nested, label, heading))
+
+        return points
+
+    @staticmethod
+    def _own_text(cell):
+        """A cell's own prose, excluding anything belonging to a table nested inside it.
+
+        Walks strings rather than ``<p>`` elements: a cell wraps its text in ``<p>`` in some
+        annexes and in ``<span>`` in others, and Annex VII's text cells hold a ``<span>``
+        followed by the nested tables of their sub-points.
+        """
+        owner = cell.find_parent('table')
+        parts = [
+            text
+            for node in cell.find_all(string=True)
+            if node.find_parent('table') is owner and (text := node.strip())
+        ]
+        return ' '.join(parts)
+
+    @staticmethod
+    def _normalise_label(marker):
+        """"1." and "1" are the same point; "(a)" keeps its brackets so paths stay readable."""
+        return marker.rstrip('.')
+
+    @staticmethod
+    def _bare_points(annex_div):
+        """Points from alternating unclassed ``<p>``: a marker, then the prose it numbers."""
+        points, label, heading = [], None, None
+        for p in annex_div.find_all('p'):
+            classes = p.get('class') or []
+            if _ANNEX_TITLE_CLASS in classes:
+                continue
+            if not (text := p.get_text(separator=' ', strip=True)):
+                continue
+            if _ANNEX_HEADING_CLASS in classes:
+                heading = text
+                continue
+            if _POINT_LABEL_RE.match(text):
+                label = text.rstrip('.')
+                continue
+            points.append({'label': label, 'text': text, 'section_heading': heading})
+            label = None
+
+        return points
+
+    @staticmethod
+    def _get_annex_title(annex_div):
+        """The annex heading, which the markup splits in two.
+
+        Both halves are ``p.oj-doc-ti``: the first restates the number ("ANNEX III"), which
+        is already carried by ``number``, and the second is the title proper.
+        """
+        headings = annex_div.find_all('p', class_=_ANNEX_TITLE_CLASS)
+        if len(headings) < 2:
+            return None
+        return headings[1].get_text(separator=' ', strip=True)
 
     def _get_article_title(self, article_div, article_id):
         """Extract article title"""

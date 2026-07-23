@@ -19,6 +19,8 @@ from legal_assistant.validation.plan import CONTAINMENT_RELATIONS, GraphPlan
 ALLOWED_TRANSITIONS: Set[Tuple[str, str, str]] = {
     ("Act", "CONTAINS", "Chapter"),
     ("Act", "CONTAINS", "Recital"),
+    ("Act", "CONTAINS", "Annex"),
+    ("Annex", "CONTAINS", "AnnexPoint"),
     ("Chapter", "CONTAINS", "Section"),
     ("Chapter", "CONTAINS", "Article"),
     ("Section", "CONTAINS", "Article"),
@@ -33,10 +35,11 @@ ALLOWED_TRANSITIONS: Set[Tuple[str, str, str]] = {
     ("CaseLaw", "INTERPRETS", "Chapter"),
 }
 
-# Edges whose right-hand endpoint is expected to live in another document's plan, so a
-# missing endpoint is not this plan's fault. INTERPRETS is emitted while loading an act and
-# points at provisions of that same act, but the CaseLaw stub itself is created here.
-_CROSS_DOCUMENT_RELATIONS = frozenset({"INTERPRETS"})
+# Edges whose endpoint is expected to live in another plan, so a missing endpoint is not this
+# plan's fault. INTERPRETS is emitted while loading an act and points at provisions of that
+# same act. STATES is emitted while ingesting obligations and its left endpoint is the passage
+# node (Paragraph or AnnexPoint), which the act plan created, not the obligation plan.
+_CROSS_DOCUMENT_RELATIONS = frozenset({"INTERPRETS", "STATES"})
 
 _WHITESPACE = re.compile(r"\s+")
 _NON_ALNUM = re.compile(r"[^0-9a-z]+")

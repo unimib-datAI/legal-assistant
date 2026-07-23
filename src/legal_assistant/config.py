@@ -30,6 +30,17 @@ OPENAI_ENDPOINT = f"{OPENAI_BASE_URL}/embeddings" if OPENAI_BASE_URL else None
 # Overridable via env so synthesis can be bumped (e.g. to gpt-4o) without a code change.
 RAG_LLM_MODEL = os.getenv("RAG_LLM_MODEL", "gpt-4o-mini")
 
+# Chat model for the offline obligation stages: vocabulary generation, deontic filtering and
+# analysis. Kept apart from RAG_LLM_MODEL on purpose. On the GDPR definitions gpt-5-mini
+# extracted a definitional IS_A and two entity subjects that gpt-4o-mini missed, and the
+# analysis stage extracts nested structure a small model degrades on. Retrieval stays on the
+# cheaper model; only these batch jobs pay for the stronger one.
+EXTRACTION_LLM_MODEL = os.getenv("EXTRACTION_LLM_MODEL", "gpt-5-mini")
+
+# How many obligation passages to process concurrently. Bounded so the burst of LLM calls
+# stays under the provider's rate limit; the extraction stages also retry a 429 with backoff.
+EXTRACTION_MAX_WORKERS = int(os.getenv("EXTRACTION_MAX_WORKERS", "8"))
+
 # Embedding model used both at graph-build time (to embed Paragraph/Recital/Article nodes) and
 # at query time (to embed the user question against the Neo4j vector index). These two MUST use
 # the same model, so keep it centralized here. EMBEDDING_DIM must match the model's output size
@@ -41,6 +52,10 @@ EMBEDDING_DIM = int(os.getenv("EMBEDDING_DIM", "1536"))
 # retrieval target. Lower selects more acts (higher recall, more off-topic context); higher
 # is stricter. Tunable via env for threshold sweeps. See legal_assistant/rag/intent_classifier.py.
 ACT_SCORE_THRESHOLD = float(os.getenv("ACT_SCORE_THRESHOLD", "0.4"))
+
+# Minimum per-actor relevance for the obligations branch to filter on a role. Separate from
+# ACT_SCORE_THRESHOLD; used only by the addressee classifier, which the branch calls when on.
+ADDRESSEE_SCORE_THRESHOLD = float(os.getenv("ADDRESSEE_SCORE_THRESHOLD", "0.5"))
 
 # Cross-encoder reranker (sentence-transformers CrossEncoder id). Overridable via env to
 # A/B alternative rerankers with retrieval_eval.py, e.g. RERANK_MODEL=zeroentropy/zerank-2 - BAAI/bge-reranker-v2-m3.

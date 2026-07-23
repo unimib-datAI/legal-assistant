@@ -36,6 +36,7 @@ dependencies = [
     "sentence-transformers",
     "FlagEmbedding",
     "nltk",
+    "PyYAML==6.0.3",
     "rank-bm25",
     "playwright",
     "ollama",

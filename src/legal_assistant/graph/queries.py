@@ -168,6 +168,71 @@ class NodeQueries:
     ORDER BY a.id, toInteger(r.number)
     """
 
+    GET_ALL_ACTORS = """
+    MATCH (a:Actor)
+    RETURN a.id AS id, a.label AS label
+    ORDER BY a.id
+    """
+
+    GET_OBLIGATIONS_FOR_ACTORS = """
+    MATCH (act:Act)-[:CONTAINS*]->(src)-[:STATES]->(o:Obligation)
+    WHERE act.id IN $acts
+    MATCH (o)-[:ADDRESSED_TO]->(a:Actor)-[:IS_A*0..]->(target:Actor)
+    WHERE target.id IN $actors
+    RETURN DISTINCT o.id AS id, src.id AS source_id, a.id AS actor,
+           o.modality AS modality, o.obligation_type AS obligation_type,
+           o.predicate_text AS predicate_text, o.target AS target,
+           o.specification AS specification, o.precondition AS precondition,
+           o.weakest_method AS weakest_method
+    ORDER BY o.id
+    """
+
+    GET_OBLIGATIONS_FOR_ACTOR = """
+    MATCH (act:Act {id: $celex})-[:CONTAINS*]->(src)-[:STATES]->(o:Obligation)
+    MATCH (o)-[:ADDRESSED_TO]->(a:Actor)-[:IS_A*0..]->(:Actor {id: $actor})
+    RETURN DISTINCT o.id AS id, src.id AS source_id, a.id AS actor,
+           o.modality AS modality, o.obligation_type AS obligation_type,
+           o.predicate_text AS predicate_text, o.target AS target,
+           o.specification AS specification, o.precondition AS precondition,
+           o.weakest_method AS weakest_method
+    ORDER BY o.id
+    """
+
+    DELETE_OBLIGATIONS_BY_ACTS = """
+    MATCH (o:Obligation)
+    WHERE o.celex IN $acts
+    DETACH DELETE o
+    """
+
+    GET_ARTICLES_BY_IDS = """
+    MATCH (art:Article)
+    WHERE art.id IN $ids
+    RETURN art.id AS id, art.title AS title, art.text AS text
+    """
+
+    GET_PARAGRAPHS_BY_ACTS = """
+    MATCH (act:Act)-[:CONTAINS*]->(art:Article)-[:CONTAINS]->(p:Paragraph)
+    WHERE act.id IN $acts
+    RETURN p.id AS id, p.text AS text, act.id AS celex
+    ORDER BY act.id, art.id, p.id
+    """
+
+    GET_ANNEX_POINTS_BY_ACTS = """
+    MATCH (act:Act)-[:CONTAINS]->(anx:Annex)-[:CONTAINS]->(p:AnnexPoint)
+    WHERE act.id IN $acts
+    RETURN p.id AS id, p.text AS text, act.id AS celex,
+           p.point_label AS point_label, p.section_heading AS section_heading,
+           anx.number AS annex_number, anx.title AS annex_title
+    ORDER BY act.id, anx.id, p.id
+    """
+
+    GET_ANNEXES_BY_ACTS = """
+    MATCH (act:Act)-[:CONTAINS]->(anx:Annex)
+    WHERE act.id IN $acts
+    RETURN anx.id AS id, anx.number AS number, anx.title AS title, act.id AS celex
+    ORDER BY act.id, anx.id
+    """
+
     GET_ARTICLES_BY_ACTS = """
     MATCH (act:Act)-[:CONTAINS*]->(art:Article)
     WHERE act.id IN $acts

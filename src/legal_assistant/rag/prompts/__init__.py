@@ -13,7 +13,15 @@ flags, pin it explicitly with ``registry.get("answer_synthesis", "v9")``.
 
 The four domain modules are imported for their registration side effect.
 """
-from legal_assistant.rag.prompts import case_law, retrieval, summaries, synthesis  # noqa: F401
+from legal_assistant.rag.prompts import (  # noqa: F401
+    case_law,
+    checklist,
+    obligations,
+    retrieval,
+    summaries,
+    synthesis,
+    vocabulary,
+)
 from legal_assistant.rag.prompts.registry import PromptRegistry, PromptVersion, registry
 
 # ── active-version exports ────────────────────────────────────────────────────
@@ -26,6 +34,17 @@ ANSWER_SYNTHESIS_PROMPT = registry.active("answer_synthesis").body
 ANSWER_FILTER_PROMPT = registry.active("answer_filter").body
 CONTEXT_CURATION_PROMPT = registry.active("context_curation").body
 ATTRIBUTION_PROMPT = registry.active("attribution").body
+
+ACTOR_VOCABULARY_PROMPT = registry.active("actor_vocabulary").body
+
+ADDRESSEE_CLASSIFICATION_PROMPT = registry.active("addressee_classification").body
+
+OBLIGATION_CHECKLIST_PROMPT = registry.active("obligation_checklist").body
+
+OBLIGATION_FILTERING_SYSTEM_PROMPT = registry.active("obligation_filtering_system").body
+OBLIGATION_FILTERING_USER_PROMPT = registry.active("obligation_filtering_user").body
+OBLIGATION_ANALYSIS_SYSTEM_PROMPT = registry.active("obligation_analysis_system").body
+OBLIGATION_ANALYSIS_USER_PROMPT = registry.active("obligation_analysis_user").body
 
 ARTICLE_SUMMARY_SYSTEM_PROMPT = registry.active("article_summary_system").body
 ARTICLE_SUMMARY_USER_PROMPT = registry.active("article_summary_user").body
@@ -48,6 +67,13 @@ __all__ = [
     "ANSWER_FILTER_PROMPT",
     "CONTEXT_CURATION_PROMPT",
     "ATTRIBUTION_PROMPT",
+    "ACTOR_VOCABULARY_PROMPT",
+    "ADDRESSEE_CLASSIFICATION_PROMPT",
+    "OBLIGATION_CHECKLIST_PROMPT",
+    "OBLIGATION_FILTERING_SYSTEM_PROMPT",
+    "OBLIGATION_FILTERING_USER_PROMPT",
+    "OBLIGATION_ANALYSIS_SYSTEM_PROMPT",
+    "OBLIGATION_ANALYSIS_USER_PROMPT",
     "ARTICLE_SUMMARY_SYSTEM_PROMPT",
     "ARTICLE_SUMMARY_USER_PROMPT",
     "CHAPTER_SUMMARY_SYSTEM_PROMPT",

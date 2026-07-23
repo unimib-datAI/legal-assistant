@@ -8,7 +8,10 @@ from pydantic import BaseModel, Field
 from legal_assistant import config
 from legal_assistant.graph.queries import NodeQueries
 from legal_assistant.rag.acts import acts_mentioned_in
-from legal_assistant.rag.prompts import QUERY_CLASSIFICATION_PROMPT
+from legal_assistant.rag.prompts import (
+    ADDRESSEE_CLASSIFICATION_PROMPT,
+    QUERY_CLASSIFICATION_PROMPT,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +27,18 @@ class ActRelevance(BaseModel):
         ge=0.0, le=1.0,
         description="0-1: how central this act's core subject matter is to the query."
     )
+
+
+class ActorRelevance(BaseModel):
+    actor: str = Field(description="Actor id being scored, exactly as listed in ROLES.")
+    relevance: float = Field(
+        ge=0.0, le=1.0, description="0-1: how central this role is to the question."
+    )
+
+
+class RawAddressees(BaseModel):
+    """Structured output of the separate addressee classifier."""
+    addressee_relevances: List[ActorRelevance] = Field(default_factory=list)
 
 
 class RawClassification(BaseModel):
@@ -65,6 +80,15 @@ class QueryClassification(BaseModel):
         description="Decomposition of a compound query into focused sub-questions; empty "
                     "for atomic queries. Used by decomposition-aware retrievers."
     )
+    addressees: List[str] = Field(
+        default_factory=list,
+        description="Actor ids the query is about, for the obligations branch. Empty unless "
+                    "the classifier scores addressees; the branch stays inert when empty."
+    )
+    addressee_scores: Dict[str, float] = Field(
+        default_factory=dict,
+        description="Raw per-actor relevance scores behind the addressee selection."
+    )
 
 
 class QueryClassifier:
@@ -82,12 +106,17 @@ class QueryClassifier:
         graph,
         llm: ChatOpenAI,
         act_score_threshold: float = config.ACT_SCORE_THRESHOLD,
+        addressee_score_threshold: float = config.ADDRESSEE_SCORE_THRESHOLD,
     ):
         self.graph = graph
         self.act_score_threshold = act_score_threshold
+        self.addressee_score_threshold = addressee_score_threshold
         self._structured_llm = llm.with_structured_output(RawClassification)
+        self._structured_addressees = llm.with_structured_output(RawAddressees)
         self._prompt = PromptTemplate.from_template(QUERY_CLASSIFICATION_PROMPT)
+        self._addressee_prompt = PromptTemplate.from_template(ADDRESSEE_CLASSIFICATION_PROMPT)
         self._acts_block: Optional[str] = None
+        self._actors_block: Optional[str] = None
         self.last_classification: Optional[QueryClassification] = None
 
     def _format_acts(self) -> str:
@@ -96,6 +125,35 @@ class QueryClassifier:
         rows = self.graph.query(NodeQueries.GET_ALL_ACTS)
         self._acts_block = "\n".join(f"- {r['celex']}: {r['title']}" for r in rows) or "(no acts available)"
         return self._acts_block
+
+    def _format_actors(self) -> str:
+        if self._actors_block is not None:
+            return self._actors_block
+        rows = self.graph.query(NodeQueries.GET_ALL_ACTORS)
+        self._actors_block = "\n".join(
+            f"- {r['id']}: {r['label']}" for r in rows) or "(no actors available)"
+        return self._actors_block
+
+    def classify_addressees(self, query: str) -> Tuple[List[str], Dict[str, float]]:
+        """Score the roles a question is about, thresholded, best first.
+
+        A separate call from :meth:`classify`, so the shared query classifier is untouched.
+        Empty when the graph holds no actors or none clears the threshold, which leaves the
+        obligations branch inert.
+        """
+        actors_block = self._format_actors()
+        if actors_block.startswith("(no actors"):
+            return [], {}
+
+        prompt = self._addressee_prompt.format(query=query, actors=actors_block)
+        raw: RawAddressees = self._structured_addressees.invoke(prompt)
+        scores = {ar.actor: ar.relevance for ar in raw.addressee_relevances}
+        selected = sorted(
+            (actor for actor, score in scores.items() if score >= self.addressee_score_threshold),
+            key=lambda actor: -scores[actor],
+        )
+        logger.info("[Classifier] addressees=%s", selected)
+        return selected, scores
 
     def _select_acts(self, raw: RawClassification, query: str) -> Tuple[List[str], Dict[str, float]]:
         """Threshold the per-act scores, then floor with any explicitly-named act."""

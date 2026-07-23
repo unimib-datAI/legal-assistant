@@ -18,7 +18,8 @@ from legal_assistant.scraper.eurlex_document_utils import EurlexDocumentUtils
 logger = logging.getLogger(__name__)
 
 # Node labels that carry an embedding + vector index. Ordered as they are built.
-EMBEDDED_LABELS: tuple[str, ...] = ("Paragraph", "Recital", "Article")
+# Only the AI Act has annex points, so the AnnexPoint index stays empty for the other three.
+EMBEDDED_LABELS: tuple[str, ...] = ("Paragraph", "Recital", "Article", "AnnexPoint")
 
 # The four acts the project models, in the order the graph is normally built.
 DEFAULT_CELEX_IDS: tuple[str, ...] = (

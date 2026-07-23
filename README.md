@@ -108,6 +108,36 @@ legal-assistant ingest case-law --reset                          # rebuild conte
 > Requires `graph build` to have run first. Judgments older than ~2012 have no XHTML
 > manifestation in Cellar and are skipped, not fatal — the run lists them at the end.
 
+### `ingest obligations` — deontic obligations
+
+Detects candidate passages, filters and analyses them with `EXTRACTION_LLM_MODEL`
+(`gpt-5-mini`), anchors addressees to the actor vocabulary, and writes the obligation
+subgraph. Passages are processed concurrently (`EXTRACTION_MAX_WORKERS`, default 8) with
+backoff on rate limits.
+
+| Flag | Type | Default | Meaning |
+|---|---|---|---|
+| `--acts` | list | `32016R0679` | CELEX ids to extract obligations from |
+| `--limit` | int | — | Process at most N candidate passages (smoke run) |
+| `--reset` | flag | off | Delete existing obligations for these acts first |
+
+```bash
+legal-assistant ingest obligations --acts 32016R0679 --reset     # full GDPR, clean rebuild
+legal-assistant ingest obligations --acts 32024R1689 --limit 20  # AI Act smoke run
+```
+
+> Requires `graph build`. Actors promoted from addressee strings are written back into
+> `obligations/actors.yaml` for review.
+
+### `checklist` — every obligation a role bears
+
+Deterministic: fetches the complete obligation set for a role (hierarchy included) and has the
+LLM render it as a compliance checklist. Nothing is retrieved or truncated.
+
+```bash
+legal-assistant checklist --act 32016R0679 --actor controller
+```
+
 ### `summarize` — optional LLM summaries on graph nodes
 
 Idempotent: only nodes whose `summary` is still NULL are fetched, so a re-run on a fully
@@ -237,6 +267,21 @@ cheap. Reports `detected` (true act in the prediction), `exact`, and `abstained`
 legal-assistant eval acts
 legal-assistant eval acts --threshold 0.5
 legal-assistant eval acts --limit 5                     # smoke run
+```
+
+### `eval roles` — obligation role-recall
+
+Generated from the graph, no annotation: for every actor that bears obligations, asks
+"What obligations does a `<role>` have?" and checks the addressee classifier picks that role
+and the graph returns a non-empty set. Needs only the classifier LLM and Neo4j.
+
+| Flag | Type | Default | Meaning |
+|---|---|---|---|
+| `--act` | str | `32016R0679` | CELEX id of the act to evaluate |
+| `--limit` | int | — | Evaluate at most N roles |
+
+```bash
+legal-assistant eval roles --act 32016R0679 --limit 10
 ```
 
 ### `eval backfill` — add attribution to an existing results CSV

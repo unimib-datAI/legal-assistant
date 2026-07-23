@@ -33,6 +33,7 @@ _EVAL_SCRIPTS = {
     "retrieval": "retrieval_eval.py",
     "ragas": "evals_ragas.py",
     "acts": "act_classification_eval.py",
+    "roles": "obligation_role_recall.py",
     "backfill": "backfill_attribution.py",
 }
 
@@ -114,6 +115,53 @@ def _cmd_ingest_case_law(args: argparse.Namespace) -> int:
 
 
 # ── summarize ─────────────────────────────────────────────────────────────────
+
+def _cmd_ingest_obligations(args: argparse.Namespace) -> int:
+    from legal_assistant.obligations.vocabulary import (
+        VOCABULARY_PATH,
+        dumps,
+        load_vocabulary,
+    )
+    from legal_assistant.pipelines import obligations_ingest as ingest_mod
+    from legal_assistant.resources import make_chat_llm, make_embeddings, make_graph_client
+
+    quiet("legal_assistant.graph.client")
+
+    graph = make_graph_client()
+    graph.verify_connection()
+    llm = make_chat_llm(model=config.EXTRACTION_LLM_MODEL, temperature=1.0)
+    embeddings = make_embeddings()
+
+    if args.reset:
+        ingest_mod.delete_obligations(graph, args.acts)
+
+    anchor = ingest_mod.ingest(
+        graph, llm, embeddings.embed_documents, args.acts, limit=args.limit)
+
+    if anchor.promoted:
+        merged = load_vocabulary() + anchor.promoted
+        VOCABULARY_PATH.write_text(dumps(merged), encoding="utf-8")
+        logger.info("Wrote %d promoted actor(s) back to %s", len(anchor.promoted), VOCABULARY_PATH)
+    if anchor.unmapped:
+        logger.warning("%d addressee string(s) matched no actor; top: %s",
+                       len(anchor.unmapped), anchor.unmapped.most_common(10))
+    return 0
+
+
+def _cmd_checklist(args: argparse.Namespace) -> int:
+    from legal_assistant.pipelines.obligation_checklist import checklist
+    from legal_assistant.resources import make_chat_llm, make_langchain_graph
+
+    graph = make_langchain_graph()
+    llm = make_chat_llm(model=config.EXTRACTION_LLM_MODEL, temperature=1.0)
+
+    text = checklist(graph, llm, args.act, args.actor)
+    if not text:
+        logger.warning("No obligations found for actor %r under %s.", args.actor, args.act)
+        return 1
+    print(text)
+    return 0
+
 
 def _cmd_summarize(args: argparse.Namespace) -> int:
     from legal_assistant.pipelines.summaries import TASKS, run_summaries
@@ -250,6 +298,22 @@ def build_parser() -> argparse.ArgumentParser:
                           help="Write judgments that fail graph validation, logging the "
                                "violations as warnings instead of skipping them.")
     case_law.set_defaults(func=_cmd_ingest_case_law)
+
+    obligations = ingest_sub.add_parser(
+        "obligations", help="Extract deontic obligations and load them into the graph.")
+    obligations.add_argument("--acts", nargs="+", default=["32016R0679"],
+                             help="CELEX ids of the acts to extract obligations from (default: GDPR).")
+    obligations.add_argument("--limit", type=int,
+                             help="Process at most N candidate passages (for a smoke run).")
+    obligations.add_argument("--reset", action="store_true",
+                             help="Delete existing obligations for these acts before ingesting.")
+    obligations.set_defaults(func=_cmd_ingest_obligations)
+
+    checklist_p = sub.add_parser(
+        "checklist", help="Render the compliance checklist for a role under an act.")
+    checklist_p.add_argument("--act", required=True, help="CELEX id of the act.")
+    checklist_p.add_argument("--actor", required=True, help="Actor id, e.g. 'controller'.")
+    checklist_p.set_defaults(func=_cmd_checklist)
 
     # summarize
     summarize = sub.add_parser("summarize", help="Generate LLM summaries on graph nodes.")

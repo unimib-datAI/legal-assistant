@@ -1,0 +1,296 @@
+- celex: null
+  defined_in: null
+  id: a_body_as_referred_to_in_paragraph_1_of_this_article
+  is_a: []
+  label: a body as referred to in paragraph 1 of this Article
+- celex: 32016R0679
+  defined_in: null
+  id: a_data_subject_who_has_obtained_restriction_of_processing_pursuant_to_paragraph_1
+  is_a:
+  - data_subject
+  label: A data subject who has obtained restriction of processing pursuant to paragraph
+    1
+- celex: 32016R0679
+  defined_in: null
+  id: any_natural_person_acting_under_the_authority_of_the_controller
+  is_a:
+  - controller
+  label: any natural person acting under the authority of the controller
+- celex: 32016R0679
+  defined_in: null
+  id: any_person_acting_under_the_authority_of_the_controller
+  is_a:
+  - controller
+  label: any person acting under the authority of the controller
+- celex: null
+  defined_in: null
+  id: as_the_case_may_be
+  is_a: []
+  label: as the case may be
+- celex: 32016R0679
+  defined_in: 32016R0679_004.7
+  id: controller
+  is_a: []
+  label: controller
+- celex: 32016R0679
+  defined_in: null
+  id: controllers_involved_in_processing_data_controllers
+  is_a:
+  - data_controllers
+  label: controllers involved in processing (data controllers)
+- celex: 32016R0679
+  defined_in: null
+  id: controllers_which_are_processing_the_personal_data
+  is_a:
+  - controller
+  label: controllers which are processing the personal data
+- celex: 32016R0679
+  defined_in: null
+  id: data_controllers
+  is_a:
+  - controller
+  label: Data controllers
+- celex: 32016R0679
+  defined_in: 32016R0679_004.1
+  id: data_subject
+  is_a: []
+  label: data subject
+- celex: 32016R0679
+  defined_in: null
+  id: each_controller
+  is_a:
+  - controller
+  label: Each controller
+- celex: null
+  defined_in: null
+  id: each_member_state
+  is_a: []
+  label: Each Member State
+- celex: 32016R0679
+  defined_in: null
+  id: each_recipient_to_whom_the_personal_data_have_been_disclosed
+  is_a:
+  - recipient
+  label: each recipient to whom the personal data have been disclosed
+- celex: 32016R0679
+  defined_in: 32016R0679_004.18
+  id: enterprise
+  is_a: []
+  label: enterprise
+- celex: 32016R0679
+  defined_in: 32016R0679_004.19
+  id: group_of_undertakings
+  is_a: []
+  label: group of undertakings
+- celex: 32016R0679
+  defined_in: 32016R0679_004.26
+  id: international_organisation
+  is_a: []
+  label: international organisation
+- celex: 32016R0679
+  defined_in: null
+  id: medium_sized_enterprises
+  is_a:
+  - enterprise
+  label: medium-sized enterprises
+- celex: null
+  defined_in: null
+  id: member_states
+  is_a: []
+  label: Member States
+- celex: 32016R0679
+  defined_in: null
+  id: more_controllers_joint_controllers
+  is_a:
+  - controller
+  label: more controllers (joint controllers)
+- celex: null
+  defined_in: null
+  id: natural_persons
+  is_a: []
+  label: natural persons
+- celex: null
+  defined_in: null
+  id: other_authorities_as_designated_by_member_state_law
+  is_a: []
+  label: other authorities as designated by Member State law
+- celex: 32016R0679
+  defined_in: null
+  id: other_bodies_representing_categories_of_controllers
+  is_a:
+  - controller
+  label: other bodies representing categories of controllers
+- celex: 32016R0679
+  defined_in: 32016R0679_004.8
+  id: processor
+  is_a: []
+  label: processor
+- celex: 32016R0679
+  defined_in: null
+  id: processor_on_the_territory_of_its_member_state
+  is_a:
+  - processor
+  label: processor on the territory of its Member State
+- celex: 32016R0679
+  defined_in: null
+  id: processor_which_submits_its_processing_to_the_certification_mechanism
+  is_a:
+  - processor
+  label: processor which submits its processing to the certification mechanism
+- celex: 32016R0679
+  defined_in: 32016R0679_004.9
+  id: recipient
+  is_a: []
+  label: recipient
+- celex: 32016R0679
+  defined_in: 32016R0679_004.17
+  id: representative
+  is_a: []
+  label: representative
+- celex: 32016R0679
+  defined_in: null
+  id: single_establishment_of_the_controller
+  is_a:
+  - controller
+  label: single establishment of the controller
+- celex: 32016R0679
+  defined_in: null
+  id: such_controllers
+  is_a:
+  - controller
+  label: Such controllers
+- celex: 32016R0679
+  defined_in: 32016R0679_004.21
+  id: supervisory_authority
+  is_a: []
+  label: supervisory authority
+- celex: 32016R0679
+  defined_in: 32016R0679_004.22
+  id: supervisory_authority_concerned
+  is_a:
+  - supervisory_authority
+  label: supervisory authority concerned
+- celex: null
+  defined_in: null
+  id: the_board
+  is_a: []
+  label: the Board
+- celex: null
+  defined_in: null
+  id: the_chair
+  is_a: []
+  label: The Chair
+- celex: null
+  defined_in: null
+  id: the_chair_of_the_board
+  is_a: []
+  label: The Chair of the Board
+- celex: null
+  defined_in: null
+  id: the_commission
+  is_a: []
+  label: the Commission
+- celex: null
+  defined_in: null
+  id: the_complainant
+  is_a: []
+  label: the complainant
+- celex: 32016R0679
+  defined_in: null
+  id: the_controller_s_representative
+  is_a:
+  - representative
+  label: the controller's representative
+- celex: null
+  defined_in: null
+  id: the_council
+  is_a: []
+  label: the Council
+- celex: null
+  defined_in: null
+  id: the_data_protection_officer
+  is_a: []
+  label: the data protection officer
+- celex: null
+  defined_in: null
+  id: the_european_parliament
+  is_a: []
+  label: the European Parliament
+- celex: null
+  defined_in: null
+  id: the_government
+  is_a: []
+  label: the government
+- celex: 32016R0679
+  defined_in: null
+  id: the_highest_management_level_of_the_controller
+  is_a:
+  - controller
+  label: the highest management level of the controller
+- celex: 32016R0679
+  defined_in: null
+  id: the_initial_processor
+  is_a:
+  - processor
+  label: the initial processor
+- celex: 32016R0679
+  defined_in: null
+  id: the_joint_controllers
+  is_a:
+  - controller
+  label: the joint controllers
+- celex: 32016R0679
+  defined_in: null
+  id: the_member_state_of_the_seconding_supervisory_authority_whose_staff_has_caused_damage_to_any_person_in_the_territory_of_another_member_state
+  is_a:
+  - supervisory_authority
+  label: The Member State of the seconding supervisory authority whose staff has caused
+    damage to any person in the territory of another Member State
+- celex: null
+  defined_in: null
+  id: the_member_states
+  is_a: []
+  label: The Member States
+- celex: null
+  defined_in: null
+  id: the_national_parliament
+  is_a: []
+  label: the national parliament
+- celex: 32016R0679
+  defined_in: null
+  id: the_processor_s_representative
+  is_a:
+  - representative
+  label: the processor's representative
+- celex: 32016R0679
+  defined_in: null
+  id: the_processor_s_representative_where_applicable
+  is_a:
+  - the_processor_s_representative
+  label: the processor's representative (where applicable)
+- celex: 32016R0679
+  defined_in: null
+  id: the_processor_who_has_access_to_personal_data
+  is_a:
+  - processor
+  label: the processor who has access to personal data
+- celex: null
+  defined_in: null
+  id: the_public
+  is_a: []
+  label: the public
+- celex: null
+  defined_in: null
+  id: the_secretariat
+  is_a: []
+  label: The secretariat
+- celex: 32016R0679
+  defined_in: 32016R0679_004.10
+  id: third_party
+  is_a: []
+  label: third party
+- celex: null
+  defined_in: null
+  id: where_applicable
+  is_a: []
+  label: where applicable
