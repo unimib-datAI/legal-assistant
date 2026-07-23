@@ -59,7 +59,7 @@ def build_validated(
     fragments from the built plan. Omitting them runs the structural checks only.
 
     ``check_determinism`` re-runs ``build_fn`` on a second recorder and compares
-    fingerprints. It is free — the same bytes go in, and nothing touches the network.
+    fingerprints. It is free: the same bytes go in, and nothing touches the network.
 
     With ``strict=False`` violations are logged as warnings and the plan is returned anyway.
     """

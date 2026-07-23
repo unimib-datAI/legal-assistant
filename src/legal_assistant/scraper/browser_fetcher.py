@@ -37,7 +37,7 @@ class BrowserFetcher:
 
         if len(html) < MIN_CONTENT_LENGTH:
             raise ValueError(
-                f"Suspiciously short response from {url} ({len(html)} chars) — "
+                f"Suspiciously short response from {url} ({len(html)} chars), "
                 "possible bot-protection page"
             )
 

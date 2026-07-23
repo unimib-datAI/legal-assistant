@@ -247,8 +247,8 @@ class CaseLawQueries:
     # NOTE: there is deliberately no "articles interpreted by these judgments" query here.
     # That bridge existed and was removed: INTERPRETS is document-level, so ranking its targets
     # by how many retrieved judgments share them surfaces whatever every judgment happens to
-    # touch (corpus-wide: Articles 6, 82, 4, 5) instead of what the retrieved passage is about
-    # — on a question about Article 55(3) it injected Articles 6, 5 and 16, and never 55.
+    # touch (corpus-wide: Articles 6, 82, 4, 5) instead of what the retrieved passage is about:
+    # on a question about Article 55(3) it injected Articles 6, 5 and 16, and never 55.
     # The bridge is now read from the citations in the passage text; see legal_assistant/rag/citations.py.
     # INTERPRETS remains as the corpus scope filter above.
 

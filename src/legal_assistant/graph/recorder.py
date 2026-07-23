@@ -5,7 +5,7 @@ through exactly two methods: ``upsert_graph_node`` and ``create_relationship``. 
 them a :class:`RecordingGraph` instead of the real client makes them build the whole graph
 in memory, where it can be inspected as a whole before a single write reaches the database.
 
-Nothing here touches the network. The builders are not modified — this is duck typing on
+Nothing here touches the network. The builders are not modified: this is duck typing on
 the only part of the interface they actually use.
 """
 from __future__ import annotations
@@ -44,7 +44,7 @@ class RecordingGraph:
     """Records graph operations instead of writing them.
 
     Mirrors the signatures of ``Neo4jGraph.upsert_graph_node`` and
-    ``Neo4jGraph.create_relationship`` — including the return value of the former, which the
+    ``Neo4jGraph.create_relationship``, including the return value of the former, which the
     builders use as the node id.
     """
 

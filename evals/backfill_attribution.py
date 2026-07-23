@@ -1,6 +1,6 @@
 """Add per-sentence source attribution to an existing evaluation CSV.
 
-Attribution needs only the answer text and the passages that produced it — both are
+Attribution needs only the answer text and the passages that produced it, both are
 already stored in the results CSV (``answer``, ``sources``, ``contexts``). So an
 existing run can be enriched *post hoc*, without re-running retrieval, synthesis or
 the RAGAS metrics: one LLM call per row, nothing else.
@@ -90,7 +90,7 @@ def backfill(csv_path: Path, llm: BaseChatModel) -> pd.DataFrame:
 
         if not source_ids or len(source_ids) != len(contexts):
             # No passages recorded (or a malformed row): nothing to attribute against.
-            logger.warning("Row %d: %d source(s), %d context(s) — skipped",
+            logger.warning("Row %d: %d source(s), %d context(s), skipped",
                            i, len(source_ids), len(contexts))
             all_segments.append("")
             all_cited.append("")

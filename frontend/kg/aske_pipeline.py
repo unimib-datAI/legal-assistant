@@ -2,7 +2,7 @@
 ASKE Pipeline page.
 
 Extracts and enriches legal concepts from the knowledge graph. The cycle itself lives in
-``legal_assistant.pipelines.aske_run`` — this page collects the parameters, streams the
+``legal_assistant.pipelines.aske_run``: this page collects the parameters, streams the
 logs, and renders the resulting concepts.
 """
 import json
@@ -29,11 +29,11 @@ col_n, col_a, col_b, col_g = st.columns(4)
 with col_n:
     n_generations = st.number_input("Generations", min_value=1, max_value=50, value=defaults.n_generations)
 with col_a:
-    alpha = st.slider("α — classification threshold", 0.0, 1.0, defaults.alpha, 0.05)
+    alpha = st.slider("α - classification threshold", 0.0, 1.0, defaults.alpha, 0.05)
 with col_b:
-    beta = st.slider("β — enrichment threshold", 0.0, 1.0, defaults.beta, 0.05)
+    beta = st.slider("β - enrichment threshold", 0.0, 1.0, defaults.beta, 0.05)
 with col_g:
-    gamma = st.number_input("γ — max new terms / concept", min_value=1, max_value=30, value=defaults.gamma)
+    gamma = st.number_input("γ - max new terms / concept", min_value=1, max_value=30, value=defaults.gamma)
 
 if st.button("Run ASKE Pipeline", type="primary"):
     params = AskeParams(
@@ -54,7 +54,7 @@ if st.button("Run ASKE Pipeline", type="primary"):
         )
 
         st.success(
-            f"ASKE complete — {len(result.active)} active concepts, "
+            f"ASKE complete: {len(result.active)} active concepts, "
             f"{len(result.inactive)} inactive, {result.updated_paragraphs} paragraphs updated."
         )
 

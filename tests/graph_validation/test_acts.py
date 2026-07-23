@@ -1,6 +1,6 @@
 """An act must reach the graph without losing a single published fragment.
 
-Runs against the four HTML files already in ``corpus/`` — no network. The case-law lookup
+Runs against the four HTML files already in ``corpus/``, no network. The case-law lookup
 inside ``extract_data`` is the one part that would reach out, so it is stubbed: the
 "Interpreted by" metadata is a separate concern from whether the act's own text survives.
 """

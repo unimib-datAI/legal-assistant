@@ -1,11 +1,11 @@
-"""Source inventory for EUR-Lex acts — what the HTML contains vs. what reaches the graph.
+"""Source inventory for EUR-Lex acts: what the HTML contains vs. what reaches the graph.
 
 The source of truth is the published markup: every ``<p class="oj-normal">`` inside an
 article or recital div is text a reader sees, so every one of them must survive into a
 ``Paragraph`` or ``Recital`` node.
 
 **``Article.text`` is deliberately excluded from the reconstruction.** The exporter stores
-the article's whole ``full_text``, which already contains all of its paragraphs — counting
+the article's whole ``full_text``, which already contains all of its paragraphs, counting
 it would make a dropped paragraph look present and defeat the check entirely.
 """
 from __future__ import annotations
@@ -44,13 +44,13 @@ def html_fragments(html_path: str | Path) -> List[str]:
 
 
 def article_fragments(html_path: str | Path) -> List[str]:
-    """Only the article side — the half the paragraph splitter is responsible for."""
+    """Only the article side, the half the paragraph splitter is responsible for."""
     soup = BeautifulSoup(Path(html_path).read_text(encoding="utf-8"), "html.parser")
     return _fragments(soup, _ARTICLE_DIV)
 
 
 def reconstructed_fragments(plan: GraphPlan) -> List[str]:
-    """Paragraph and recital text from the plan — never ``Article.text``.
+    """Paragraph and recital text from the plan, never ``Article.text``.
 
     Walked off the recorded nodes rather than the DFS so that a paragraph orphaned by a
     broken containment edge still counts as *written*: losing it is a structural failure,

@@ -45,7 +45,7 @@ def test_good_plan_passes():
 def test_dangling_edge_is_caught():
     def build(graph):
         build_good(graph)
-        # An article that cites a paragraph nobody created — today Neo4j swallows this.
+        # An article that cites a paragraph nobody created: today Neo4j swallows this.
         graph.create_relationship("Article", "Paragraph", "ACTart_1", "ACT_999.001", "CONTAINS")
 
     plan = build_plan(build)

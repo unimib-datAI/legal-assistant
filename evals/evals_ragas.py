@@ -64,7 +64,7 @@ class RagasMetricsEvaluator:
         self.context_recall = ContextRecall(llm=self.llm)
         # Precision and recall are logged separately instead of a single F1:
         # with the (untouchable) encyclopedic ground truths, F1 conflates two
-        # very different signals — reference claims the corpus cannot support
+        # very different signals: reference claims the corpus cannot support
         # (recall ceiling) and extra grounded claims in the answer (precision).
         self.factual_precision = FactualCorrectness(llm=self.llm, mode="precision", name="factual_precision")
         self.factual_recall = FactualCorrectness(llm=self.llm, mode="recall", name="factual_recall")

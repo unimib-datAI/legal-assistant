@@ -1,4 +1,4 @@
-"""Evaluation page — compare RAG answers against the Ground Truth.
+"""Evaluation page: compare RAG answers against the Ground Truth.
 
 This page loads a precomputed evaluation results CSV from ``evals/evals/evaluations/``
 and, for one question at a time, shows the RAG answer side-by-side with the reference
@@ -6,7 +6,7 @@ and, for one question at a time, shows the RAG answer side-by-side with the refe
 and shown under the RAG answer, so a divergence from the GT can be traced back to the
 retrieved passages.
 
-No Neo4j / OpenAI calls happen here — it is a pure read of already-computed results.
+No Neo4j / OpenAI calls happen here: it is a pure read of already-computed results.
 Generate a fresh full (53-question) run with, e.g.::
 
     legal-assistant eval ragas --dataset golden_dataset
@@ -72,10 +72,10 @@ def _comparison_csvs() -> list[Path]:
 
 
 def _format_source_id(source_id: str) -> str:
-    """'32022R0868art_1' -> 'Data Governance Act — Article 1'. Unparsable ids pass through."""
+    """'32022R0868art_1' -> 'Data Governance Act, Article 1'. Unparsable ids pass through."""
     if match := _SOURCE_ID_RE.match(source_id):
         act = CELEX_TO_ACT_NAME.get(match["celex"], match["celex"])
-        return f"{act} — {_KIND_LABEL[match['kind']]} {match['number']}"
+        return f"{act}, {_KIND_LABEL[match['kind']]} {match['number']}"
 
     if match := _PARAGRAPH_ID_RE.match(source_id):
         act = CELEX_TO_ACT_NAME.get(match["celex"], match["celex"])
@@ -83,7 +83,7 @@ def _format_source_id(source_id: str) -> str:
         paragraph = int(match["paragraph"])
         # Paragraph 0 means the id points at the article as a whole.
         suffix = f"({paragraph})" if paragraph else ""
-        return f"{act} — Article {article}{suffix}"
+        return f"{act}, Article {article}{suffix}"
 
     return source_id
 
@@ -118,7 +118,7 @@ def _split_pipe(value: object) -> list[str]:
 
 # ── page ──────────────────────────────────────────────────────────────────────
 
-st.title("📊 Evaluation — RAG vs Ground Truth")
+st.title("📊 Evaluation: RAG vs Ground Truth")
 st.caption(
     "Confronta la risposta del RAG con la risposta di riferimento (Ground Truth) "
     "sulle domande del golden dataset. I risultati sono letti da un CSV precalcolato."

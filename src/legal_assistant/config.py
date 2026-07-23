@@ -48,6 +48,6 @@ RERANK_MODEL = os.getenv("RERANK_MODEL", "zeroentropy/zerank-2")
 # Some rerankers (e.g. Jina) ship custom modeling code and need this to load via CrossEncoder.
 RERANK_TRUST_REMOTE_CODE = os.getenv("RERANK_TRUST_REMOTE_CODE", "").lower() in ("1", "true", "yes")
 # Torch dtype for the reranker weights. "auto" respects the checkpoint's native dtype, so
-# large decoder rerankers (e.g. the ~4B bf16 zerank-2) load in bf16 instead of fp32 — ~half
+# large decoder rerankers (e.g. the ~4B bf16 zerank-2) load in bf16 instead of fp32, ~half
 # the VRAM and much faster on a 16GB GPU, where fp32 spills to CPU. Override with e.g. "float32".
 RERANK_DTYPE = os.getenv("RERANK_DTYPE", "auto")

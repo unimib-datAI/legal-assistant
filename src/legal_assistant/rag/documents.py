@@ -23,7 +23,7 @@ _DISPLAY_NUM_RE = re.compile(r"^\((\d+)\)\s*")
 _PC_ID_RE = re.compile(r"\nid:\s*([^\n]+)")
 
 # Judgment paragraph ids are sequential by construction ("62018CJ0311_par_199"), so a
-# passage's neighbours are reachable by arithmetic — no query needed.
+# passage's neighbours are reachable by arithmetic: no query needed.
 _CASE_LAW_PAR_ID_RE = re.compile(r"^(?P<prefix>.+)_par_(?P<number>\d+)$")
 
 
@@ -64,7 +64,7 @@ def neighbour_ids(passage_id: str, window: int) -> list[str]:
 
 
 def recital_header(celex: str, recital_text: str) -> str:
-    """'[GDPR, Recital 46]' — the display number is read off the pristine recital text."""
+    """'[GDPR, Recital 46]': the display number is read off the pristine recital text."""
     act_name = CELEX_TO_ACT_NAME.get(celex, celex)
     m = _DISPLAY_NUM_RE.match(recital_text)
     if m:
@@ -105,7 +105,7 @@ def decorate_case_law(doc: Document) -> Document:
     """Return a copy of ``doc`` headed with the case number, section and paragraph.
 
     The header is what tells the synthesis LLM this passage is a *ruling about* a provision
-    rather than the provision itself — e.g. ``[C-645/19, The first question, para. 71]``.
+    rather than the provision itself, e.g. ``[C-645/19, The first question, para. 71]``.
     """
     meta = doc.metadata
     case = meta.get("case_number") or meta.get("celex", "")

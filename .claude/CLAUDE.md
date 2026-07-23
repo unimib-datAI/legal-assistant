@@ -69,6 +69,12 @@ states. A doc that repeats the code diverges from it; a doc that explains *why* 
 - Prefer flat over nested — early returns instead of deeply nested `if/else`.
 - Use type hints on all function signatures. Avoid `Any` unless truly necessary.
 - Use `dataclasses` or `pydantic.BaseModel` for structured data instead of raw dicts.
+- Never write `—` (em dash) in comments, docstrings, log records, or UI text. Use a colon,
+  a comma, or a full stop. Two places are exempt because there the character is data, not
+  punctuation, and changing it changes behaviour: text that reaches the LLM (prompt
+  templates in `rag/prompts/`, Pydantic field descriptions, the cited source headers built
+  in `rag/documents.py` and `rag/attribution.py`), and regexes matching EUR-Lex markup
+  (`_DASH` in `case_law/html_parser.py`). Comments quoting real source text keep it too.
 
 ## Error Handling
 - Catch specific exceptions, never bare `except:` or `except Exception:` without re-raising.

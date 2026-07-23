@@ -1,14 +1,14 @@
 """Factories for the external clients every entry point needs.
 
 Neo4j connections, embedding clients, and chat models were previously constructed
-inline in each script, page, and eval — each copy repeating the model id, the
+inline in each script, page, and eval, each copy repeating the model id, the
 ``temperature``, and the ``base_url or None`` normalization. They are built here
 instead, so a change to how the project talks to Neo4j or OpenAI is a one-file change.
 
 Two distinct graph clients exist and both are needed:
 
 * :func:`make_graph_client` returns the project's own :class:`legal_assistant.graph.client.Neo4jGraph`
-  — a raw driver wrapper with the ingestion helpers (embedding generation, index creation).
+  a raw driver wrapper with the ingestion helpers (embedding generation, index creation).
 * :func:`make_langchain_graph` returns LangChain's ``Neo4jGraph``, which is what the
   retrievers and ``Neo4jVector`` expect.
 """
@@ -52,7 +52,7 @@ def make_embeddings(model: str | None = None) -> OpenAIEmbeddings:
 
 
 def make_chat_llm(model: str | None = None, temperature: float = 0.0) -> ChatOpenAI:
-    """A chat model. ``temperature`` is always explicit — never left to the default."""
+    """A chat model. ``temperature`` is always explicit, never left to the default."""
     return ChatOpenAI(
         model=model or config.RAG_LLM_MODEL,
         temperature=temperature,

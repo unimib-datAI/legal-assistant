@@ -17,7 +17,7 @@ from legal_assistant.validation.gate import GraphValidationError
 st.title("Case Law Parser")
 st.caption(
     "Enter the CELEX id of a CJEU judgment. Its structure is read from the EUR-Lex "
-    "XHTML markup — no PDF, no inference."
+    "XHTML markup, no PDF, no inference."
 )
 
 
@@ -148,7 +148,7 @@ with col_info:
                     graph.close()
                 st.success(f"KG created for {celex}.")
             except GraphValidationError as exc:
-                st.error(f"Validation failed — nothing was written for {celex}:")
+                st.error(f"Validation failed, nothing was written for {celex}:")
                 st.code(exc.report(), language="text")
             except Exception as exc:
                 st.error(f"Error: {exc}")

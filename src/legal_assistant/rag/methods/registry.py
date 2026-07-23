@@ -1,7 +1,7 @@
 """Registry of available RAG methods.
 
 To add a new method: implement a :class:`~legal_assistant.rag.methods.base.RagMethod`
-subclass and append an instance to ``_METHODS`` below — the frontend picks it up
+subclass and append an instance to ``_METHODS`` below; the frontend picks it up
 automatically.
 """
 from __future__ import annotations

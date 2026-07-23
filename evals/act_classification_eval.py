@@ -1,17 +1,17 @@
-"""Act-classification accuracy for the query classifier — classification only.
+"""Act-classification accuracy for the query classifier: classification only.
 
 Unlike ``retrieval_eval.py`` / ``evals_ragas.py`` this runs neither retrieval nor answer
 synthesis. For each golden-dataset row it calls ``QueryClassifier.classify`` and compares
 the predicted target acts against the act the row is labelled with, then reports the
 percentage of questions whose true act was detected.
 
-Only the classifier LLM and the Neo4j graph (for the AVAILABLE ACTS block) are built — no
-embedding model, vector store, or reranker — so a run is cheap relative to a full eval.
+Only the classifier LLM and the Neo4j graph (for the AVAILABLE ACTS block) are built, no
+embedding model, vector store, or reranker, so a run is cheap relative to a full eval.
 
 Metrics (the golden datasets are single-act, so the labelled act is the one true act):
-- detected  — the labelled act is in the predicted set (the headline "% correct").
-- exact     — the predicted set is exactly the labelled act, nothing extra.
-- abstained — the classifier returned no acts (out-of-scope / below threshold).
+- detected:  the labelled act is in the predicted set (the headline "% correct").
+- exact:     the predicted set is exactly the labelled act, nothing extra.
+- abstained: the classifier returned no acts (out-of-scope / below threshold).
 
 Example:
     legal-assistant eval acts --dataset golden_dataset

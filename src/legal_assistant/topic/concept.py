@@ -208,7 +208,7 @@ class ConceptService:
         Args:
             concept_label: Used only for logging on failure.
             term_embeddings: 2-D array of shape (n_terms, embedding_dim).
-            damping: AP damping factor — higher values improve stability (default 0.9).
+            damping: AP damping factor; higher values improve stability (default 0.9).
             max_iter: Maximum number of AP iterations (default 300).
             convergence_iter: Iterations without change before declaring convergence (default 30).
 

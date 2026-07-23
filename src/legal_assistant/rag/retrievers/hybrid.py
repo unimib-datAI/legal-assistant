@@ -30,7 +30,7 @@ class HybridRetriever(BaseRetriever):
     """Hybrid retriever: dense (vector) + sparse (BM25) article search fused with RRF.
 
     Recitals are retrieved via BM25 and judged by the same cross-encoder pass as the
-    articles, then kept only if they clear `recital_score_threshold` — so irrelevant
+    articles, then kept only if they clear `recital_score_threshold`, so irrelevant
     recitals are dropped instead of always padding the context. Set `use_recitals=False`
     to skip the recital branch entirely and return articles only.
 
@@ -40,7 +40,7 @@ class HybridRetriever(BaseRetriever):
 
     * the surviving paragraphs are appended to the context in their own slots, and
     * the provisions those paragraphs *cite in their own text* are fused back into the
-      article RRF as an extra ranked list — a *graph boost* on the act branch.
+      article RRF as an extra ranked list, a *graph boost* on the act branch.
 
     The act branch is never made to depend on the case law branch: articles keep their
     `top_k_final` guaranteed slots, and a query that retrieves no case law behaves exactly
@@ -229,8 +229,8 @@ class HybridRetriever(BaseRetriever):
     ) -> List[Tuple[Document, float]]:
         """Guarantee the operative part of the top judgment a slot, if it earns one.
 
-        The operative part *is* the holding — the paragraphs the Court hands down as its
-        answer — so on a question about what a judgment decided it is the highest-value
+        The operative part *is* the holding, the paragraphs the Court hands down as its
+        answer, so on a question about what a judgment decided it is the highest-value
         passage by construction. It is fetched rather than searched because it can lose the
         candidate stage outright: it opens with a formal recitation of the instrument under
         review, which matches a question about the ruling poorly.
@@ -279,7 +279,7 @@ class HybridRetriever(BaseRetriever):
         scored.sort(key=lambda pair: -pair[1])
 
         # Expand around the hits that would survive on their own, then let the reranker judge
-        # the neighbours on the same footing — a neighbour is kept only if it outscores what
+        # the neighbours on the same footing: a neighbour is kept only if it outscores what
         # it displaces, so expansion cannot dilute a good result.
         seeds = [
             doc for doc, score in scored[: self.top_k_case_law]
@@ -310,7 +310,7 @@ class HybridRetriever(BaseRetriever):
     ) -> List[Document]:
         """Articles the retrieved judgment passages cite in their own text.
 
-        Ranked by the rerank score of the passage that cites them — never by how often an
+        Ranked by the rerank score of the passage that cites them, never by how often an
         article is cited. Frequency is what the INTERPRETS bridge used and it simply
         resurfaced the corpus's most-litigated provisions; here the article inherits the
         relevance of the passage that called for it.
@@ -348,7 +348,7 @@ class HybridRetriever(BaseRetriever):
     def _rerank_case_law(
         self, user_query: str, candidates: List[Document]
     ) -> List[Tuple[Document, float]]:
-        """Score judgment paragraphs against the query (single paragraphs — no dilution)."""
+        """Score judgment paragraphs against the query (single paragraphs, no dilution)."""
         if not candidates:
             return []
         if not self.use_reranker:
@@ -393,7 +393,7 @@ class HybridRetriever(BaseRetriever):
     def _rerank_recitals(
         self, user_query: str, recital_candidates: List[Document]
     ) -> List[Tuple[Document, float]]:
-        """Score recitals whole against the query (short, single-paragraph — no dilution)."""
+        """Score recitals whole against the query (short, single-paragraph, no dilution)."""
         if not recital_candidates:
             return []
         if not self.use_reranker:
@@ -437,7 +437,7 @@ class HybridRetriever(BaseRetriever):
         )
 
         if not target_acts:
-            logger.warning("[HybridRetriever] No target acts classified — returning empty.")
+            logger.warning("[HybridRetriever] No target acts classified, returning empty.")
             return []
 
         # Search queries: the original question, plus decomposed sub-questions when
@@ -463,7 +463,7 @@ class HybridRetriever(BaseRetriever):
             bm25.k = self.top_k_sparse
 
         # Case law branch: only on INTERPRETIVE queries, and always alongside the act branch
-        # rather than in place of it. It runs to completion first — including its rerank —
+        # rather than in place of it. It runs to completion first (including its rerank)
         # because the bridge ranks each cited article by the score of the passage citing it,
         # and that score does not exist until the case law has been judged.
         is_interpretive = classification is not None and classification.intent == "INTERPRETIVE"
@@ -517,7 +517,7 @@ class HybridRetriever(BaseRetriever):
         if not article_candidates and not recital_candidates and not kept_case_law:
             return []
 
-        # Articles and recitals are reranked (whole text) and selected independently — neither
+        # Articles and recitals are reranked (whole text) and selected independently: neither
         # recitals nor judgments ever compete with articles for the guaranteed article slots.
         article_scored = self._rerank_articles(user_query, article_candidates)
         recital_scored = self._rerank_recitals(user_query, recital_candidates)

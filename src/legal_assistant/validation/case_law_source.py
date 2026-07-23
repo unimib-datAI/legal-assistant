@@ -1,4 +1,4 @@
-"""Source inventory for CJEU judgments — what the HTML contains, layer by layer.
+"""Source inventory for CJEU judgments: what the HTML contains, layer by layer.
 
 A judgment reaches the graph through two transformations, and each is checked separately:
 
@@ -71,7 +71,7 @@ def _strip_number(item: str) -> str:
 def body_fragments(flat: Iterable[dict]) -> List[str]:
     """Body items that must end up inside a ``CaseLawParagraph``.
 
-    Takes the flattened tree — the same ``flat`` the builder receives — so the inventory and
+    Takes the flattened tree (the same ``flat`` the builder receives), so the inventory and
     the build are guaranteed to be looking at the same document.
 
     Preamble sections are excluded: ``_write_sections`` gives them a node but deliberately
@@ -92,8 +92,8 @@ def body_exemptions(flat: Iterable[dict]) -> List[str]:
     The "hereby rules" line is a marker that switches the splitter into operative mode, and
     a bare "[Signatures]" closes the judgment. Neither is content.
 
-    An unnumbered item with no preceding numbered paragraph is also dropped by the splitter
-    — a headnote fragment with nothing to attach to.
+    An unnumbered item with no preceding numbered paragraph is also dropped by the splitter:
+    a headnote fragment with nothing to attach to.
     """
     exempt: List[str] = []
     for section in flat:
@@ -131,6 +131,6 @@ def reconstructed_fragments(plan: GraphPlan) -> List[str]:
 
 
 def paragraph_texts(plan: GraphPlan) -> List[str]:
-    """Only the ``CaseLawParagraph`` text — the target of the layer-2 check."""
+    """Only the ``CaseLawParagraph`` text, the target of the layer-2 check."""
     return [n.properties.get("text", "") for n in plan.node_ops
             if n.label == "CaseLawParagraph"]

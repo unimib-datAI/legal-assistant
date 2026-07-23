@@ -2,15 +2,15 @@
 surface keyword lexicon used to recognise an act by name or regulation number.
 
 Consumers:
-- ``rag/documents.py`` — CELEX -> display name for passage headers.
-- ``rag/intent_classifier.py`` — ``acts_mentioned_in`` as a deterministic floor: an act the
+- ``rag/documents.py``: CELEX -> display name for passage headers.
+- ``rag/intent_classifier.py``: ``acts_mentioned_in`` as a deterministic floor, an act the
   user names explicitly is force-included regardless of the LLM's relevance score.
-- ``evals/retrieval_eval.py`` — ``act_to_celex`` maps a dataset act label to CELEX.
+- ``evals/retrieval_eval.py``: ``act_to_celex`` maps a dataset act label to CELEX.
 """
 import re
 from typing import List, Optional, Tuple
 
-# CELEX is structured: sector, year, instrument letter, number — 32016R0679 is sector 3,
+# CELEX is structured: sector, year, instrument letter, number. 32016R0679 is sector 3,
 # year 2016, Regulation, number 679. Everything an act is cited BY inside a judgment is
 # therefore derivable from its id, so a new act needs no entry anywhere below.
 _CELEX_RE = re.compile(r"^(?P<sector>\d)(?P<year>\d{4})(?P<instrument>[A-Z]+)(?P<number>\d+)$")

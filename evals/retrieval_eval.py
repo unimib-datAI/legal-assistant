@@ -1,18 +1,18 @@
 """Deterministic retrieval-quality metric for the RAG methods.
 
-Unlike ``evals_ragas.py`` (which scores the *generated answer* with an LLM judge —
+Unlike ``evals_ragas.py`` (which scores the *generated answer* with an LLM judge,
 noisy at small n), this harness scores only the *retrieval* step against the
 articles/recitals that each ground-truth answer cites inline. It calls
 ``RAGPipeline.retrieve`` (no answer synthesis, no judge), so a run is cheap and,
-apart from HyDE sampling, deterministic — the right tool for A/B-ing reranker
+apart from HyDE sampling, deterministic: the right tool for A/B-ing reranker
 choices (the cross-encoder set via the RERANK_MODEL env var) without generation/judge noise.
 
 Metrics per query, aggregated overall and per act (rows whose GT cites no
 target-act provision are skipped from the aggregates):
 
-- top1_anchor  — is the top-ranked retrieved doc one the GT relies on?
-- recall_at_k  — fraction of the GT's cited provisions present in the retrieved set
-- mrr          — 1 / rank of the first GT-cited provision in the retrieved list
+- top1_anchor:  is the top-ranked retrieved doc one the GT relies on?
+- recall_at_k:  fraction of the GT's cited provisions present in the retrieved set
+- mrr:          1 / rank of the first GT-cited provision in the retrieved list
 
 Example:
     legal-assistant eval retrieval --dataset subset_retrieval_scarso --repeats 3
@@ -120,7 +120,7 @@ def log_averages(report: list) -> None:
     scored = [r for r in report if r["n_expected"] > 0]
     skipped = len(report) - len(scored)
     if not scored:
-        logger.warning("No rows had extractable GT references — nothing to average.")
+        logger.warning("No rows had extractable GT references, nothing to average.")
         return
 
     logger.info("=== Overall (n=%d scored, %d skipped: GT cited no target-act provision) ===",
@@ -159,7 +159,7 @@ def main() -> None:
     parser.add_argument("--repeats", type=int, default=3,
                         help="Runs per query, averaged to wash out HyDE sampling variance.")
     parser.add_argument("--no-case-law", action="store_true",
-                        help="Disable the INTERPRETIVE case law branch and its graph boost — "
+                        help="Disable the INTERPRETIVE case law branch and its graph boost; "
                              "the control arm when A/B-ing case law retrieval.")
     args = parser.parse_args()
 

@@ -4,7 +4,7 @@ The judgments to ingest are read straight out of the graph: the act loader alrea
 creates a ``(:CaseLaw)`` stub per judgment listed as "Interpreted by" in the EUR-Lex
 metadata, together with the ``(:CaseLaw)-[:INTERPRETS]->(:Article|:Paragraph|:Chapter)``
 edge. Those stubs *are* the set of judgments interpreting our acts, so this module needs
-no separate case list — but it does require :mod:`legal_assistant.pipelines.graph_build`
+no separate case list, but it does require :mod:`legal_assistant.pipelines.graph_build`
 to have run first.
 
 Summaries are optional: they cost one LLM call per section and paragraph-level retrieval
@@ -76,7 +76,7 @@ def ingest(
 ) -> IngestTotals:
     """Parse, validate and write each judgment.
 
-    A judgment that cannot be fetched — or that fails validation — is skipped and recorded
+    A judgment that cannot be fetched, or that fails validation, is skipped and recorded
     in ``failed``; nothing is written for it and the batch continues. ``strict=False``
     downgrades validation failures to warnings and writes anyway.
     """
@@ -88,11 +88,11 @@ def ingest(
             roots = parse_celex(celex)
         except CaseLawHTMLError as exc:
             # Judgments before ~2012 have no XHTML manifestation in Cellar, only FMX.
-            logger.warning("[%d/%d] SKIP %s — %s", i, len(celex_list), label, exc)
+            logger.warning("[%d/%d] SKIP %s: %s", i, len(celex_list), label, exc)
             totals.failed.append((celex, str(exc)))
             continue
         except OSError as exc:
-            logger.warning("[%d/%d] SKIP %s — fetch failed: %s", i, len(celex_list), label, exc)
+            logger.warning("[%d/%d] SKIP %s, fetch failed: %s", i, len(celex_list), label, exc)
             totals.failed.append((celex, f"fetch failed: {exc}"))
             continue
 
@@ -110,7 +110,7 @@ def ingest(
         totals.paragraphs += counts["paragraphs"]
         totals.operative += counts["operative"]
         logger.info(
-            "[%d/%d] %s — %d sections, %d paragraphs (%d operative)",
+            "[%d/%d] %s: %d sections, %d paragraphs (%d operative)",
             i, len(celex_list), label,
             counts["sections"], counts["paragraphs"], counts["operative"],
         )

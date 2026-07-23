@@ -4,20 +4,51 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="2aac46b9-d4a6-4ea1-8017-d11d286eba73" name="Changes" comment="Refactor project structure by renaming files and updating imports to align with new module paths; add requirements.txt and logging setup.">
-      <change beforePath="$PROJECT_DIR$/.claude/graph_validation.md" beforeDir="false" afterPath="$PROJECT_DIR$/.claude/graph_validation.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
+    <list default="true" id="2aac46b9-d4a6-4ea1-8017-d11d286eba73" name="Changes" comment="Implement graph validation mechanism to ensure data integrity before writing to Neo4j; add new validation classes and methods, and refactor document loading to support validation checks.">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/knowledge-graph.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/knowledge-graph.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/superpowers/specs/2026-07-23-em-dash-cleanup-design.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/superpowers/specs/2026-07-23-em-dash-cleanup-design.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/evals/act_classification_eval.py" beforeDir="false" afterPath="$PROJECT_DIR$/evals/act_classification_eval.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/evals/backfill_attribution.py" beforeDir="false" afterPath="$PROJECT_DIR$/evals/backfill_attribution.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/evals/evals_ragas.py" beforeDir="false" afterPath="$PROJECT_DIR$/evals/evals_ragas.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/evals/retrieval_eval.py" beforeDir="false" afterPath="$PROJECT_DIR$/evals/retrieval_eval.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/evaluation/evaluation.py" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/evaluation/evaluation.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/kg/aske_pipeline.py" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/kg/aske_pipeline.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/kg/case_law_parser.py" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/kg/case_law_parser.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/kg/graph_init.py" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/kg/graph_init.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/img/KG.png" beforeDir="false" afterPath="$PROJECT_DIR$/img/KG.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/legal_assistant/case_law/kg_builder.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/case_law/kg_builder.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/legal_assistant/case_law/html_parser.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/case_law/html_parser.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/legal_assistant/case_law/llm_orchestrator.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/case_law/llm_orchestrator.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/legal_assistant/cli/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/cli/main.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/legal_assistant/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/config.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/legal_assistant/graph/loader.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/graph/loader.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/legal_assistant/graph/queries.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/graph/queries.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/legal_assistant/graph/recorder.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/graph/recorder.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/legal_assistant/graph/seed.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/graph/seed.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/legal_assistant/logging_setup.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/logging_setup.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/legal_assistant/pipelines/case_law_ingest.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/pipelines/case_law_ingest.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/legal_assistant/pipelines/graph_build.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/pipelines/graph_build.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/legal_assistant/rag/acts.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/rag/acts.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/legal_assistant/rag/attribution.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/rag/attribution.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/legal_assistant/rag/citations.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/rag/citations.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/legal_assistant/rag/documents.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/rag/documents.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/legal_assistant/rag/methods/base.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/rag/methods/base.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/legal_assistant/rag/methods/registry.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/rag/methods/registry.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/legal_assistant/rag/pipeline.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/rag/pipeline.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/legal_assistant/rag/retrievers/hybrid.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/rag/retrievers/hybrid.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/legal_assistant/rag/retrievers/topics.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/rag/retrievers/topics.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/legal_assistant/resources.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/resources.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/legal_assistant/scraper/browser_fetcher.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/scraper/browser_fetcher.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/legal_assistant/scraper/eurlex_exporter.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/scraper/eurlex_exporter.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/legal_assistant/text/preprocessor.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/text/preprocessor.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/legal_assistant/topic/concept.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/topic/concept.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/legal_assistant/validation/act_source.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/validation/act_source.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/legal_assistant/validation/case_law_source.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/validation/case_law_source.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/legal_assistant/validation/checks.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/validation/checks.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/legal_assistant/validation/gate.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/validation/gate.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/legal_assistant/validation/plan.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/validation/plan.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/conftest.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/conftest.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/graph_validation/test_acts.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/graph_validation/test_acts.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/graph_validation/test_case_law.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/graph_validation/test_case_law.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/graph_validation/test_gate.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/graph_validation/test_gate.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -81,7 +112,7 @@
     &quot;RunOnceActivity.typescript.service.memoryLimit.init&quot;: &quot;true&quot;,
     &quot;codeWithMe.voiceChat.enabledByDefault&quot;: &quot;false&quot;,
     &quot;git-widget-placeholder&quot;: &quot;feature/project-refactor&quot;,
-    &quot;last_opened_file_path&quot;: &quot;E:/Projects/legal-assistant/test/rag_eval/evals/evaluations&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/Users/nicho/AppData/Roaming/JetBrains/PyCharm2026.1/scratches&quot;,
     &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
     &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
     &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
@@ -93,11 +124,11 @@
 }</component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="C:\Users\nicho\AppData\Roaming\JetBrains\PyCharm2026.1\scratches" />
       <recent name="E:\Projects\legal-assistant\test\rag_eval\evals\evaluations" />
       <recent name="E:\Projects\legal-assistant\docs" />
       <recent name="E:\Projects\legal-assistant" />
       <recent name="E:\Projects\legal-assistant\test\rag_eval\evals\datasets" />
-      <recent name="C:\Users\nicho\AppData\Roaming\JetBrains\PyCharm2026.1\scratches" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
       <recent name="E:\Projects\legal-assistant\test\rag_eval\evals\evaluations" />
@@ -258,14 +289,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1767884002550</updated>
-    </task>
-    <task id="LOCAL-00001" summary="(WIP) &#10;* Implemented the graph init using the scraped information&#10;* RAG v1">
-      <option name="closed" value="true" />
-      <created>1768430411913</created>
-      <option name="number" value="00001" />
-      <option name="presentableId" value="LOCAL-00001" />
-      <option name="project" value="LOCAL" />
-      <updated>1768430411913</updated>
     </task>
     <task id="LOCAL-00002" summary="First experiment with RAG">
       <option name="closed" value="true" />
@@ -651,7 +674,15 @@
       <option name="project" value="LOCAL" />
       <updated>1784723750631</updated>
     </task>
-    <option name="localTasksCounter" value="50" />
+    <task id="LOCAL-00050" summary="Implement graph validation mechanism to ensure data integrity before writing to Neo4j; add new validation classes and methods, and refactor document loading to support validation checks.">
+      <option name="closed" value="true" />
+      <created>1784753680186</created>
+      <option name="number" value="00050" />
+      <option name="presentableId" value="LOCAL-00050" />
+      <option name="project" value="LOCAL" />
+      <updated>1784753680186</updated>
+    </task>
+    <option name="localTasksCounter" value="51" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -669,7 +700,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="Improved parsing + claims evaluation implemented for the first benchmark" />
     <MESSAGE value="Implemented a new RAG approach + query + improved parsing of paragraphs" />
     <MESSAGE value="rag alternative model" />
     <MESSAGE value="Enhance RAG integration with new query capabilities and improved logging" />
@@ -694,7 +724,8 @@
     <MESSAGE value="Rename dataset files and enhance prompt registry to support specific version retrieval for A/B testing" />
     <MESSAGE value="Add initial project configuration files for legal assistant integration" />
     <MESSAGE value="Refactor project structure by renaming files and updating imports to align with new module paths; add requirements.txt and logging setup." />
-    <option name="LAST_COMMIT_MESSAGE" value="Refactor project structure by renaming files and updating imports to align with new module paths; add requirements.txt and logging setup." />
+    <MESSAGE value="Implement graph validation mechanism to ensure data integrity before writing to Neo4j; add new validation classes and methods, and refactor document loading to support validation checks." />
+    <option name="LAST_COMMIT_MESSAGE" value="Implement graph validation mechanism to ensure data integrity before writing to Neo4j; add new validation classes and methods, and refactor document loading to support validation checks." />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

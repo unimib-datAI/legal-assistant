@@ -3,8 +3,8 @@
 Library modules must only ever call ``logging.getLogger(__name__)``; configuring the
 root logger is the *application's* job. Several modules used to call
 ``logging.basicConfig`` at import time, which meant importing the package silently
-reconfigured logging for whoever imported it. Entry points — the CLI, the eval scripts,
-the Streamlit app — call :func:`configure_logging` instead.
+reconfigured logging for whoever imported it. Entry points (the CLI, the eval scripts,
+the Streamlit app) call :func:`configure_logging` instead.
 """
 from __future__ import annotations
 
@@ -16,7 +16,7 @@ DATE_FORMAT = "%H:%M:%S"
 
 
 def configure_logging(level: int = logging.INFO, *, show_logger_name: bool = False) -> None:
-    """Configure root logging once. Safe to call again — later calls are no-ops.
+    """Configure root logging once. Safe to call again: later calls are no-ops.
 
     ``show_logger_name`` includes the module name in each line, which is what the
     ingestion pipelines want when several modules log interleaved progress.

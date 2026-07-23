@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 class TextPreprocessor:
     """Stateless NLP preprocessing for legal paragraph text.
 
-    Handles tokenization, lemmatization, and chunking — all pure text
+    Handles tokenization, lemmatization, and chunking, all pure text
     operations with no graph or embedding model dependency.
     """
 
@@ -56,7 +56,7 @@ class TextPreprocessor:
         Combines the three preprocessing steps into a single call.
 
         Args:
-            paragraphs: Raw paragraphs from the KG — {"paragraph_id": ..., "text": str}
+            paragraphs: Raw paragraphs from the KG: {"paragraph_id": ..., "text": str}
             skip_first: Skip the first sentence per paragraph (often just a number/label)
 
         Returns:

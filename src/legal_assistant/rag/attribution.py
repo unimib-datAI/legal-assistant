@@ -126,7 +126,7 @@ def attribute_answer(
 
     try:
         result = llm.with_structured_output(_AttributionResult).invoke(prompt)
-    except Exception:  # external boundary (LLM / parsing) — log and degrade gracefully
+    except Exception:  # external boundary (LLM / parsing): log and degrade gracefully
         logger.exception("[attribution] attribution call failed; using single segment")
         return [Segment(text=answer_text)]
 

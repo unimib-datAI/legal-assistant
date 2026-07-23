@@ -42,7 +42,7 @@ def build_graph(
 ) -> GraphBuildResult:
     """Load ``celex_ids`` from EUR-Lex into Neo4j, then embed and index their text nodes.
 
-    Every act is fetched, built in memory and **validated before anything is written** — and
+    Every act is fetched, built in memory and **validated before anything is written**, and
     before the database is cleared. A parser regression therefore leaves the existing graph
     untouched rather than wiping it and failing halfway through the reload.
 

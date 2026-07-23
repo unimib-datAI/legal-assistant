@@ -30,7 +30,7 @@ def _call_llm(user_prompt: str, system_prompt: str) -> str:
 def parse_document(celex: str) -> list[Node]:
     """Parse the judgment identified by *celex* into a section tree.
 
-    Structure comes from the EUR-Lex XHTML markup, not from an LLM — see
+    Structure comes from the EUR-Lex XHTML markup, not from an LLM; see
     ``legal_assistant/case_law/html_parser.py``.
     """
     return parse_celex(celex)

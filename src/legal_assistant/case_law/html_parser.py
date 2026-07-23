@@ -11,7 +11,7 @@ Two markup schemes exist; they share the same suffixes and differ only by a
 Depth is *relative to the document*: the same heading is ``sum-title-1`` in one
 judgment and ``title-grseq-2`` in another. So the classes actually present after
 the ``Judgment`` anchor are dense-ranked per document. The anchor itself is
-excluded from that ranking — see ``_section_depths``.
+excluded from that ranking; see ``_section_depths``.
 """
 import logging
 import re
@@ -44,7 +44,7 @@ _TOPIC_SPLIT = re.compile(r"\s+" + _DASH + r"\s*(?=[A-Z‘’'\"])")
 # quotes, newer ones do not:
 #   legacy:  (‛Electronic communications — … — Articles 7 and 8’)
 #   modern:  (Reference for a preliminary ruling – … – Concept of ‘consent’)
-# Left in, the wrapping quotes fork the graph — ‛Personal data and Personal data become two distinct
+# Left in, the wrapping quotes fork the graph: ‛Personal data and Personal data become two distinct
 # CaseLawTopic nodes, so the judgments sharing the corpus's most common topics stop linking.
 #
 # The trailing quote may only be dropped when the block *opens* with one. In the modern form the
@@ -100,7 +100,7 @@ def _text_outside_tables(tag: Tag) -> str:
 
     A numbered paragraph that introduces a quotation holds the quotation in a table nested
     inside its own prose cell. That inner table's rows are emitted separately, in document
-    order, right after this one — so taking the cell's full ``get_text()`` here would repeat
+    order, right after this one, so taking the cell's full ``get_text()`` here would repeat
     every quoted line inside the introducing paragraph.
     """
     parts: list[str] = []
@@ -122,14 +122,14 @@ def _text_outside_tables(tag: Tag) -> str:
 def _linearize(soup: BeautifulSoup) -> list[tuple[str | None, str]]:
     """Flatten the document into ordered (heading_class | None, text) pairs.
 
-    Numbered paragraphs are split across two table cells — the number and the
-    prose — and must be re-joined here. Without this merge every body paragraph
+    Numbered paragraphs are split across two table cells, the number and the
+    prose, and must be re-joined here. Without this merge every body paragraph
     would arrive as two fragments.
 
     The cells must be counted non-recursively. A paragraph that introduces a quotation
     ("3 Recitals 1, 4, 10 … state:") nests the quotation's own table inside its prose cell,
     so a recursive ``find_all("td")`` sees 20 cells rather than 2, the row fails the pair
-    check, and the introducing paragraph is dropped from the document — while the quoted
+    check, and the introducing paragraph is dropped from the document, while the quoted
     lines it introduces survive, orphaned.
     """
     items: list[tuple[str | None, str]] = []
@@ -160,7 +160,7 @@ def _section_depths(
 
     The ``Judgment`` anchor is deliberately excluded from the ranking. Including it
     makes ``Legal context`` a *sibling* of ``Judgment`` under the modern scheme but a
-    *child* of it under the legacy scheme — the same section landing at a different
+    *child* of it under the legacy scheme: the same section landing at a different
     depth, and therefore a different Neo4j parent, depending only on the year the
     judgment was published. Excluding it puts ``Legal context`` at depth 0 in both.
     """
@@ -187,7 +187,7 @@ def _split_topics(raw: str) -> list[str]:
 
     A judgment can list the same qualifier twice (62018CJ0511 has "Scope" under both
     Directive 2002/58 and Directive 2000/31). Since the node id is derived from the
-    label, the duplicate would silently upsert onto the first — so drop it here instead.
+    label, the duplicate would silently upsert onto the first, so drop it here instead.
     """
     cleaned = raw.strip().lstrip("(").rstrip(")").strip()
 

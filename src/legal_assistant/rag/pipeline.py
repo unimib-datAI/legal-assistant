@@ -34,7 +34,7 @@ class RAGPipeline:
         synthesis_prompt_version: str | None = None,
     ):
         """`overrides` sets any of the method's own params (see `method.param_specs()`),
-        so an eval can A/B a single knob — e.g. `{"use_case_law": False}` — without a
+        so an eval can A/B a single knob, e.g. `{"use_case_law": False}`, without a
         constructor argument per knob.
 
         `synthesis_prompt_version` pins a specific registered version of the
@@ -58,7 +58,7 @@ class RAGPipeline:
         logger.info("[Prompts] answer_synthesis version in use: %s", synthesis_prompt.version)
 
         # Shared resources (graph, vector store, classifier, LLMs) come from the
-        # same RagContext the chat frontend uses — single source of truth.
+        # same RagContext the chat frontend uses: single source of truth.
         ctx = RagContext()
         self.classifier = ctx.classifier
         self.synthesis_llm = ctx.synthesis_llm
@@ -119,14 +119,14 @@ class RAGPipeline:
             keep = [i for i in sel["keep"] if isinstance(i, int) and 0 <= i < len(docs)]
             governing = {i for i in sel.get("governing", []) if i in keep}
         except (json.JSONDecodeError, KeyError, TypeError):
-            logger.warning("[Curation] unparsable curator output — keeping all passages.")
+            logger.warning("[Curation] unparsable curator output, keeping all passages.")
             return docs, ""
 
         if not keep:  # fail-open on empty selection
-            logger.warning("[Curation] empty selection — keeping all passages.")
+            logger.warning("[Curation] empty selection, keeping all passages.")
             return docs, ""
 
-        # Governing passages first, then the rest of the kept set — a positional signal
+        # Governing passages first, then the rest of the kept set: a positional signal
         # that reinforces the synthesis prompt's governing-provision step.
         ordered = [i for i in keep if i in governing] + [i for i in keep if i not in governing]
         kept_docs = [docs[i] for i in ordered]
@@ -150,7 +150,7 @@ class RAGPipeline:
             for i in range(len(docs)) if i not in keep
         ]
         logger.info(
-            "[Curation] kept %d/%d — kept: %s | dropped: %s  (G = governing)",
+            "[Curation] kept %d/%d | kept: %s | dropped: %s  (G = governing)",
             len(kept_docs), len(docs), kept_ids, dropped_ids,
         )
         return kept_docs, guidance

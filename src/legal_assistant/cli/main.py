@@ -1,7 +1,7 @@
 """The ``legal-assistant`` command line.
 
 Every subcommand is a thin wrapper over a function in :mod:`legal_assistant.pipelines`
-or :mod:`legal_assistant.rag` — argument parsing lives here, logic lives there, so each
+or :mod:`legal_assistant.rag`: argument parsing lives here, logic lives there, so each
 pipeline stays callable (and testable) without a shell.
 
     legal-assistant graph build            # phase 1: scrape EUR-Lex -> Neo4j -> embeddings
@@ -45,7 +45,7 @@ def _cmd_graph_build(args: argparse.Namespace) -> int:
     celex_ids = args.celex or list(DEFAULT_CELEX_IDS)
     result = build_graph(celex_ids, clear_db=not args.no_clear, strict=not args.allow_invalid)
     logger.info(
-        "Graph built — %d document(s), indexed: %s",
+        "Graph built, %d document(s), indexed: %s",
         len(result.celex_ids), ", ".join(result.indexed_labels),
     )
     return 0
@@ -72,7 +72,7 @@ def _cmd_ingest_case_law(args: argparse.Namespace) -> int:
     from legal_assistant.pipelines import case_law_ingest as ingest_mod
     from legal_assistant.resources import make_graph_client
 
-    # Chatty at INFO — every node upsert and every edge — and it drowns per-judgment progress.
+    # Chatty at INFO (every node upsert and every edge), and it drowns per-judgment progress.
     quiet("legal_assistant.graph.client")
 
     graph = make_graph_client()
@@ -99,7 +99,7 @@ def _cmd_ingest_case_law(args: argparse.Namespace) -> int:
             ingest_mod.embed_and_index(graph)
 
         logger.info(
-            "Done — %d/%d judgments, %d sections, %d paragraphs (%d operative), %d skipped.",
+            "Done: %d/%d judgments, %d sections, %d paragraphs (%d operative), %d skipped.",
             totals.judgments, len(celex_list), totals.sections,
             totals.paragraphs, totals.operative, len(totals.failed),
         )
@@ -192,7 +192,7 @@ def _cmd_eval(args: argparse.Namespace) -> int:
     if not script.is_file():
         logger.error(
             "%s not found. The eval harnesses ship with the repository, not the installed "
-            "package — run this from a checkout.", script,
+            "package; run this from a checkout.", script,
         )
         return 1
 

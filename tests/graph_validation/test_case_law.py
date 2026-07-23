@@ -3,7 +3,7 @@
 Three shapes on purpose: a 2012 judgment (the oldest manifestation Cellar serves), a modern
 one, and a large one.
 
-The XHTML is **cached, not committed** — 764 KB of source documents does not belong in the
+The XHTML is **cached, not committed**: 764 KB of source documents does not belong in the
 repository. The first run downloads each judgment into ``fixtures/`` (gitignored) and every
 run after that is offline. Without network and without a cache, these tests skip rather
 than fail: they check the parser, not the availability of Cellar.
@@ -39,7 +39,7 @@ def _cached_html(celex: str) -> str:
 
     try:
         html = fetch_html(celex)
-    except Exception as exc:  # offline, Cellar down, proxy — not a parser failure
+    except Exception as exc:  # offline, Cellar down, proxy, not a parser failure
         pytest.skip(f"{celex} not cached and could not be fetched: {exc}")
 
     FIXTURES.mkdir(parents=True, exist_ok=True)
@@ -133,7 +133,7 @@ def test_create_case_law_kg_writes_nothing_when_the_splitter_drops_a_paragraph(
 ):
     """Simulate the regression the gate exists to catch: the splitter silently loses text.
 
-    Corrupting ``flat`` would not do it — the inventory is derived from ``flat`` too, so both
+    Corrupting ``flat`` would not do it: the inventory is derived from ``flat`` too, so both
     sides move together. The asymmetry has to come from the builder, which is exactly where
     a real parser regression would live.
     """

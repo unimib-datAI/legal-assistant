@@ -23,7 +23,7 @@ class GraphLoader:
         self.graph = neo4j_graph
 
     def _emit(self, data):
-        """Write one parsed document into ``self.graph`` — the real client or a recorder."""
+        """Write one parsed document into ``self.graph``, the real client or a recorder."""
         self._load_act(data['act'])
         self._load_chapters(data['act'], data['chapters'])
         self._load_recitals(data['act'], data['recitals'])

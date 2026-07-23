@@ -3,7 +3,7 @@
 The graph's only case-law-to-act edge is document-level: ``(:CaseLaw)-[:INTERPRETS]->(:Article)``
 says *this judgment interprets Article 58*, never *this passage does*. Ranking those by how
 many of the retrieved judgments share an article rewards whatever every judgment happens to
-touch — across the GDPR corpus the most-interpreted are Articles 6, 4, 82 and 5 — rather than
+touch (across the GDPR corpus the most-interpreted are Articles 6, 4, 82 and 5) rather than
 what the passage in hand is actually about.
 
 A judgment states which provisions it turns on by citing them, so read them off the text of
@@ -11,7 +11,7 @@ the passages retrieval already returned.
 
 Matching is anchored on the ACT, not on the article number: a reference counts only when the
 act is named immediately after the article list. Scanning for "Article N" and then guessing
-the act does not survive real prose — Schrems II §199 reads
+the act does not survive real prose: Schrems II §199 reads
 
     "Article 1 of the Privacy Shield Decision is incompatible with Article 45(1) of the GDPR,
      read in the light of Articles 7, 8 and 47 of the Charter, and is therefore invalid."
@@ -30,11 +30,11 @@ from legal_assistant.rag.acts import CELEX_TO_ACT_NAME, celex_instrument_and_num
 logger = logging.getLogger(__name__)
 
 # The article number(s) of a citation: "45(1)", "56 and 60", "7, 8 and 47". Paragraph and
-# point suffixes are captured only so they can be discarded — the act-side retrieval unit is
+# point suffixes are captured only so they can be discarded: the act-side retrieval unit is
 # the Article, so "Article 61(8)" must resolve to the same node as "Article 61".
 #
 # Ranges are deliberately NOT matched. "Articles 44 to 50 of the GDPR" names a scope, not a
-# pinpoint, and expanding it would inject seven articles sharing one citing score — exactly
+# pinpoint, and expanding it would inject seven articles sharing one citing score, exactly
 # the coarse signal this module exists to replace. The pattern fails on "to", so a range is
 # skipped rather than mis-parsed.
 _ITEM = r"\d+(?:\([^)]{1,16}\))*"
@@ -55,13 +55,13 @@ def _act_reference(celex: str, resolve_anaphora: bool) -> Optional[str]:
     joined = "|".join(re.escape(n) for n in numbers)
     alternatives = [rf"(?:the\s+)?{word}\s*(?:\([A-Z]{{2,3}}\)\s*)?(?:No\s*)?(?:{joined})"]
 
-    # "of that regulation" — the anaphora a judgment falls back to once it has cited the act
+    # "of that regulation": the anaphora a judgment falls back to once it has cited the act
     # in full. Unambiguous only while a single act of this instrument type is in play, which
     # is the caller's business to know; hence the flag rather than a guess here.
     if resolve_anaphora:
         alternatives.append(rf"that\s+{word}")
 
-    # "of the GDPR" — the act's own short name, reusing the display map rather than adding a
+    # "of the GDPR": the act's own short name, reusing the display map rather than adding a
     # second act-keyed table. An act cited only by number never matches this branch.
     name = CELEX_TO_ACT_NAME.get(celex)
     if name:
@@ -88,7 +88,7 @@ def cited_articles(text: str, celex: str, *, resolve_anaphora: bool = True) -> L
     """
     pattern = _compile(celex, resolve_anaphora)
     if pattern is None:
-        logger.debug("[Citations] %s is not a parsable CELEX — no citations resolved.", celex)
+        logger.debug("[Citations] %s is not a parsable CELEX, no citations resolved.", celex)
         return []
 
     found: List[str] = []

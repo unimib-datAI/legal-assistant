@@ -1,4 +1,4 @@
-"""Pluggable RAG-method abstraction — the contract for a retrieval strategy.
+"""Pluggable RAG-method abstraction: the contract for a retrieval strategy.
 
 A :class:`RagMethod` wraps one retrieval strategy behind a uniform interface so
 callers can switch between methods at runtime and auto-generate their
@@ -6,7 +6,7 @@ hyperparameter controls from :meth:`RagMethod.param_specs`.
 
 **To add a strategy:** write the retriever under ``rag/retrievers/``, subclass
 :class:`RagMethod` in ``rag/methods/<name>.py``, and add an instance to ``_METHODS``
-in :mod:`legal_assistant.rag.methods.registry`. Nothing else needs to change — the
+in :mod:`legal_assistant.rag.methods.registry`. Nothing else needs to change: the
 CLI, the eval scripts, and the frontend all read the registry.
 """
 from __future__ import annotations
@@ -60,5 +60,5 @@ class RagMethod(ABC):
         """Instantiate the underlying retriever from shared resources + config."""
 
     def default_config(self) -> Dict[str, Any]:
-        """Config dict of every spec's default — the UI's starting state."""
+        """Config dict of every spec's default: the UI's starting state."""
         return {spec.name: spec.default for spec in self.param_specs()}

@@ -153,7 +153,7 @@ class GraphEnrichedRetriever(BaseRetriever):
                 vector_ids.append(paragraph_id)
         logger.info("[Vector Search] Retrieved %d paragraphs: %s", len(vector_ids), vector_ids)
 
-        # Case law is retrieved only by the `hybrid` method — see HybridRetriever.
+        # Case law is retrieved only by the `hybrid` method; see HybridRetriever.
         relevant_docs.extend(recitals)
 
         logger.info("[Retriever] Reranking %d documents total (incl. %d recitals)", len(relevant_docs), len(recitals))

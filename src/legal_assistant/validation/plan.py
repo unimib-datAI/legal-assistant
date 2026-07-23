@@ -54,7 +54,7 @@ class GraphPlan:
     ) -> Iterator[Tuple[int, NodeOp]]:
         """Pre-order DFS from ``root_id``, yielding ``(depth, node)``.
 
-        A node already visited is not descended into again — a cycle would otherwise not
+        A node already visited is not descended into again: a cycle would otherwise not
         terminate. Detecting that revisit is `checks.containment_is_tree`'s job, not this
         one's; here it only guarantees termination.
         """
@@ -80,7 +80,7 @@ class GraphPlan:
     # ── identity ─────────────────────────────────────────────────────────────
 
     def fingerprint(self) -> str:
-        """sha256 of a canonical serialisation — order-insensitive, content-sensitive.
+        """sha256 of a canonical serialisation: order-insensitive, content-sensitive.
 
         Two runs over the same bytes must produce the same fingerprint even if the builder
         emits in a different order; any change to a node property or an edge must change it.

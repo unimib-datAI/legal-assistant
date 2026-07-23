@@ -134,13 +134,13 @@ class EURLexHTMLParser:
 
         Three shapes occur in the published markup:
 
-        1. **Numbered paragraphs** — ``div`` children whose id is ``<article>.<paragraph>``.
-        2. **Amending articles** — an article whose body restates paragraphs of *another*
+        1. **Numbered paragraphs**: ``div`` children whose id is ``<article>.<paragraph>``.
+        2. **Amending articles**: an article whose body restates paragraphs of *another*
            act, so their div ids carry the amended article's number, not this one's
            (AI Act art_108 holds ``017.003``, ``019.004``, …). Their ids must be re-derived
            from the containing article: ``017.003`` is also the real id of AI Act Article
            17(3), and reusing it would silently overwrite that provision.
-        3. **Unnumbered articles** — definitions and single-clause articles, whose text sits
+        3. **Unnumbered articles**: definitions and single-clause articles, whose text sits
            directly under the article div.
         """
         article_num = article_id.split('_')[1].zfill(3)
@@ -183,7 +183,7 @@ class EURLexHTMLParser:
                 paragraphs.insert(0, {'id': f'{article_num}.0', 'text': ' '.join(text_parts)})
             return paragraphs
 
-        # Shape 3: no numbered subdivisions — definitions or a single-clause article.
+        # Shape 3: no numbered subdivisions, i.e. definitions or a single-clause article.
         if not text_parts:
             return paragraphs
 

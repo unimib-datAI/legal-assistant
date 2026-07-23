@@ -1,7 +1,7 @@
 """Pure checks over a :class:`~legal_assistant.validation.plan.GraphPlan`.
 
 Every function takes a plan (plus whatever it needs) and returns a list of
-:class:`Violation`. No I/O, no side effects — so each is testable against a hand-built plan.
+:class:`Violation`. No I/O, no side effects, so each is testable against a hand-built plan.
 """
 from __future__ import annotations
 
@@ -57,7 +57,7 @@ class Violation:
 def normalise(text: str) -> str:
     """Canonical form for text comparison: NFKC, lowercase, alphanumerics only.
 
-    Aggressive on purpose — the question a conservation check answers is "did this content
+    Aggressive on purpose: the question a conservation check answers is "did this content
     survive", not "was the whitespace preserved". Punctuation and spacing differ freely
     between the source markup and the concatenated node text.
     """
@@ -193,7 +193,7 @@ def conservation(
     Presence is matched by containment, because a source fragment is one ``<p>`` while a
     node's text may concatenate several of them. Duplication is matched by *exact* node
     text instead: counting substring occurrences across the concatenated corpus is
-    meaningless for short fragments — a topic label like "EU law" legitimately occurs inside
+    meaningless for short fragments: a topic label like "EU law" legitimately occurs inside
     dozens of paragraphs without having been stored twice.
     """
     exempt_norm = {normalise(e) for e in exempt if normalise(e)}
