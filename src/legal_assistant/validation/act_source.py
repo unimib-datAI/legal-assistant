@@ -120,8 +120,18 @@ def reconstructed_fragments(plan: GraphPlan) -> List[str]:
     broken containment edge still counts as *written*: losing it is a structural failure,
     reported by ``containment_is_tree``, not a conservation one.
     """
-    return [
+    fragments = [
         node.properties.get("text", "")
         for node in plan.node_ops
         if node.label in ("Paragraph", "Recital", "AnnexPoint")
     ]
+    # An annex point's marker is published text, and in a schedule it is the substantive
+    # half of the row: "Cauliflowers | 10,52" stores the produce in ``point_label`` and the
+    # amount in ``text``. Counting only the text would report the marker as lost when it is
+    # in the graph, so the label counts as reconstructed too.
+    fragments += [
+        label
+        for node in plan.node_ops
+        if node.label == "AnnexPoint" and (label := node.properties.get("point_label"))
+    ]
+    return fragments

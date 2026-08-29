@@ -11,6 +11,8 @@ The schema mirrors the structure EUR-Lex publishes:
 
 - An **act** is composed of one or more **chapters**, and separately of a flat list of
   **recitals**.
+  - Not every act is subdivided. A short one lists its **articles** directly, with no
+    chapter at all, and some acts mix the two shapes.
 - Each **chapter** is composed of one or more **articles**.
   - In some cases the articles are grouped into **sections** rather than hanging directly
     off the chapter (`Chapter → Section → Article`). Both shapes occur in the corpus.
@@ -174,21 +176,32 @@ label    String            e.g. "Reference for a preliminary ruling"
 
 ## Annex nodes
 
-Only the AI Act has annexes. They hang off the act, in the same structural position as
-recitals, because the published markup places them outside the chapter tree.
+Of the acts in the corpus only the AI Act has annexes. They hang off the act, in the same
+structural position as recitals, because the published markup places them outside the
+chapter tree.
 
 ### Annex
 
 ```
-id       String   "<celex>anx_<roman>"    e.g. "32024R1689anx_III"
-number   String   Roman numeral            e.g. "III"
+id       String   "<celex>anx_<label>"    e.g. "32024R1689anx_III"
+number   String   Roman numeral, Arabic digits or a letter code, as published
 title    String   e.g. "High-risk AI systems referred to in Article 6(2)"
 ```
+
+`number` is whatever the act labels the annex with: most use Roman numerals, some use
+Arabic digits (`anx_1`), a few a letter code. Nothing derives meaning from its form.
 
 ### AnnexPoint
 
 The retrievable unit of an annex. Its id is positional, not parsed from the prose numbering;
 the citation a lawyer writes is carried separately in `point_label`.
+
+An annex is not always a list of numbered points: it can equally *be* a table, such as a
+schedule of amounts or a control list of goods. Those rows are stored as points with a null
+`point_label`, since they carry no marker to cite them by, and a row of two cells keeps its
+first cell in `point_label` and its second in `text`. **`point_label IS NOT NULL` is
+therefore the test for a citable point**, and the one to filter on if annex retrieval is
+enabled.
 
 ```
 id                String   "<celex>anx_<roman>.p_<nnn>"   e.g. "32024R1689anx_III.p_007"
@@ -251,9 +264,17 @@ The act hierarchy:
 
 ```
 Act ─CONTAINS→ Chapter ─CONTAINS→ [Section ─CONTAINS→] Article ─CONTAINS→ Paragraph
+ ├──CONTAINS→ Article ─CONTAINS→ Paragraph        (acts with no chapter division)
  ├──CONTAINS→ Recital
  └──CONTAINS→ Annex ─CONTAINS→ AnnexPoint
 ```
+
+**Not every act is subdivided.** A short regulation or directive often lists its articles
+directly, with no `cpt_` division at all, and some acts mix the two shapes. An article that
+sits outside any chapter hangs off the `Act`, in the same structural position as a recital
+or an annex. Depth is therefore not fixed: `Article` sits one, two or three hops below the
+root. Queries already accommodate this by walking `(:Act)-[:CONTAINS*]->(:Article)` with a
+variable-length edge, and a chapter lookup on such an article simply returns nothing.
 
 The obligation subgraph, which points back into the acts and into the actor vocabulary:
 

@@ -215,29 +215,59 @@ class EURLexHTMLParser:
         return points
 
     def _points_from_table(self, table, prefix, heading):
-        """One table is one point: marker cell, text cell, then its nested sub-points.
+        """The points of one table, row by row.
+
+        A numbered point is a row of two cells, the marker then its prose, and most annexes
+        wrap each point in a table of its own. But an annex can equally *be* a table: a
+        currency list, a control list of goods, a schedule of reporting fields. Those rows
+        carry no marker and any number of columns, and they are published text like any
+        other, so they are kept as unlabelled points rather than dropped.
 
         Some annexes indent a point with a blank leading column, so Annex VII's rows read
         ``['', '3.1.', 'The application ...']``. Taking the marker off cell zero would give
         an empty label and push the real marker into the text, hence the skip.
         """
-        cells = [td for td in table.find_all('td') if td.find_parent('table') is table]
-        while cells and not cells[0].get_text(strip=True):
-            cells.pop(0)
-        if len(cells) < 2:
-            return []
+        points = []
+        for row in table.find_all('tr'):
+            if row.find_parent('table') is not table:
+                continue
 
-        label = prefix + self._normalise_label(cells[0].get_text(separator=' ', strip=True))
-        body = cells[1]
-        points = [{
-            'label': label,
-            'text': self._own_text(body),
-            'section_heading': heading,
-        }]
+            # Header cells carry published text too: a schedule's column headings name the
+            # fields its rows fill in, and dropping them leaves the rows unreadable. A row
+            # holding any of them is a heading, never a numbered point, so it never takes
+            # the marker-and-text path however many cells it has.
+            cells = [c for c in row.find_all(['td', 'th'])
+                     if c.find_parent('table') is table]
+            is_heading_row = any(c.name == 'th' for c in cells)
+            while cells and not cells[0].get_text(strip=True):
+                cells.pop(0)
+            if not cells:
+                continue
 
-        for nested in body.find_all('table'):
-            if nested.find_parent('table') is table:
-                points.extend(self._points_from_table(nested, label, heading))
+            if len(cells) == 2 and not is_heading_row:
+                label = prefix + self._normalise_label(
+                    cells[0].get_text(separator=' ', strip=True))
+                body = cells[1]
+                points.append({
+                    'label': label,
+                    'text': self._own_text(body),
+                    'section_heading': heading,
+                })
+                nested_prefix, nested_cells = label, [body]
+            else:
+                if text := ' '.join(t for c in cells if (t := self._own_text(c))):
+                    points.append({
+                        'label': None,
+                        'text': text,
+                        'section_heading': heading,
+                    })
+                nested_prefix, nested_cells = prefix, cells
+
+            for cell in nested_cells:
+                for nested in cell.find_all('table'):
+                    if nested.find_parent('table') is table:
+                        points.extend(
+                            self._points_from_table(nested, nested_prefix, heading))
 
         return points
 
