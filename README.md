@@ -28,9 +28,8 @@ cp .env.example .env        # NEO4J_URI / NEO4J_USERNAME / NEO4J_PASSWORD / OPEN
 Then build the graph and ask a question:
 
 ```bash
-legal-assistant graph build
+legal-assistant graph build --with-case-law
 legal-assistant graph aske
-legal-assistant ingest case-law --acts 32016R0679
 legal-assistant rag query "What entities fall under the personal scope of Chapter II?"
 ```
 
@@ -49,16 +48,33 @@ DEBUG.
 
 Scrapes EUR-Lex, writes the graph, embeds and indexes Paragraph, Recital and Article nodes.
 
+**Runs are resumable.** An act already in the graph is skipped before it is downloaded, so
+relaunching an interrupted build costs nothing for the acts already loaded. Each act is
+written in a single transaction, so a crash leaves it absent rather than half loaded.
+
 | Flag | Type | Default | Meaning |
 |---|---|---|---|
 | `--celex` | list | the four acts | CELEX ids to load |
-| `--no-clear` | flag | off | Keep the existing database instead of wiping it first |
+| `--clear` | flag | off | Wipe the database first, instead of resuming |
+| `--force` | flag | off | Reload acts that are already present. Ignored with `--clear` |
+| `--with-case-law` | flag | off | After the acts, ingest the CJEU judgments interpreting them |
+| `--allow-invalid` | flag | off | Write acts that fail validation, logging violations as warnings |
 
 ```bash
-legal-assistant graph build                                  # all four acts, fresh database
+legal-assistant graph build                                  # all four acts, resuming
 legal-assistant graph build --celex 32016R0679               # GDPR only
-legal-assistant graph build --celex 32024R1689 --no-clear    # add the AI Act to what exists
+legal-assistant graph build --celex 32024R1689               # add the AI Act to what exists
+legal-assistant graph build --clear                          # wipe and rebuild from scratch
+legal-assistant graph build --with-case-law                  # acts, then their judgments
 ```
+
+> **Breaking change.** `--no-clear` has been removed and the default is now the opposite of
+> what it was: a plain `graph build` keeps the database and fills in what is missing. Ask for
+> `--clear` to get the old wipe-and-rebuild behaviour. The flag was removed rather than kept
+> as a no-op so that an existing script fails loudly instead of silently changing meaning.
+
+Exits non-zero if any act failed to load. Acts that fail are reported individually and do not
+stop the others from being written.
 
 Default acts: `32016R0679` (GDPR), `32024R1689` (AI Act), `32023R2854` (Data Act),
 `32022R0868` (Data Governance Act).
@@ -87,6 +103,11 @@ legal-assistant graph aske --generations 20 --alpha 0.3 --out results/aske.json
 
 Reads the judgments to fetch out of the graph itself (the `(:CaseLaw)` stubs `graph build`
 created), parses each from EUR-Lex XHTML, and embeds the paragraphs.
+
+**Runs are resumable.** A judgment already stored is skipped before it is fetched from
+Cellar, and each judgment is written in its own transaction, so an interrupted run resumes at
+the first judgment that has no content rather than re-downloading the corpus. Use `--reset` to
+force a full re-ingest.
 
 | Flag | Type | Default | Meaning |
 |---|---|---|---|

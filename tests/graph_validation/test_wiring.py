@@ -36,23 +36,23 @@ def no_network():
         yield
 
 
-def test_plan_document_writes_nothing():
+def test_plan_document_writes_nothing(graph_mock):
     """Planning is pure: it must not touch the client it was constructed with."""
-    graph = MagicMock()
+    graph = graph_mock
     GraphLoader(graph).plan_document(_config())
     graph.upsert_graph_node.assert_not_called()
     graph.create_relationship.assert_not_called()
 
 
-def test_load_document_writes_after_validating():
-    graph = MagicMock()
+def test_load_document_writes_after_validating(graph_mock):
+    graph = graph_mock
     plan = GraphLoader(graph).load_document(_config())
     assert graph.upsert_graph_node.call_count == len(plan.node_ops)
 
 
-def test_a_failing_act_stops_the_whole_batch():
+def test_a_failing_act_stops_the_whole_batch(graph_mock):
     """One bad document must not leave the others half-written."""
-    graph = MagicMock()
+    graph = graph_mock
     loader = GraphLoader(graph)
 
     with patch.object(
@@ -65,9 +65,9 @@ def test_a_failing_act_stops_the_whole_batch():
     graph.upsert_graph_node.assert_not_called()
 
 
-def test_database_is_not_cleared_when_validation_fails():
+def test_database_is_not_cleared_when_validation_fails(graph_mock):
     """The ordering guarantee: validate everything, *then* clear, *then* write."""
-    graph = MagicMock()
+    graph = graph_mock
 
     with patch("legal_assistant.pipelines.graph_build.make_graph_client", return_value=graph), \
          patch("legal_assistant.pipelines.graph_build.EurlexDocumentUtils") as utils, \
@@ -83,8 +83,8 @@ def test_database_is_not_cleared_when_validation_fails():
     graph.close.assert_called_once()
 
 
-def test_clear_happens_before_the_writes_when_validation_passes():
-    graph = MagicMock()
+def test_clear_happens_before_the_writes_when_validation_passes(graph_mock):
+    graph = graph_mock
     order = []
     graph.clear_database.side_effect = lambda: order.append("clear")
     graph.upsert_graph_node.side_effect = lambda **kw: order.append("write") or kw["node_properties"]["id"]

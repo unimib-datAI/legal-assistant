@@ -36,10 +36,18 @@ ALLOWED_TRANSITIONS: Set[Tuple[str, str, str]] = {
 }
 
 # Edges whose endpoint is expected to live in another plan, so a missing endpoint is not this
-# plan's fault. INTERPRETS is emitted while loading an act and points at provisions of that
-# same act. STATES is emitted while ingesting obligations and its left endpoint is the passage
-# node (Paragraph or AnnexPoint), which the act plan created, not the obligation plan.
-_CROSS_DOCUMENT_RELATIONS = frozenset({"INTERPRETS", "STATES"})
+# plan's fault. STATES is emitted while ingesting obligations and its left endpoint is the
+# passage node (Paragraph or AnnexPoint), which the act plan created, not the obligation plan.
+#
+# INTERPRETS used to be exempt too, on the same reasoning, but the reasoning did not hold:
+# both of its endpoints are created inside the act plan, the stub by `_load_case_law` itself
+# and the target by the article loader. Exempting it hid a real defect. Twelve of the
+# sixty-eight judgments in the corpus had no edge at all, because the reference normaliser
+# produced ids for paragraphs that do not exist, and `MATCH ... MATCH ... MERGE` drops such an
+# edge in silence. Those judgments were then invisible to `GET_CASE_LAW_BY_ACTS` and never
+# ingested. The loader now resolves a reference against the nodes it has created and emits no
+# edge it cannot ground; this check is what keeps that true.
+_CROSS_DOCUMENT_RELATIONS = frozenset({"STATES"})
 
 _WHITESPACE = re.compile(r"\s+")
 _NON_ALNUM = re.compile(r"[^0-9a-z]+")

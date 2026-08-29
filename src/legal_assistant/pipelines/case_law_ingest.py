@@ -21,6 +21,7 @@ from legal_assistant.case_law.html_parser import CaseLawHTMLError, parse_celex
 from legal_assistant.case_law.kg_builder import build_from_tree, celex_to_case_number
 from legal_assistant.case_law.tree import flatten
 from legal_assistant.graph.client import Neo4jGraph
+from legal_assistant.graph.completion import case_law_is_ingested
 from legal_assistant.graph.queries import CaseLawQueries
 from legal_assistant.resources import make_embeddings
 from legal_assistant.validation.gate import GraphValidationError
@@ -41,6 +42,7 @@ class IngestTotals:
     sections: int = 0
     paragraphs: int = 0
     operative: int = 0
+    skipped: int = 0
     failed: List[Tuple[str, str]] = field(default_factory=list)
 
 
@@ -76,14 +78,27 @@ def ingest(
 ) -> IngestTotals:
     """Parse, validate and write each judgment.
 
-    A judgment that cannot be fetched, or that fails validation, is skipped and recorded
-    in ``failed``; nothing is written for it and the batch continues. ``strict=False``
-    downgrades validation failures to warnings and writes anyway.
+    A judgment already stored is skipped before it is fetched, so an interrupted run resumes
+    rather than re-downloading the whole corpus. A judgment that cannot be fetched, or that
+    fails validation, is skipped and recorded in ``failed``; nothing is written for it and
+    the batch continues. ``strict=False`` downgrades validation failures to warnings and
+    writes anyway.
+
+    Each judgment is written in its own transaction, so a judgment that is present is
+    present in full: there is no half-written judgment for the resume check to mistake for
+    a finished one.
     """
     totals = IngestTotals()
 
     for i, celex in enumerate(celex_list, start=1):
         label = f"{celex} ({celex_to_case_number(celex)})"
+
+        # Before the fetch: the Cellar round trip is what a resumed run must not repeat.
+        if case_law_is_ingested(graph, celex):
+            logger.info("[%d/%d] %s already ingested, skipping", i, len(celex_list), label)
+            totals.skipped += 1
+            continue
+
         try:
             roots = parse_celex(celex)
         except CaseLawHTMLError as exc:

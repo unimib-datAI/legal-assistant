@@ -11,8 +11,9 @@ the only part of the interface they actually use.
 from __future__ import annotations
 
 import logging
+from contextlib import contextmanager
 from dataclasses import dataclass
-from typing import Any, Dict, List
+from typing import Any, Dict, Iterator, List
 
 logger = logging.getLogger(__name__)
 
@@ -51,6 +52,17 @@ class RecordingGraph:
     def __init__(self) -> None:
         self.node_ops: List[NodeOp] = []
         self.edge_ops: List[EdgeOp] = []
+
+    @contextmanager
+    def transaction(self) -> Iterator["RecordingGraph"]:
+        """Mirror ``Neo4jGraph.transaction`` by yielding self.
+
+        Recording is already atomic: nothing is visible to anyone until the plan is replayed,
+        and an exception discards the whole recorder along with the run. The method exists so
+        that a builder writing one unit takes the same code path here as against the real
+        client, which is the point of the duck-typed seam.
+        """
+        yield self
 
     def upsert_graph_node(self, node_name: str, node_properties: Dict[str, Any]) -> str:
         """Record a node upsert and return its id, as the real client does."""

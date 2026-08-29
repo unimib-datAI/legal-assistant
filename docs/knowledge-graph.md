@@ -282,6 +282,15 @@ interpose a section. `INTERPRETS` may point at an article, a paragraph **or** a 
 depending on how precise the EUR-Lex metadata is, so a query walking it must handle all
 three target labels.
 
+**Every `INTERPRETS` edge is grounded.** The loader resolves a reference against the nodes it
+has just created and emits no edge it cannot ground, because the write is
+`MATCH ... MATCH ... MERGE` and would otherwise drop the edge in silence. Two consequences
+worth knowing when reading the data. A reference to a paragraph the act does not have falls
+back to that paragraph's **article**, so the target can be coarser than the metadata was.
+And a reference that resolves to nothing at all leaves a stub with no edge, which
+`GET_CASE_LAW_BY_ACTS` cannot reach and the ingest will therefore never fetch: those are
+logged as warnings during the build rather than passed over.
+
 **There is no citation edge.** Article-to-article citations used to be materialised as
 `CITES`, derived by regex over the article text ("Articles 12 to 15" expanded to a whole
 range, including articles of other acts). Nothing read them, most pointed at ids that did

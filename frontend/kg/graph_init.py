@@ -25,7 +25,10 @@ celex_input = st.text_area(
     height=120,
     help="GDPR · AI Act · Data Act · Data Governance Act",
 )
-clear_db = st.checkbox("Clear existing database before loading", value=True)
+# Off by default, matching the CLI: a plain run resumes and keeps whatever is already
+# loaded. Ticking this wipes the graph, which is the destructive choice and so the explicit
+# one.
+clear_db = st.checkbox("Clear existing database before loading", value=False)
 
 if st.button("Run Graph Initialization", type="primary"):
     celex_ids = [c.strip() for c in celex_input.splitlines() if c.strip()]
@@ -36,7 +39,12 @@ if st.button("Run Graph Initialization", type="primary"):
     try:
         with stream_logs(), st.spinner("Initializing graph, this may take several minutes…"):
             result = build_graph(celex_ids, clear_db=clear_db)
-        st.success(f"Graph initialized: {len(result.celex_ids)} document(s) loaded.")
+        st.success(
+            f"Graph initialized: {len(result.celex_ids)} document(s) loaded, "
+            f"{len(result.skipped)} already present."
+        )
+        for celex, reason in result.failed:
+            st.warning(f"{celex} was not loaded: {reason}")
     except GraphValidationError as exc:
         st.error(
             "Graph validation failed: **nothing was written and the database was not "

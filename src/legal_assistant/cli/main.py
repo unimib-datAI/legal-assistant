@@ -44,12 +44,23 @@ def _cmd_graph_build(args: argparse.Namespace) -> int:
     from legal_assistant.pipelines.graph_build import DEFAULT_CELEX_IDS, build_graph
 
     celex_ids = args.celex or list(DEFAULT_CELEX_IDS)
-    result = build_graph(celex_ids, clear_db=not args.no_clear, strict=not args.allow_invalid)
-    logger.info(
-        "Graph built, %d document(s), indexed: %s",
-        len(result.celex_ids), ", ".join(result.indexed_labels),
+    result = build_graph(
+        celex_ids,
+        clear_db=args.clear,
+        strict=not args.allow_invalid,
+        force=args.force,
     )
-    return 0
+    logger.info(
+        "Graph built, %d document(s) written, %d skipped as already loaded, indexed: %s",
+        len(result.celex_ids), len(result.skipped), ", ".join(result.indexed_labels),
+    )
+    for celex, reason in result.failed:
+        logger.error("Act %s was not loaded: %s", celex, reason)
+
+    if args.with_case_law:
+        _ingest_case_law_for(celex_ids)
+
+    return 1 if result.failed else 0
 
 
 def _cmd_graph_aske(args: argparse.Namespace) -> int:
@@ -65,6 +76,38 @@ def _cmd_graph_aske(args: argparse.Namespace) -> int:
         )
         logger.info("Concept report written to %s", args.out)
     return 0
+
+
+def _ingest_case_law_for(acts: list[str]) -> None:
+    """Chain the case law ingest onto a finished act build.
+
+    Orchestration only: the judgments are resolved from the graph exactly as the standalone
+    command does, and the ingest brings its own resume logic, so an interrupted chained run
+    picks up where it stopped.
+    """
+    from legal_assistant.pipelines import case_law_ingest as ingest_mod
+    from legal_assistant.resources import make_graph_client
+
+    quiet("legal_assistant.graph.client")
+
+    graph = make_graph_client()
+    try:
+        celex_list = ingest_mod.resolve_celex_list(graph, acts)
+        if not celex_list:
+            logger.warning("No case law references found for acts %s, nothing to ingest.", acts)
+            return
+
+        logger.info("Ingesting %d judgment(s) for acts %s…", len(celex_list), acts)
+        totals = ingest_mod.ingest(graph, celex_list)
+        if totals.paragraphs:
+            ingest_mod.embed_and_index(graph)
+
+        logger.info(
+            "Case law: %d judgment(s) ingested, %d already present, %d failed.",
+            totals.judgments, totals.skipped, len(totals.failed),
+        )
+    finally:
+        graph.close()
 
 
 # ── ingest ────────────────────────────────────────────────────────────────────
@@ -100,9 +143,10 @@ def _cmd_ingest_case_law(args: argparse.Namespace) -> int:
             ingest_mod.embed_and_index(graph)
 
         logger.info(
-            "Done: %d/%d judgments, %d sections, %d paragraphs (%d operative), %d skipped.",
+            "Done: %d/%d judgments, %d sections, %d paragraphs (%d operative), "
+            "%d already present, %d failed.",
             totals.judgments, len(celex_list), totals.sections,
-            totals.paragraphs, totals.operative, len(totals.failed),
+            totals.paragraphs, totals.operative, totals.skipped, len(totals.failed),
         )
         for celex, reason in totals.failed:
             logger.info("  skipped %s: %s", celex, reason)
@@ -263,8 +307,13 @@ def build_parser() -> argparse.ArgumentParser:
 
     build = graph_sub.add_parser("build", help="Scrape EUR-Lex, load Neo4j, embed and index.")
     build.add_argument("--celex", nargs="+", help="CELEX ids to load (default: the four acts).")
-    build.add_argument("--no-clear", action="store_true",
-                       help="Keep the existing database instead of wiping it first.")
+    build.add_argument("--clear", action="store_true",
+                       help="Wipe the database first. Without it the build resumes, keeping "
+                            "acts that are already loaded.")
+    build.add_argument("--force", action="store_true",
+                       help="Reload acts that are already present. Ignored with --clear.")
+    build.add_argument("--with-case-law", action="store_true",
+                       help="After the acts, ingest the CJEU judgments that interpret them.")
     build.add_argument("--allow-invalid", action="store_true",
                        help="Write acts that fail graph validation, logging the violations "
                             "as warnings instead of aborting.")

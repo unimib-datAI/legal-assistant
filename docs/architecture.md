@@ -33,7 +33,7 @@ src/legal_assistant/       the package — everything importable
   config.py                env-driven settings (models, thresholds, paths)
   resources.py             the only place Neo4j / OpenAI clients are constructed
   logging_setup.py         the only place root logging is configured
-  graph/                   Neo4j client, loader, Cypher queries, ASKE seeds
+  graph/                   Neo4j client, write seam, loader, Cypher queries, ASKE seeds
   scraper/                 EUR-Lex fetching and HTML parsing
   case_law/                CJEU judgment parsing and KG building
   text/  topic/            preprocessing and the ASKE algorithm
@@ -105,7 +105,20 @@ Paragraph, Recital and Article nodes are embedded and given a vector index.
 CJEU judgments are a separate job (`pipelines/case_law_ingest.py`) because they are fetched
 per judgment and fail individually: `case_law/html_parser.py` reads the hierarchy straight
 from the published XHTML, `case_law/tree.py` flattens it, `case_law/kg_builder.py` writes
-it. A judgment that cannot be fetched is skipped and reported, never fatal.
+it. A judgment that cannot be fetched is skipped and reported, never fatal. `graph build
+--with-case-law` chains the two jobs; each still runs on its own.
+
+**Both jobs are resumable, and the graph is the only state they keep.** There is no progress
+ledger: a run asks Neo4j whether an act or a judgment is already there, and skips it *before*
+fetching anything. What makes that answer trustworthy is that every unit is written inside
+one transaction, through `Neo4jGraph.transaction()`, so a unit is either wholly present or
+wholly absent. Presence therefore means "complete and validated", which is why no completion
+marker exists on the nodes.
+
+The write path is a duck-typed seam with three implementors of `graph/writer.py`'s
+`GraphWriter`: the real client, `RecordingGraph` (which is how a plan is built and validated
+before any write), and `TransactionalGraph`. A builder does not know which one it is writing
+to.
 
 ### Phase 2 — Topic extraction (`pipelines/aske_run.py`)
 

@@ -21,9 +21,15 @@ class GraphLoader:
 
     def __init__(self, neo4j_graph: Neo4jGraph):
         self.graph = neo4j_graph
+        self._paragraph_ids: set[str] = set()
 
     def _emit(self, data):
-        """Write one parsed document into ``self.graph``, the real client or a recorder."""
+        """Write one parsed document into ``self.graph``, the real client or a recorder.
+
+        Case law comes last, and must: its edges point at provisions of this act, and
+        :meth:`_load_case_law` only emits an edge whose target it has already created.
+        """
+        self._paragraph_ids = set()
         self._load_act(data['act'])
         self._load_chapters(data['act'], data['chapters'])
         self._load_recitals(data['act'], data['recitals'])
@@ -60,8 +66,13 @@ class GraphLoader:
         )
 
     def write(self, plan: GraphPlan) -> None:
-        """Replay a validated plan onto the real graph."""
-        plan.replay(self.graph)
+        """Replay a validated plan onto the real graph, as one transaction.
+
+        Atomic on purpose: a run interrupted mid-write must leave no trace of the act, so a
+        later run can tell "already loaded" from "started and abandoned" by presence alone.
+        """
+        with self.graph.transaction() as tx:
+            plan.replay(tx)
 
     def load_document(self, config, *, strict: bool = True):
         """Validate one document and write it."""
@@ -198,6 +209,7 @@ class GraphLoader:
         """Create Paragraph nodes."""
         for paragraph in article['paragraphs']:
             paragraph_id = f"{act['celex']}_{paragraph['id']}"
+            self._paragraph_ids.add(paragraph_id)
 
             self.graph.upsert_graph_node(
                 node_name="Paragraph",
@@ -296,8 +308,36 @@ class GraphLoader:
                 relationship="CONTAINS"
             )
 
+    def _resolve_paragraph(self, celex, paragraph):
+        """The id of the paragraph a reference names, or None if this act has no such node.
+
+        Two spellings reach here for the same provision. Numbered paragraphs keep the padded
+        id EUR-Lex puts in the markup, ``006.001``; points of a definitions article are built
+        from the parsed marker and stay unpadded, ``004.7``. EUR-Lex writes both ``A04PT7``
+        and ``A04P4`` for the latter, so a reference normalised to the padded form has to be
+        tried against the unpadded one before it is given up on.
+        """
+        candidates = [f"{celex}_{paragraph}"]
+        article, _, number = paragraph.partition('.')
+        if number.isdigit():
+            candidates.append(f"{celex}_{article}.{int(number)}")
+
+        return next((c for c in candidates if c in self._paragraph_ids), None)
+
     def _load_case_law(self, act, case_law_list):
-        """Create CaseLaw nodes and their interpretation relationships."""
+        """Create CaseLaw nodes and their interpretation relationships.
+
+        An edge is emitted only once its target is known to exist in this act. The write is
+        ``MATCH ... MATCH ... MERGE``, which neither writes nor complains when an endpoint is
+        missing, so an unchecked edge to a mistyped id vanishes without trace, and with it the
+        judgment: ``GET_CASE_LAW_BY_ACTS`` reaches judgments through INTERPRETS, so no edge
+        means the ingest never fetches it.
+
+        The stub is created either way. Knowing a judgment interprets the act without knowing
+        which provision is worth more than not knowing of the judgment at all.
+        """
+        celex = act['celex']
+
         for case_law in case_law_list:
             case_law_id = case_law['case_law_identifier']
 
@@ -309,33 +349,37 @@ class GraphLoader:
             except Exception as e:
                 logger.debug("CaseLaw node '%s' already exists or could not be created: %s", case_law_id, e)
 
+            target = None
             if case_law.get('paragraph'):
-                paragraph_id = f"{act['celex']}_{case_law['paragraph']}"
-                self.graph.create_relationship(
-                    left_node_name="CaseLaw",
-                    right_node_name="Paragraph",
-                    left_id=case_law_id,
-                    right_id=paragraph_id,
-                    relationship="INTERPRETS"
-                )
+                # A paragraph this act does not have falls back to its article: a coarser
+                # true edge keeps the judgment reachable, where no edge would lose it.
+                if paragraph_id := self._resolve_paragraph(celex, case_law['paragraph']):
+                    target = ("Paragraph", paragraph_id)
+                elif case_law.get('article'):
+                    logger.info("%s: paragraph %s not in %s, linking to the article instead",
+                                case_law_id, case_law['paragraph'], celex)
+                    target = ("Article", f"{celex}{case_law['article']}")
             elif case_law.get('article'):
-                article_id = f"{act['celex']}{case_law['article']}"
-                self.graph.create_relationship(
-                    left_node_name="CaseLaw",
-                    right_node_name="Article",
-                    left_id=case_law_id,
-                    right_id=article_id,
-                    relationship="INTERPRETS"
-                )
+                target = ("Article", f"{celex}{case_law['article']}")
             elif case_law.get('chapter'):
-                chapter_id = f"{act['celex']}{case_law['chapter']}"
-                self.graph.create_relationship(
-                    left_node_name="CaseLaw",
-                    right_node_name="Chapter",
-                    left_id=case_law_id,
-                    right_id=chapter_id,
-                    relationship="INTERPRETS"
+                target = ("Chapter", f"{celex}{case_law['chapter']}")
+
+            if target is None:
+                logger.warning(
+                    "%s interprets %s at %r, which resolves to no node: no INTERPRETS edge, "
+                    "so this judgment will not be ingested.",
+                    case_law_id, celex, case_law.get('raw_article_reference', ''),
                 )
+                continue
+
+            label, target_id = target
+            self.graph.create_relationship(
+                left_node_name="CaseLaw",
+                right_node_name=label,
+                left_id=case_law_id,
+                right_id=target_id,
+                relationship="INTERPRETS"
+            )
 
     def _extract_number(self, id_string, prefix):
         """Extract number from ID string."""

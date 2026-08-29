@@ -1,10 +1,24 @@
 import logging
+import re
 
 from bs4 import BeautifulSoup
 
 from legal_assistant.scraper.browser_fetcher import BrowserFetcher
 
 logger = logging.getLogger(__name__)
+
+# One provision of one article: "A02P1", "A04PT7", "A06P1L1LF", "A38P3SNT2", "A01".
+#
+# Anything after the paragraph number addresses a unit finer than the graph stores (a point,
+# a subparagraph, a sentence), so it is matched and discarded rather than read as digits. The
+# article number must run to the end or to the first subdivision marker, which is what stops
+# a range such as "A12-A15" from matching at all.
+_ARTICLE_REF_RE = re.compile(
+    r'^A(?P<article>\d+)'
+    r'(?:PT(?P<point>\d+)'          # point of a definitions article
+    r'|P(?P<paragraph>\d+)(?:[A-Z].*)?'   # paragraph, plus any finer subdivision
+    r')?$'
+)
 
 
 class MetadataParser:
@@ -87,36 +101,49 @@ class MetadataParser:
             'paragraph': paragraph
         }.items() if value is not None}
 
-    def enrich_article_reference(self, article_reference):
-        """
-        Enrich and normalize article reference to match existing database format.
+    @staticmethod
+    def enrich_article_reference(article_reference):
+        """Normalise an EUR-Lex reference to the ids the graph loader writes.
 
         EUR-Lex format → Database format:
         - 'A01' → chapter=None, article='art_1', paragraph=None
         - 'A02P1' → chapter=None, article='art_2', paragraph='002.001'
-        - 'A04PT11' → chapter=None, article='art_4', paragraph='004.011'
+        - 'A04PT7' → chapter=None, article='art_4', paragraph='004.7'
         - 'CH8' → chapter='CH8', article=None, paragraph=None
+
+        The reference language goes finer than the graph does: EUR-Lex cites a sentence
+        inside a subparagraph inside a point ('A06P1L1LF'), while the smallest node is the
+        paragraph. Everything below the paragraph is therefore **truncated**. Reading every
+        digit out of the suffix instead, as this once did, invents a paragraph number:
+        'A06P1L1LF' became paragraph 11 of an article that has four, and the edge was
+        silently dropped by the `MATCH ... MERGE` that writes it.
+
+        Points of a definitions article are the one asymmetry. The loader stores those
+        unpadded, ``004.7``, because it builds the id from the parsed marker, while numbered
+        paragraphs keep the padded id EUR-Lex puts in the markup, ``006.001``. This has to
+        follow the loader, or every Article 4 reference misses a node that does exist.
         """
         if article_reference.startswith('CH'):
             return article_reference, None, None
 
-        if article_reference.startswith('A'):
-            rest = article_reference[1:]
-            article_num, paragraph = None, None
+        match = _ARTICLE_REF_RE.match(article_reference)
+        if not match:
+            # Ranges ('A12-A15'), annex and preamble references, and anything else EUR-Lex
+            # publishes that has no single node to point at. Logged rather than dropped in
+            # silence: an unresolved reference means a judgment nothing will ever ingest.
+            logger.warning(
+                "Unhandled case law reference %r: no interpretation edge will be created.",
+                article_reference,
+            )
+            return None, None, None
 
-            if 'PT' in rest:
-                article_num, part_num = map(int, rest.split('PT'))
-                paragraph = f'{article_num:03d}.{part_num:03d}'
-            elif 'P' in rest:
-                article_num, paragraph_part = rest.split('P')
-                article_num = int(article_num)
+        article_num = int(match.group('article'))
+        article = f'art_{article_num}'
 
-                paragraph_digits = "".join(filter(str.isdigit, paragraph_part))
-                paragraph = f'{article_num:03d}.{int(paragraph_digits):03d}'
-            else:
-                article_num = int(rest)
+        if point := match.group('point'):
+            return None, article, f'{article_num:03d}.{int(point)}'
 
-            article = f'art_{article_num}' if article_num else None
-            return None, article, paragraph
+        if paragraph := match.group('paragraph'):
+            return None, article, f'{article_num:03d}.{int(paragraph):03d}'
 
-        return None, None, None
+        return None, article, None

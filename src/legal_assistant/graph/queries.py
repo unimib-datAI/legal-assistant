@@ -15,6 +15,13 @@ class NodeQueries:
     RETURN count(n) > 0 AS exists
     """
 
+    # Resume check. An act is written inside a single transaction, so the node is present
+    # only if the whole act landed, which makes presence a sound proxy for "done".
+    ACT_IS_LOADED = """
+    MATCH (a:Act {id: $celex})
+    RETURN count(a) > 0 AS done
+    """
+
     # `SET n +=` merges the given properties instead of replacing the whole map. A full
     # replace would let one ingest path silently strip another's properties: `_load_case_law`
     # upserts (:CaseLaw {id}) with nothing but an id, so re-running the act loader after the
@@ -284,6 +291,14 @@ class CaseLawQueries:
     MATCH (n)
     WHERE n:CaseLawSection OR n:CaseLawParagraph OR n:CaseLawTopic
     DETACH DELETE n
+    """
+
+    # Resume check. Node presence is *not* usable here: the act loader creates a (:CaseLaw)
+    # stub for every "Interpreted by" reference long before the judgment is fetched, so the
+    # node always exists. Content is the question.
+    CASE_LAW_IS_INGESTED = """
+    MATCH (cl:CaseLaw {id: $celex})
+    RETURN EXISTS { (cl)-[:HAS_SECTION]->(:CaseLawSection) } AS done
     """
 
     GET_CASE_LAW_BY_ACTS = """

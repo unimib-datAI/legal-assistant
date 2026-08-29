@@ -189,7 +189,10 @@ def create_case_law_kg(
         conservation_kind="body",
         strict=strict,
     )
-    plan.replay(graph)
+    # One transaction per judgment: an interrupted write must leave the judgment absent
+    # rather than truncated, so a resumed run re-ingests it instead of skipping it.
+    with graph.transaction() as tx:
+        plan.replay(tx)
     return _counts_from_plan(plan, celex)
 
 

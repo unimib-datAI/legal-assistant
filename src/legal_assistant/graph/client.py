@@ -1,10 +1,12 @@
 import logging
-from typing import Callable
+from contextlib import contextmanager
+from typing import Any, Callable, Dict, Iterator
 
 from neo4j import GraphDatabase
 from tqdm import tqdm
 
 from legal_assistant.graph.queries import GeneralQueries, NodeQueries, RelationQueries
+from legal_assistant.graph.writer import TransactionalGraph
 
 logger = logging.getLogger(__name__)
 
@@ -42,24 +44,45 @@ class Neo4jGraph:
             result = session.run(query, node_id=node_id)
             return result.single()["exists"]
 
-    def upsert_graph_node(self, node_name, node_properties):
-        """Create or update a node with the given name and properties, returning its ID."""
+    @contextmanager
+    def transaction(self) -> Iterator[TransactionalGraph]:
+        """Write several statements as one unit: all of them land, or none of them do.
+
+        This is what lets a resumed run trust the graph. An act or judgment written through
+        one transaction is either wholly present or wholly absent, so "the node exists" can
+        be read as "that unit completed and was validated", with no completion marker and no
+        schema change.
+        """
         with self.driver.session() as session:
-            query = NodeQueries.CREATE_NODE.format(node_name=node_name)
-            result = session.run(query, node_properties=node_properties)
-            node_id = result.single()["node_id"]
+            tx = session.begin_transaction()
+            try:
+                yield TransactionalGraph(tx)
+            except BaseException:
+                tx.rollback()
+                raise
+            tx.commit()
+
+    def upsert_graph_node(self, node_name, node_properties):
+        """Create or update a node with the given name and properties, returning its ID.
+
+        One statement, one session, hence one implicit transaction. Callers writing a whole
+        unit should go through :meth:`transaction` instead.
+        """
+        with self.driver.session() as session:
+            node_id = TransactionalGraph(session).upsert_graph_node(node_name, node_properties)
             logger.info("Upserted %s node (ID: %s)", node_name, node_id)
             return node_id
 
     def create_relationship(self, left_node_name, right_node_name, left_id, right_id, relationship):
         """Create a relationship of the specified type between two nodes identified by their IDs."""
         with self.driver.session() as session:
-            query = RelationQueries.CREATE_RELATIONSHIP.format(
+            TransactionalGraph(session).create_relationship(
                 left_node_name=left_node_name,
                 right_node_name=right_node_name,
-                relationship=relationship
+                left_id=left_id,
+                right_id=right_id,
+                relationship=relationship,
             )
-            session.run(query, left_id=left_id, right_id=right_id)
             logger.info("Created %s relationship between %s(id=%s) and %s(id=%s)",
                         relationship, left_node_name, left_id, right_node_name, right_id)
 

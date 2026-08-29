@@ -12,6 +12,7 @@ import logging
 from typing import Any, Dict, Iterator, List, Sequence, Set, Tuple
 
 from legal_assistant.graph.recorder import EdgeOp, NodeOp, RecordingGraph
+from legal_assistant.graph.writer import GraphWriter
 
 logger = logging.getLogger(__name__)
 
@@ -104,11 +105,14 @@ class GraphPlan:
 
     # ── output ───────────────────────────────────────────────────────────────
 
-    def replay(self, graph: Any) -> None:
-        """Write the plan to a real graph client, in the order it was recorded.
+    def replay(self, graph: GraphWriter) -> None:
+        """Write the plan to any graph writer, in the order it was recorded.
 
         Nodes first, then edges: the real ``CREATE_RELATIONSHIP`` matches both endpoints, so
         an edge emitted before its node would silently write nothing.
+
+        Callers that need the plan to land atomically pass a writer obtained from
+        ``Neo4jGraph.transaction()`` rather than the client itself.
         """
         for op in self.node_ops:
             graph.upsert_graph_node(node_name=op.label, node_properties=op.properties)

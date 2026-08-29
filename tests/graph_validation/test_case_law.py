@@ -12,8 +12,6 @@ from __future__ import annotations
 
 import pathlib
 import re
-from unittest.mock import MagicMock
-
 import pytest
 
 from legal_assistant.case_law.html_parser import parse_case_law
@@ -117,10 +115,10 @@ def test_parsing_is_deterministic(judgment):
     assert again.fingerprint() == plan.fingerprint()
 
 
-def test_create_case_law_kg_writes_a_valid_judgment(judgment):
+def test_create_case_law_kg_writes_a_valid_judgment(judgment, graph_mock):
     """The public entry point validates and then writes."""
     celex, _, flat, plan = judgment
-    graph = MagicMock()
+    graph = graph_mock
     counts = create_case_law_kg(celex=celex, flat=flat, graph=graph)
 
     assert graph.upsert_graph_node.call_count == len(plan.node_ops)
@@ -129,7 +127,7 @@ def test_create_case_law_kg_writes_a_valid_judgment(judgment):
 
 
 def test_create_case_law_kg_writes_nothing_when_the_splitter_drops_a_paragraph(
-    judgment, monkeypatch
+    judgment, monkeypatch, graph_mock
 ):
     """Simulate the regression the gate exists to catch: the splitter silently loses text.
 
@@ -148,7 +146,7 @@ def test_create_case_law_kg_writes_nothing_when_the_splitter_drops_a_paragraph(
 
     monkeypatch.setattr(kg, "split_paragraphs", lossy_split)
 
-    graph = MagicMock()
+    graph = graph_mock
     with pytest.raises(GraphValidationError, match="body_lost"):
         create_case_law_kg(celex=celex, flat=flat, graph=graph)
 
