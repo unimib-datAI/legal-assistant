@@ -11,7 +11,11 @@ _SPLIT_DEF_NUM_RE = re.compile(r'^\((\d+)\)$')
 _PARAGRAPH_DIV_RE = re.compile(r'^\d{3}\.\d+$')
 
 # An annex root div: "anx_III". Title sub-divs carry a dotted suffix and must not match.
-_ANNEX_DIV_RE = re.compile(r'^anx_[IVXLCDM]+$')
+# Annexes are labelled inconsistently across acts: Roman numerals in most, Arabic digits in
+# some ("anx_1"), a letter code in a few. The source inventory in validation/act_source.py
+# counts every "anx_" division, so anything narrower here loses annex text silently. The
+# "[^.]" guard keeps this to top-level annexes, excluding their dotted subdivisions.
+_ANNEX_DIV_RE = re.compile(r'^anx_[^.]+$')
 
 # A point's numbering marker, standing alone in its own element: "1.", "(a)", "(iii)".
 # Deliberately narrow: a prose word such as "The" must never be taken for a label.
@@ -42,6 +46,7 @@ class EURLexHTMLParser:
                 'eurolex_url': self.eurolex_url
             },
             'chapters': self._get_chapters(),
+            'articles': self._get_unchaptered_articles(),
             'recitals': self._get_recitals(),
             'annexes': self._get_annexes(),
             'case_law': self._get_case_law()
@@ -70,6 +75,21 @@ class EURLexHTMLParser:
             })
 
         return chapters
+
+    def _get_unchaptered_articles(self):
+        """Articles that hang off the act itself, outside any chapter.
+
+        Not every act is subdivided: a short regulation or directive often lists its
+        articles directly, with no ``cpt_`` division at all, and some acts mix the two.
+        Selecting by the absence of a chapter ancestor covers both shapes and cannot
+        double-count, since an article inside a chapter is emitted by
+        :meth:`_get_chapters` and excluded here by the same test.
+        """
+        return [
+            self._article_entry(article_div)
+            for article_div in self.soup.find_all('div', id=re.compile(r'^art_\d+$'))
+            if article_div.find_parent('div', id=re.compile(r'^cpt_')) is None
+        ]
 
     def _get_chapter_title(self, chapter_div, chapter_id):
         """Extract the title of a chapter"""
@@ -107,24 +127,24 @@ class EURLexHTMLParser:
 
     def _get_articles(self, parent_div):
         """Extract articles from the document"""
-        articles = []
-        article_divs = parent_div.find_all('div', id=re.compile(r'^art_\d+$'), recursive=False)
+        return [
+            self._article_entry(article_div)
+            for article_div in parent_div.find_all(
+                'div', id=re.compile(r'^art_\d+$'), recursive=False)
+        ]
 
-        for article_div in article_divs:
-            article_id = article_div.get('id')
-            article_number_p = article_div.find('p', class_='oj-ti-art')
+    def _article_entry(self, article_div):
+        """One article, as the loader expects it. Shared by the chaptered and flat paths."""
+        article_id = article_div.get('id')
+        article_number_p = article_div.find('p', class_='oj-ti-art')
 
-            full_text = ' '.join(article_div.stripped_strings)
-
-            articles.append({
-                'id': article_id,
-                'number': article_number_p.get_text(strip=True) if article_number_p else None,
-                'title': self._get_article_title(article_div, article_id),
-                'paragraphs': self._get_paragraphs(article_div, article_id),
-                'full_text': full_text
-            })
-
-        return articles
+        return {
+            'id': article_id,
+            'number': article_number_p.get_text(strip=True) if article_number_p else None,
+            'title': self._get_article_title(article_div, article_id),
+            'paragraphs': self._get_paragraphs(article_div, article_id),
+            'full_text': ' '.join(article_div.stripped_strings)
+        }
 
     def _get_annexes(self):
         """Extract the annexes of the document.

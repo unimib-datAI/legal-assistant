@@ -32,6 +32,7 @@ class GraphLoader:
         self._paragraph_ids = set()
         self._load_act(data['act'])
         self._load_chapters(data['act'], data['chapters'])
+        self._load_unchaptered_articles(data['act'], data.get('articles', []))
         self._load_recitals(data['act'], data['recitals'])
         self._load_annexes(data['act'], data.get('annexes', []))
         self._load_case_law(data['act'], data['case_law'])
@@ -172,8 +173,21 @@ class GraphLoader:
 
             self._load_articles(act, section, chapter_id, section_id)
 
+    def _load_unchaptered_articles(self, act, articles):
+        """Articles that hang off the act itself, in acts with no chapter division.
+
+        Structurally the same position recitals and annexes occupy. The parser guarantees
+        these are disjoint from the chaptered ones, so an article is emitted exactly once
+        whichever shape the act has.
+        """
+        self._load_articles(act, {'articles': articles}, None, None)
+
     def _load_articles(self, act, parent, chapter_id, section_id):
-        """Create Article nodes and paragraphs."""
+        """Create Article nodes and paragraphs.
+
+        ``chapter_id`` and ``section_id`` are both ``None`` for an article that hangs
+        directly off the act.
+        """
         for article in parent['articles']:
             article_id = f"{act['celex']}{article['id']}"
 
@@ -186,7 +200,15 @@ class GraphLoader:
                 }
             )
 
-            if section_id:
+            if not chapter_id and not section_id:
+                self.graph.create_relationship(
+                    left_node_name="Act",
+                    right_node_name="Article",
+                    left_id=act['celex'],
+                    right_id=article_id,
+                    relationship="CONTAINS"
+                )
+            elif section_id:
                 self.graph.create_relationship(
                     left_node_name="Section",
                     right_node_name="Article",

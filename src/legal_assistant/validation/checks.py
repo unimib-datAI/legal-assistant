@@ -18,6 +18,8 @@ from legal_assistant.validation.plan import CONTAINMENT_RELATIONS, GraphPlan
 # docs/knowledge-graph.md. An edge outside this set means a builder changed shape.
 ALLOWED_TRANSITIONS: Set[Tuple[str, str, str]] = {
     ("Act", "CONTAINS", "Chapter"),
+    # Acts with no chapter division hang their articles off the act itself.
+    ("Act", "CONTAINS", "Article"),
     ("Act", "CONTAINS", "Recital"),
     ("Act", "CONTAINS", "Annex"),
     ("Annex", "CONTAINS", "AnnexPoint"),
