@@ -4,41 +4,32 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="2aac46b9-d4a6-4ea1-8017-d11d286eba73" name="Changes" comment="Add deontic obligations module with extraction, filtering, and analysis capabilities; implement compliance checklist generation and enhance graph structure for annexes and annex points.">
-      <change afterPath="$PROJECT_DIR$/.idea/csv-editor.xml" afterDir="false" />
+    <list default="true" id="2aac46b9-d4a6-4ea1-8017-d11d286eba73" name="Changes" comment="Enhance act processing to support flat acts and annexes; ensure articles are retained without chapter divisions and improve handling of annex numbering and tables.">
       <change afterPath="$PROJECT_DIR$/docs/reports/2026-07-24-gdpr-obligations-extraction.md" afterDir="false" />
       <change afterPath="$PROJECT_DIR$/docs/superpowers/plans/2026-07-23-obligations-graph-plan.md" afterDir="false" />
       <change afterPath="$PROJECT_DIR$/docs/superpowers/specs/2026-07-23-obligations-graph-design.md" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/img/coreleg.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/img/datamodel.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/legal_assistant/graph/completion.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/legal_assistant/graph/writer.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/tests/graph/test_case_law_references.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/tests/graph/test_completion.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/tests/graph/test_writer.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/tests/pipelines/test_case_law_resume.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/tests/pipelines/test_cli_graph_build.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/tests/pipelines/test_graph_build_resume.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/tests/scraper/test_metadata_parser.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/evals/evals/datasets/case_law_golden_dataset_v2.csv" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/evals/evals/evaluations/HippoRAG_final_case_law_bench.csv" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/evals/evals/evaluations/LightRAG_final_case_law_bench.csv" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/evals/evals/evaluations/ThemisRAG_bench_case_law.csv" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/evals/evals/evaluations/eval/HippoRAG_final_case_law_bench.csv" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/evals/evals/evaluations/eval/LightRAG_final_case_law_bench.csv" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/evals/evals/evaluations/eval/pathRAG_bench_case_law_final.csv" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/evals/evals/evaluations/eval/themisRAG_bench_case_law_final.csv" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/evals/evals/evaluations/hippoRAG_bench.csv" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/evals/evals/evaluations/hippoRAG_bench_case_law.csv" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/evals/evals/evaluations/pathRAG_bench_case_law_final.csv" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/evals/evals/evaluations/pathRAG_bench_case_law_v2.csv" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/evals/evals/evaluations/pathRAG_bench_v2.csv" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/evals/evals/evaluations/rag_eval_ragas_v9_a6e3d61f-6a25-456c-b806-ed323a2a1d53.csv" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/evals/evals/evaluations/rag_eval_ragas_v9_aef93afe-670d-449b-8438-73dd998b59a4.csv" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/evals/evals/evaluations/themisRAG_bench_case_law_final.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/csv-editor.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/csv-editor.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/architecture.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/architecture.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/knowledge-graph.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/knowledge-graph.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/kg/graph_init.py" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/kg/graph_init.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/legal_assistant/case_law/kg_builder.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/case_law/kg_builder.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/legal_assistant/cli/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/cli/main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/legal_assistant/graph/client.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/graph/client.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/legal_assistant/graph/loader.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/graph/loader.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/legal_assistant/graph/queries.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/graph/queries.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/legal_assistant/graph/recorder.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/graph/recorder.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/legal_assistant/pipelines/case_law_ingest.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/pipelines/case_law_ingest.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/legal_assistant/pipelines/graph_build.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/pipelines/graph_build.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/legal_assistant/scraper/metadata_parser.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/scraper/metadata_parser.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/legal_assistant/validation/checks.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/validation/checks.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/legal_assistant/validation/plan.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/legal_assistant/validation/plan.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/conftest.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/conftest.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/graph_validation/test_case_law.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/graph_validation/test_case_law.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/graph_validation/test_wiring.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/graph_validation/test_wiring.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/corpus/32016R0679.html" beforeDir="false" afterPath="$PROJECT_DIR$/corpus/32016R0679.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/corpus/32022R0868.html" beforeDir="false" afterPath="$PROJECT_DIR$/corpus/32022R0868.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/corpus/32023R2854.html" beforeDir="false" afterPath="$PROJECT_DIR$/corpus/32023R2854.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/corpus/32024R1689.html" beforeDir="false" afterPath="$PROJECT_DIR$/corpus/32024R1689.html" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -92,6 +83,7 @@
     &quot;Python.rag.executor&quot;: &quot;Run&quot;,
     &quot;Python.rag_pipeline.executor&quot;: &quot;Run&quot;,
     &quot;Python.ragas_eval.executor&quot;: &quot;Run&quot;,
+    &quot;Python.scriptone.executor&quot;: &quot;Run&quot;,
     &quot;Python.socratic_knowledge_extraction.executor&quot;: &quot;Run&quot;,
     &quot;Python.temp.executor&quot;: &quot;Run&quot;,
     &quot;Python.test.executor&quot;: &quot;Run&quot;,
@@ -103,7 +95,7 @@
     &quot;SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
     &quot;codeWithMe.voiceChat.enabledByDefault&quot;: &quot;false&quot;,
     &quot;git-widget-placeholder&quot;: &quot;feature/obligations&quot;,
-    &quot;last_opened_file_path&quot;: &quot;E:/Projects/legal-assistant/img&quot;,
+    &quot;last_opened_file_path&quot;: &quot;E:/Projects/legal-assistant/evals/evals/evaluations/eval&quot;,
     &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
     &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
     &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
@@ -115,11 +107,11 @@
 }</component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
-      <recent name="E:\Projects\legal-assistant\img" />
+      <recent name="E:\Projects\legal-assistant\evals\evals\evaluations\eval" />
+      <recent name="E:\Projects\legal-assistant\evals\evals\evaluations" />
       <recent name="E:\Projects\legal-assistant" />
+      <recent name="E:\Projects\legal-assistant\img" />
       <recent name="C:\Users\nicho\AppData\Roaming\JetBrains\PyCharm2026.1\scratches" />
-      <recent name="E:\Projects\legal-assistant\test\rag_eval\evals\evaluations" />
-      <recent name="E:\Projects\legal-assistant\docs" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
       <recent name="E:\Projects\legal-assistant\test\rag_eval\evals\evaluations" />
@@ -129,31 +121,7 @@
       <recent name="E:\Projects\legal-assistant\.claude" />
     </key>
   </component>
-  <component name="RunManager" selected="Python.evals_ragas">
-    <configuration name="aske_pipeline (1)" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
-      <module name="legal-assistant" />
-      <option name="ENV_FILES" value="" />
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <envs>
-        <env name="PYTHONUNBUFFERED" value="1" />
-      </envs>
-      <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
-      <option name="IS_MODULE_SDK" value="true" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
-      <option name="DEBUG_JUST_MY_CODE" value="true" />
-      <option name="RUN_TOOL" value="" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/aske_pipeline.py" />
-      <option name="PARAMETERS" value="" />
-      <option name="SHOW_COMMAND_LINE" value="false" />
-      <option name="EMULATE_TERMINAL" value="false" />
-      <option name="MODULE_MODE" value="false" />
-      <option name="REDIRECT_INPUT" value="false" />
-      <option name="INPUT_FILE" value="" />
-      <method v="2" />
-    </configuration>
+  <component name="RunManager" selected="Python.scriptone">
     <configuration name="evals_ragas" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="legal-assistant" />
       <option name="ENV_FILES" value="" />
@@ -250,6 +218,30 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
+    <configuration name="scriptone" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="legal-assistant" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/src/legal_assistant" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="DEBUG_JUST_MY_CODE" value="false" />
+      <option name="RUN_TOOL" value="" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/src/legal_assistant/scriptone.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
     <configuration default="true" type="docker-deploy" factoryName="docker-compose.yml" temporary="true">
       <deployment type="docker-compose.yml">
         <settings />
@@ -258,11 +250,11 @@
     </configuration>
     <recent_temporary>
       <list>
+        <item itemvalue="Python.scriptone" />
         <item itemvalue="Python.evals_ragas" />
         <item itemvalue="Python.rag_pipeline" />
         <item itemvalue="Python.graph_rag" />
         <item itemvalue="Python.graph_init" />
-        <item itemvalue="Python.aske_pipeline (1)" />
       </list>
     </recent_temporary>
   </component>
@@ -280,30 +272,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1767884002550</updated>
-    </task>
-    <task id="LOCAL-00003" summary="ASKE approach implementation v1">
-      <option name="closed" value="true" />
-      <created>1769426391231</created>
-      <option name="number" value="00003" />
-      <option name="presentableId" value="LOCAL-00003" />
-      <option name="project" value="LOCAL" />
-      <updated>1769426391231</updated>
-    </task>
-    <task id="LOCAL-00004" summary="- ASKE implementation updated&#10;- First consistent version of GraphRAG with topic filtering">
-      <option name="closed" value="true" />
-      <created>1769502439957</created>
-      <option name="number" value="00004" />
-      <option name="presentableId" value="LOCAL-00004" />
-      <option name="project" value="LOCAL" />
-      <updated>1769502439957</updated>
-    </task>
-    <task id="LOCAL-00005" summary="- Added another result">
-      <option name="closed" value="true" />
-      <created>1769502496633</created>
-      <option name="number" value="00005" />
-      <option name="presentableId" value="LOCAL-00005" />
-      <option name="project" value="LOCAL" />
-      <updated>1769502496633</updated>
     </task>
     <task id="LOCAL-00006" summary="Refactor GraphEnrichedRetriever and enhance topic extraction logic">
       <option name="closed" value="true" />
@@ -673,7 +641,31 @@
       <option name="project" value="LOCAL" />
       <updated>1784849547357</updated>
     </task>
-    <option name="localTasksCounter" value="52" />
+    <task id="LOCAL-00052" summary="Implement transaction management for graph writes to ensure atomicity; add mock for testing and update CLI behavior to support resumable runs without data loss.">
+      <option name="closed" value="true" />
+      <created>1788038399018</created>
+      <option name="number" value="00052" />
+      <option name="presentableId" value="LOCAL-00052" />
+      <option name="project" value="LOCAL" />
+      <updated>1788038399019</updated>
+    </task>
+    <task id="LOCAL-00053" summary="Add support for unchaptered articles in document loader; enhance article extraction and relationship creation for acts without chapter divisions.">
+      <option name="closed" value="true" />
+      <created>1788041281954</created>
+      <option name="number" value="00053" />
+      <option name="presentableId" value="LOCAL-00053" />
+      <option name="project" value="LOCAL" />
+      <updated>1788041281954</updated>
+    </task>
+    <task id="LOCAL-00054" summary="Enhance act processing to support flat acts and annexes; ensure articles are retained without chapter divisions and improve handling of annex numbering and tables.">
+      <option name="closed" value="true" />
+      <created>1788045997370</created>
+      <option name="number" value="00054" />
+      <option name="presentableId" value="LOCAL-00054" />
+      <option name="project" value="LOCAL" />
+      <updated>1788045997370</updated>
+    </task>
+    <option name="localTasksCounter" value="55" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -691,9 +683,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="rag alternative model" />
-    <MESSAGE value="Enhance RAG integration with new query capabilities and improved logging" />
-    <MESSAGE value="Nuovo retrieval (con performance okay)" />
     <MESSAGE value="Refine HybridRetriever to filter recitals by score threshold and enhance candidate selection" />
     <MESSAGE value="Add HyDE prompt and generator for act-grounded legal passage generation" />
     <MESSAGE value="Refactor RAG pipeline to use shared context for resources and simplify initialization" />
@@ -716,7 +705,10 @@
     <MESSAGE value="Refactor project structure by renaming files and updating imports to align with new module paths; add requirements.txt and logging setup." />
     <MESSAGE value="Implement graph validation mechanism to ensure data integrity before writing to Neo4j; add new validation classes and methods, and refactor document loading to support validation checks." />
     <MESSAGE value="Add deontic obligations module with extraction, filtering, and analysis capabilities; implement compliance checklist generation and enhance graph structure for annexes and annex points." />
-    <option name="LAST_COMMIT_MESSAGE" value="Add deontic obligations module with extraction, filtering, and analysis capabilities; implement compliance checklist generation and enhance graph structure for annexes and annex points." />
+    <MESSAGE value="Implement transaction management for graph writes to ensure atomicity; add mock for testing and update CLI behavior to support resumable runs without data loss." />
+    <MESSAGE value="Add support for unchaptered articles in document loader; enhance article extraction and relationship creation for acts without chapter divisions." />
+    <MESSAGE value="Enhance act processing to support flat acts and annexes; ensure articles are retained without chapter divisions and improve handling of annex numbering and tables." />
+    <option name="LAST_COMMIT_MESSAGE" value="Enhance act processing to support flat acts and annexes; ensure articles are retained without chapter divisions and improve handling of annex numbering and tables." />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

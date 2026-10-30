@@ -3,6 +3,20 @@
   <component name="CsvFileAttributes">
     <option name="attributeMap">
       <map>
+        <entry key="\evals\evals\datasets\case_law_golden_dataset.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="\evals\evals\datasets\case_law_golden_dataset_v2.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
         <entry key="\evals\evals\datasets\golden_dataset.csv">
           <value>
             <Attribute>
@@ -17,7 +31,56 @@
             </Attribute>
           </value>
         </entry>
+        <entry key="\evals\evals\evaluations\ThemisRAG_bench_case_law.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
         <entry key="\evals\evals\evaluations\lightRAG_bench.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="\evals\evals\evaluations\lightRAG_bench_case_law.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="\evals\evals\evaluations\pathRAG_bench_v2.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="\evals\evals\evaluations\rag_eval_ragas_v9_a6e3d61f-6a25-456c-b806-ed323a2a1d53.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="\evals\evals\evaluations\rag_eval_ragas_v9_aef93afe-670d-449b-8438-73dd998b59a4.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="\evals\evals\evaluations\themisRAG_bench_case_law_final.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="\evals\evals\evaluations\unimibRAG_bench.csv">
           <value>
             <Attribute>
               <option name="separator" value="," />
